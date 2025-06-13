@@ -1,164 +1,299 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, RotateCcw, Play, Pause } from 'lucide-react';
+// App.js - Updated with Modern UI and Combined API Key Support
+import React, { useState, useEffect, useRef } from 'react';
+import { Brain, Search, Sparkles, Clock, Play, Pause, RotateCcw, RefreshCw, Lightbulb, CheckCircle, MessageCircle, User, Bot } from 'lucide-react';
+import { getSocraticResponse } from './openaiAPI';
 import './App.css';
 
-const CSLearningApp = () => {
-  const [currentScreen, setCurrentScreen] = useState('setup');
-  const [selectedTopic, setSelectedTopic] = useState('');
-  const [selectedTrack, setSelectedTrack] = useState('');
-  const [selectedQuestionType, setSelectedQuestionType] = useState('');
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [userAnswer, setUserAnswer] = useState('');
-  const [difficultyLevel, setDifficultyLevel] = useState(1);
-  const [correctStreak, setCorrectStreak] = useState(0);
-  const [wrongCount, setWrongCount] = useState(0);
-  const [timerMinutes, setTimerMinutes] = useState(8); // Starting attention span
-  const [timeLeft, setTimeLeft] = useState(8 * 60); // in seconds
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [feedback, setFeedback] = useState('');
-  const [showFeedback, setShowFeedback] = useState(false);
+const learningPaths = {
+  conceptual: { 
+    name: "Conceptual Track", 
+    description: "Deep understanding of core concepts",
+    icon: "🧠"
+  },
+  applied: { 
+    name: "Applied Track", 
+    description: "Practical implementation and examples",
+    icon: "⚡"
+  },
+  comprehensive: { 
+    name: "Comprehensive Track", 
+    description: "Complete mastery with theory and practice",
+    icon: "🎯"
+  }
+};
 
-  const topics = [
-    { id: 'queues', name: 'Queues', description: 'FIFO data structures and variations' },
-    { id: 'binary-trees', name: 'Binary Trees', description: 'Tree structures and traversals' },
-    { id: 'sorting', name: 'Sorting Algorithms', description: 'Comparison and non-comparison sorts' },
-    { id: 'networking', name: 'TCP/IP Basics', description: 'Network protocols and communication' },
-    { id: 'os', name: 'Process Management', description: 'Operating system process concepts' }
-  ];
+const questioningStyles = {
+  direct: { 
+    name: "Direct Explanation", 
+    description: "Clear, straightforward questioning",
+    icon: "💭"
+  },
+  scenario: { 
+    name: "Scenario-Based", 
+    description: "Real-world problem scenarios",
+    icon: "🌍"
+  },
+  puzzle: { 
+    name: "Puzzle & Brain Teaser", 
+    description: "Challenge-based learning",
+    icon: "🧩"
+  },
+  analogy: { 
+    name: "Analogy & Metaphor", 
+    description: "Learn through comparisons",
+    icon: "🔗"
+  }
+};
 
-  const tracks = [
-    { id: 'conceptual', name: 'Conceptual Track', description: 'Focus on the "why" - understanding core principles' },
-    { id: 'applied', name: 'Applied Track', description: 'Focus on implementation and practical usage' },
-    { id: 'comprehensive', name: 'Comprehensive Track', description: 'Everything theoretical - deep dive into all aspects' }
-  ];
-
-  const questionTypes = [
-    { id: 'socratic', name: 'Socratic Method', description: 'Guided discovery through strategic questions' },
-    { id: 'puzzle', name: 'Puzzle-Based', description: 'Problem-solving challenges and brain teasers' },
-    { id: 'roleplay', name: 'Role-Play', description: 'Real-world scenarios and use cases' }
-  ];
-
-  // Sample questions based on topic, track, and difficulty
-  const getQuestion = (topic, track, difficulty, questionType) => {
-    const questions = {
-      queues: {
-        conceptual: {
-          1: { q: "Why would you choose a queue data structure over a stack for a task scheduling system?", type: "explanation" },
-          2: { q: "Explain the trade-offs between using an array-based queue versus a linked-list-based queue.", type: "explanation" },
-          3: { q: "How does a priority queue differ conceptually from a regular queue, and when would you use each?", type: "explanation" },
-          4: { q: "Analyze the impact of different queue implementations on system performance in high-concurrency scenarios.", type: "explanation" },
-          5: { q: "Design a queue system that can handle both FIFO and priority-based processing with optimal space-time complexity.", type: "explanation" }
-        },
-        applied: {
-          1: { q: "Write pseudocode to implement the basic enqueue operation for a simple queue.", type: "pseudocode" },
-          2: { q: "Write pseudocode to implement a circular queue with fixed size, including handling overflow.", type: "pseudocode" },
-          3: { q: "Write pseudocode for a priority queue implementation using a heap structure.", type: "pseudocode" },
-          4: { q: "Implement a thread-safe queue in pseudocode with proper synchronization mechanisms.", type: "pseudocode" },
-          5: { q: "Design and implement a distributed queue system in pseudocode that handles node failures gracefully.", type: "pseudocode" }
-        },
-        comprehensive: {
-          1: { q: "Describe the queue data structure, its operations, and write pseudocode for enqueue and dequeue.", type: "mixed" },
-          2: { q: "Explain different types of queues, their use cases, and implement a double-ended queue in pseudocode.", type: "mixed" },
-          3: { q: "Analyze the time complexity of various queue implementations and design a thread-safe queue in pseudocode.", type: "mixed" },
-          4: { q: "Compare queue implementations across different programming paradigms and implement a lock-free queue design.", type: "mixed" },
-          5: { q: "Research and design a queue system for a distributed microservices architecture, including fault tolerance and scalability considerations.", type: "mixed" }
-        }
-      },
-      'binary-trees': {
-        conceptual: {
-          1: { q: "Why are binary trees useful, and how do they differ from linear data structures like arrays?", type: "explanation" },
-          2: { q: "Explain the difference between a binary tree and a binary search tree.", type: "explanation" },
-          3: { q: "When would you choose a balanced binary tree over an unbalanced one?", type: "explanation" }
-        },
-        applied: {
-          1: { q: "Write pseudocode to insert a node into a binary search tree.", type: "pseudocode" },
-          2: { q: "Write pseudocode for in-order traversal of a binary tree.", type: "pseudocode" },
-          3: { q: "Implement a function in pseudocode to check if a binary tree is balanced.", type: "pseudocode" }
-        },
-        comprehensive: {
-          1: { q: "Explain binary tree concepts and write pseudocode for basic insertion and traversal.", type: "mixed" },
-          2: { q: "Describe different tree traversal methods and implement them with complexity analysis.", type: "mixed" },
-          3: { q: "Design a self-balancing binary search tree and analyze its performance characteristics.", type: "mixed" }
-        }
-      }
-    };
-
-    const topicQuestions = questions[topic];
-    if (!topicQuestions) {
-      return { q: `Sample question for ${topic} not yet available. This will be added in the full version.`, type: "explanation" };
-    }
-
-    const trackQuestions = topicQuestions[track];
-    if (!trackQuestions) {
-      return { q: `${track} questions for ${topic} not yet available.`, type: "explanation" };
-    }
-
-    return trackQuestions[difficulty] || { q: "Advanced question not yet available.", type: "explanation" };
-  };
+function App() {
+  const [step, setStep] = useState('concept');
+  const [userConcept, setUserConcept] = useState('');
+  const [learningPath, setLearningPath] = useState('');
+  const [questioningStyle, setQuestioningStyle] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [userInput, setUserInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(20 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const [progress, setProgress] = useState([]);
+  const [showApiSetup, setShowApiSetup] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [isApiKeyLoaded, setIsApiKeyLoaded] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [apiKeySource, setApiKeySource] = useState(''); // Track where the key came from
+  const messageEndRef = useRef(null);
 
   // Timer effect
   useEffect(() => {
-    let interval = null;
-    if (isTimerRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(timeLeft => timeLeft - 1);
+    if (timerActive && !timerPaused && timeRemaining > 0) {
+      const interval = setInterval(() => {
+        setTimeRemaining(t => {
+          if (t <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return t - 1;
+        });
       }, 1000);
-    } else if (timeLeft === 0) {
-      setIsTimerRunning(false);
-      alert("Time's up! Take a break and return when ready.");
+      return () => clearInterval(interval);
     }
-    return () => clearInterval(interval);
-  }, [isTimerRunning, timeLeft]);
+  }, [timerActive, timerPaused, timeRemaining]);
 
-  const startLearning = () => {
-    if (selectedTopic && selectedTrack && selectedQuestionType) {
-      setCurrentScreen('learning');
-      setCurrentQuestion(getQuestion(selectedTopic, selectedTrack, difficultyLevel, selectedQuestionType));
-      setTimeLeft(timerMinutes * 60);
-      setIsTimerRunning(true);
-    }
-  };
+  // Auto-scroll messages
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  const submitAnswer = () => {
-    if (!userAnswer.trim()) return;
-
-    // Simple mock assessment - in real app, this would use ChatGPT API
-    const isCorrect = userAnswer.length > 20; // Mock: longer answers are "better"
+  // Load API key from environment variable OR localStorage on component mount
+  useEffect(() => {
+    console.log('=== API KEY LOADING ===');
     
-    if (isCorrect) {
-      setCorrectStreak(correctStreak + 1);
-      setWrongCount(0);
-      setFeedback("Great work! Your logic is sound. Moving to the next level.");
-      
-      // Increase difficulty and timer
-      if (correctStreak + 1 >= 2) { // Every 2 correct answers
-        setDifficultyLevel(Math.min(difficultyLevel + 1, 5));
-        setTimerMinutes(Math.min(timerMinutes + 3, 25));
-        setTimeLeft(Math.min((timerMinutes + 3) * 60, 25 * 60));
-      }
-    } else {
-      setWrongCount(wrongCount + 1);
-      setCorrectStreak(0);
-      setFeedback("Not quite right. Think about the core logic step by step. Try again!");
+    // Priority 1: Environment variable (for development)
+    const envApiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    console.log('Environment API key available:', !!envApiKey);
+    console.log('Environment API key length:', envApiKey?.length);
+    
+    // Priority 2: localStorage (for user input)
+    const savedApiKey = localStorage.getItem('socratic_openai_key');
+    console.log('Saved API key available:', !!savedApiKey);
+    console.log('Saved API key length:', savedApiKey?.length);
+    
+    // Use environment first, then saved key
+    let finalKey = null;
+    let source = '';
+    
+    if (envApiKey && envApiKey.trim() && envApiKey !== 'undefined') {
+      finalKey = envApiKey.trim();
+      source = 'environment';
+    } else if (savedApiKey && savedApiKey.trim() && savedApiKey !== 'null' && savedApiKey !== 'undefined') {
+      finalKey = savedApiKey.trim();
+      source = 'localStorage';
     }
+    
+    if (finalKey) {
+      setApiKey(finalKey);
+      setApiKeySource(source);
+      console.log('Using API key from:', source);
+      console.log('Final API key length:', finalKey.length);
+    } else {
+      console.log('No API key found in environment or localStorage');
+      setApiKeySource('none');
+    }
+    
+    setIsApiKeyLoaded(true);
+    console.log('=== END API KEY LOADING ===');
+  }, []);
 
-    setShowFeedback(true);
-    setTimeout(() => {
-      setShowFeedback(false);
-      if (isCorrect) {
-        setCurrentQuestion(getQuestion(selectedTopic, selectedTrack, difficultyLevel, selectedQuestionType));
-      }
-      setUserAnswer('');
-    }, 3000);
+  // Save API key to localStorage
+  const saveApiKey = (key) => {
+    console.log('=== SAVING API KEY ===');
+    console.log('Key to save length:', key?.length);
+    
+    try {
+      localStorage.setItem('socratic_openai_key', key);
+      console.log('Key saved to localStorage successfully');
+      
+      // Verify it was saved
+      const verification = localStorage.getItem('socratic_openai_key');
+      console.log('Verification - key exists after save:', !!verification);
+      
+      setApiKey(key);
+      setApiKeySource('localStorage');
+      console.log('Key set in React state');
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
   };
 
-  const resetProgress = () => {
-    setDifficultyLevel(1);
-    setCorrectStreak(0);
-    setWrongCount(0);
-    setTimerMinutes(8);
-    setTimeLeft(8 * 60);
-    setCurrentQuestion(getQuestion(selectedTopic, selectedTrack, 1, selectedQuestionType));
+  // Clear API key from localStorage
+  const clearApiKey = () => {
+    localStorage.removeItem('socratic_openai_key');
+    
+    // Check if environment key exists
+    const envKey = process.env.REACT_APP_OPENAI_API_KEY;
+    if (envKey && envKey.trim() && envKey !== 'undefined') {
+      setApiKey(envKey.trim());
+      setApiKeySource('environment');
+    } else {
+      setApiKey('');
+      setApiKeySource('none');
+      setShowApiSetup(true);
+    }
+  };
+
+  // Get current API key from all sources
+  const getCurrentApiKey = () => {
+    return apiKey || 
+           process.env.REACT_APP_OPENAI_API_KEY || 
+           localStorage.getItem('socratic_openai_key') || 
+           null;
+  };
+
+  // Get API key status for display
+  const getApiKeyStatus = () => {
+    const envKey = process.env.REACT_APP_OPENAI_API_KEY;
+    const savedKey = localStorage.getItem('socratic_openai_key');
+    
+    if (envKey && envKey.trim() && envKey !== 'undefined') {
+      return { 
+        status: 'env', 
+        message: '✅ API Key from Environment (.env file)',
+        showChange: false // Don't show change button for env key
+      };
+    } else if (savedKey && savedKey.trim() && savedKey !== 'null' && savedKey !== 'undefined') {
+      return { 
+        status: 'saved', 
+        message: '✅ API Key Configured (User Input)',
+        showChange: true
+      };
+    } else {
+      return { 
+        status: 'missing', 
+        message: '⚠️ API Key Required',
+        showChange: false
+      };
+    }
+  };
+
+  const handleStart = () => {
+    // Check all possible sources for API key
+    const finalApiKey = getCurrentApiKey();
+    
+    console.log('=== HANDLE START DEBUG ===');
+    console.log('Current apiKey state:', !!apiKey);
+    console.log('Environment key:', !!process.env.REACT_APP_OPENAI_API_KEY);
+    console.log('LocalStorage key:', !!localStorage.getItem('socratic_openai_key'));
+    console.log('Final API key available:', !!finalApiKey);
+    
+    if (!finalApiKey) {
+      console.log('No API key found, showing setup modal');
+      setShowApiSetup(true);
+      return;
+    }
+    
+    // Make sure we're using the final key in state
+    if (!apiKey && finalApiKey) {
+      setApiKey(finalApiKey);
+      
+      // Determine source for display
+      if (process.env.REACT_APP_OPENAI_API_KEY) {
+        setApiKeySource('environment');
+      } else {
+        setApiKeySource('localStorage');
+      }
+    }
+    
+    setStep('learning');
+    setTimerActive(true);
+    const welcome = `🎓 Welcome! You've selected **${learningPaths[learningPath].name}** with **${questioningStyles[questioningStyle].name}** style to explore **"${userConcept}"**.\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin your learning journey!`;
+    
+    setMessages([{ 
+      type: 'bot', 
+      content: welcome, 
+      timestamp: new Date(),
+      isWelcome: true 
+    }]);
+  };
+
+  const handleSubmit = async () => {
+    if (!userInput.trim() || isThinking || timeRemaining <= 0) return;
+    
+    // Get the current API key from all sources
+    const currentApiKey = getCurrentApiKey();
+    
+    console.log('=== HANDLE SUBMIT DEBUG ===');
+    console.log('API Key from state:', !!apiKey);
+    console.log('API Key from getCurrentApiKey():', !!currentApiKey);
+    console.log('Final key to use:', !!currentApiKey);
+    
+    setIsThinking(true);
+    const userMessage = { 
+      type: 'user', 
+      content: userInput, 
+      timestamp: new Date() 
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    
+    try {
+      const botReply = await getSocraticResponse(
+        userConcept, 
+        userInput, 
+        learningPath, 
+        questioningStyle,
+        currentApiKey // Use the current API key from all sources
+      );
+      
+      const botMessage = { 
+        type: 'bot', 
+        content: botReply, 
+        timestamp: new Date() 
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
+      setProgress(prev => [...prev, { 
+        question: userInput, 
+        answer: botReply, 
+        timestamp: new Date() 
+      }]);
+    } catch (error) {
+      console.error('=== ERROR DETAILS ===');
+      console.error('Error type:', error.constructor.name);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+      
+      const errorMessage = {
+        type: 'bot',
+        content: `❌ Error: ${error.message}`,
+        timestamp: new Date(),
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsThinking(false);
+      setUserInput('');
+    }
   };
 
   const formatTime = (seconds) => {
@@ -167,196 +302,339 @@ const CSLearningApp = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (currentScreen === 'setup') {
+  const resetSession = () => {
+    setStep('concept');
+    setMessages([]);
+    setProgress([]);
+    setTimeRemaining(20 * 60);
+    setTimerActive(false);
+    setTimerPaused(false);
+    setUserInput('');
+  };
+
+  // API Key Setup Modal
+  if (showApiSetup) {
+    const handleSaveApiKey = () => {
+      if (tempApiKey.trim()) {
+        saveApiKey(tempApiKey.trim());
+        setShowApiSetup(false);
+        setTempApiKey(''); // Clear temp key after saving
+        if (step === 'concept' && userConcept && learningPath && questioningStyle) {
+          handleStart();
+        }
+      }
+    };
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-orange-900 mb-2">CS Interview Prep</h1>
-            <p className="text-orange-700">Master computer science concepts through adaptive questioning</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
-            <h2 className="text-2xl font-semibold text-orange-900 mb-6">Choose Your Topic</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {topics.map(topic => (
-                <div
-                  key={topic.id}
-                  onClick={() => setSelectedTopic(topic.id)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedTopic === topic.id
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 hover:border-orange-300'
-                  }`}
-                >
-                  <h3 className="font-semibold text-gray-900">{topic.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{topic.description}</p>
+      <div className="app-container">
+        <div className="setup-modal">
+          <div className="setup-content">
+            <h2>🔑 API Key Setup</h2>
+            <p>To use the Socratic AI tutor, you need an OpenAI API key.</p>
+            
+            {/* Show environment variable info if available */}
+            {process.env.REACT_APP_OPENAI_API_KEY ? (
+              <div style={{ background: '#e8f5e8', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+                <strong>📝 Note:</strong> You have an API key in your .env file, but it seems there might be an issue with it. 
+                You can override it by entering a new key below.
+              </div>
+            ) : (
+              <div style={{ background: '#f0f8ff', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
+                <strong>💡 Tip:</strong> For development, you can also add <code>REACT_APP_OPENAI_API_KEY=your-key</code> to your .env file 
+                instead of entering it here each time.
+              </div>
+            )}
+            
+            <div className="setup-steps">
+              <div className="step">
+                <span className="step-number">1</span>
+                <div>
+                  <strong>Get your API key</strong>
+                  <p>Visit <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer">platform.openai.com</a></p>
                 </div>
-              ))}
+              </div>
+              <div className="step">
+                <span className="step-number">2</span>
+                <div>
+                  <strong>Create an account & get key</strong>
+                  <p>Sign up and create a new API key</p>
+                </div>
+              </div>
+              <div className="step">
+                <span className="step-number">3</span>
+                <div>
+                  <strong>Enter your key below</strong>
+                  <p>Your key will be saved locally and securely</p>
+                </div>
+              </div>
             </div>
 
-            <h2 className="text-2xl font-semibold text-orange-900 mb-6">Choose Your Learning Track</h2>
-            <div className="grid md:grid-cols-3 gap-4 mb-8">
-              {tracks.map(track => (
-                <div
-                  key={track.id}
-                  onClick={() => setSelectedTrack(track.id)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedTrack === track.id
-                      ? 'border-yellow-500 bg-yellow-50'
-                      : 'border-gray-200 hover:border-yellow-300'
-                  }`}
-                >
-                  <h3 className="font-semibold text-gray-900">{track.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{track.description}</p>
-                </div>
-              ))}
+            <input
+              type="password"
+              placeholder="sk-..."
+              value={tempApiKey}
+              onChange={(e) => setTempApiKey(e.target.value)}
+              className="api-key-input"
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveApiKey()}
+            />
+            
+            <div className="setup-actions">
+              <button 
+                onClick={() => {
+                  setShowApiSetup(false);
+                  setTempApiKey(''); // Clear temp key on cancel
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveApiKey}
+                disabled={!tempApiKey.trim()}
+                className="btn btn-primary"
+              >
+                Save & Start Learning
+              </button>
             </div>
-
-            <h2 className="text-2xl font-semibold text-orange-900 mb-6">Choose Question Type</h2>
-            <div className="grid md:grid-cols-3 gap-4 mb-8">
-              {questionTypes.map(type => (
-                <div
-                  key={type.id}
-                  onClick={() => setSelectedQuestionType(type.id)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedQuestionType === type.id
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 hover:border-orange-300'
-                  }`}
-                >
-                  <h3 className="font-semibold text-gray-900">{type.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{type.description}</p>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={startLearning}
-              disabled={!selectedTopic || !selectedTrack || !selectedQuestionType}
-              className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold py-4 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-orange-600 hover:to-yellow-600 transition-all"
-            >
-              Start Learning Session
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header with timer and progress */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-orange-900">
-                {topics.find(t => t.id === selectedTopic)?.name} - Level {difficultyLevel}
-              </h1>
-              <p className="text-orange-700">
-                {tracks.find(t => t.id === selectedTrack)?.name} • {questionTypes.find(t => t.id === selectedQuestionType)?.name}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-green-600">
-                <CheckCircle size={20} />
-                <span className="font-semibold">{correctStreak}</span>
+  // Concept Selection Screen
+  if (step === 'concept') {
+    const apiStatus = getApiKeyStatus();
+    
+    return (
+      <div className="app-container">
+        <div className="setup-container">
+          <div className="header">
+            <Brain className="header-icon" />
+            <h1>Socratic CS Tutor</h1>
+            <p>Learn through guided discovery and thoughtful questioning</p>
+            
+            {/* Enhanced API Key Status */}
+            {isApiKeyLoaded && (
+              <div className="api-status">
+                {apiStatus.status === 'missing' ? (
+                  <div className="api-status-missing">
+                    {apiStatus.message}
+                  </div>
+                ) : (
+                  <div className="api-status-good">
+                    {apiStatus.message}
+                    {apiStatus.showChange && (
+                      <button 
+                        onClick={() => setShowApiSetup(true)}
+                        className="change-key-btn"
+                      >
+                        Change
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2 text-red-600">
-                <XCircle size={20} />
-                <span className="font-semibold">{wrongCount}</span>
-              </div>
-              <button
-                onClick={resetProgress}
-                className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <RotateCcw size={16} />
-                Reset
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Ice Cream Timer */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <div className="text-4xl">🍦</div>
-              <div>
-                <div className="font-semibold text-orange-900">Focus Timer</div>
-                <div className="text-sm text-orange-700">Max: {timerMinutes} minutes</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-3xl font-bold text-orange-900">{formatTime(timeLeft)}</div>
-              <button
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                {isTimerRunning ? <Pause size={16} /> : <Play size={16} />}
-                {isTimerRunning ? 'Pause' : 'Resume'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Question Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Question:</h2>
-          <p className="text-gray-800 mb-6 leading-relaxed">{currentQuestion?.q}</p>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Answer (Pseudocode/Explanation):
+          <div className="form-section">
+            <label className="form-label">
+              <Lightbulb size={18} />
+              What concept do you want to explore?
             </label>
-            <textarea
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              className="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none font-mono text-sm"
-              placeholder="Write your pseudocode or explanation here..."
-              disabled={showFeedback}
+            <input
+              className="form-input"
+              placeholder="e.g., recursion, sorting algorithms, data structures, OOP concepts..."
+              value={userConcept}
+              onChange={(e) => setUserConcept(e.target.value)}
             />
           </div>
 
-          <button
-            onClick={submitAnswer}
-            disabled={!userAnswer.trim() || showFeedback}
-            className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-orange-600 hover:to-yellow-600 transition-all"
+          <div className="form-section">
+            <label className="form-label">Choose your learning path</label>
+            <div className="options-grid">
+              {Object.entries(learningPaths).map(([key, path]) => (
+                <div
+                  key={key}
+                  className={`option-card ${learningPath === key ? 'selected' : ''}`}
+                  onClick={() => setLearningPath(key)}
+                >
+                  <span className="option-icon">{path.icon}</span>
+                  <h3>{path.name}</h3>
+                  <p>{path.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-section">
+            <label className="form-label">Choose questioning style</label>
+            <div className="options-grid">
+              {Object.entries(questioningStyles).map(([key, style]) => (
+                <div
+                  key={key}
+                  className={`option-card ${questioningStyle === key ? 'selected' : ''}`}
+                  onClick={() => setQuestioningStyle(key)}
+                >
+                  <span className="option-icon">{style.icon}</span>
+                  <h3>{style.name}</h3>
+                  <p>{style.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button 
+            className="btn btn-primary btn-large"
+            onClick={handleStart}
+            disabled={!userConcept || !learningPath || !questioningStyle}
           >
-            Submit Answer
+            <Sparkles size={20} />
+            Start Learning Journey
           </button>
         </div>
+      </div>
+    );
+  }
 
-        {/* Feedback Section */}
-        {showFeedback && (
-          <div className={`rounded-xl shadow-lg p-6 mb-6 ${
-            feedback.includes('Great') ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-          }`}>
-            <h3 className={`font-semibold mb-2 ${
-              feedback.includes('Great') ? 'text-green-800' : 'text-red-800'
-            }`}>
-              Feedback:
-            </h3>
-            <p className={feedback.includes('Great') ? 'text-green-700' : 'text-red-700'}>
-              {feedback}
-            </p>
+  // Learning Session Screen
+  return (
+    <div className="app-container">
+      <div className="learning-container">
+        {/* Header */}
+        <div className="learning-header">
+          <div className="session-info">
+            <h2>
+              <Brain size={24} />
+              Learning: {userConcept}
+            </h2>
+            <div className="session-meta">
+              <span className="path-badge">
+                {learningPaths[learningPath].icon} {learningPaths[learningPath].name}
+              </span>
+              <span className="style-badge">
+                {questioningStyles[questioningStyle].icon} {questioningStyles[questioningStyle].name}
+              </span>
+            </div>
           </div>
-        )}
+          
+          <div className="timer-controls">
+            <div className={`timer ${timeRemaining < 300 ? 'timer-warning' : ''}`}>
+              <Clock size={18} />
+              <span>{formatTime(timeRemaining)}</span>
+            </div>
+            <button 
+              onClick={() => setTimerPaused(!timerPaused)}
+              className="timer-btn"
+              title={timerPaused ? 'Resume' : 'Pause'}
+            >
+              {timerPaused ? <Play size={16} /> : <Pause size={16} />}
+            </button>
+            <button 
+              onClick={() => setTimeRemaining(20 * 60)}
+              className="timer-btn"
+              title="Reset Timer"
+            >
+              <RotateCcw size={16} />
+            </button>
+          </div>
+        </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <button
-            onClick={() => setCurrentScreen('setup')}
-            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Back to Setup
-          </button>
-          <div className="text-sm text-gray-600 flex items-center">
-            Progress will reset if you change tracks mid-topic
+        {/* Messages */}
+        <div className="messages-container">
+          {messages.map((message, index) => (
+            <div key={index} className={`message ${message.type}`}>
+              <div className="message-avatar">
+                {message.type === 'user' ? (
+                  <User size={20} />
+                ) : (
+                  <Bot size={20} />
+                )}
+              </div>
+              <div className="message-content">
+                <div className={`message-bubble ${message.isWelcome ? 'welcome' : ''} ${message.isError ? 'error' : ''}`}>
+                  {message.content}
+                </div>
+                <div className="message-time">
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {isThinking && (
+            <div className="message bot">
+              <div className="message-avatar">
+                <Bot size={20} />
+              </div>
+              <div className="message-content">
+                <div className="thinking-bubble">
+                  <div className="thinking-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  Thinking...
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messageEndRef} />
+        </div>
+
+        {/* Input Area */}
+        <div className="input-area">
+          <div className="input-container">
+            <input
+              className="message-input"
+              placeholder="Type your response..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              disabled={timeRemaining <= 0 || isThinking}
+            />
+            <button 
+              className="send-btn"
+              onClick={handleSubmit}
+              disabled={timeRemaining <= 0 || isThinking || !userInput.trim()}
+            >
+              <MessageCircle size={20} />
+            </button>
+          </div>
+          
+          <div className="session-controls">
+            <div className="progress-info">
+              <CheckCircle size={16} className="progress-icon" />
+              <span>{progress.length} exchanges • {progress.filter(p => p.answer).length} AI responses</span>
+            </div>
+            
+            <button
+              onClick={resetSession}
+              className="btn btn-secondary btn-sm"
+            >
+              <RefreshCw size={16} />
+              New Session
+            </button>
+            
+            <button
+              onClick={() => setShowApiSetup(true)}
+              className="btn btn-secondary btn-sm"
+              title="Change API Key"
+            >
+              🔑 API Key
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
-export default CSLearningApp;
+export default App;

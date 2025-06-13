@@ -5,16 +5,122 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="CS Interview Prep - Master computer science concepts through adaptive questioning"
-    />
+    <meta name="description" content="Socratic CS Learning Platform - Discover computer science through guided questioning. Learn algorithms like Euclidean Algorithm through interactive Socratic dialogue." />
+    <meta name="keywords" content="computer science, learning, algorithms, Socratic method, education, programming, interactive learning" />
+    <meta name="author" content="Socratic CS Learning Platform" />
+    
+    <!-- Open Graph tags for social media sharing -->
+    <meta property="og:title" content="Socratic CS Learning Platform" />
+    <meta property="og:description" content="Discover computer science through guided questioning. Learn algorithms interactively!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="%PUBLIC_URL%" />
+    
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Socratic CS Learning Platform" />
+    <meta name="twitter:description" content="Discover computer science through guided questioning. Learn algorithms interactively!" />
+    
+    <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- Manifest for PWA -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>CS Interview Prep</title>
+    
+    <!-- Preload critical fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon variations -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
+    
+    <title>Socratic CS Learning Platform</title>
+    
+    <!-- Inline critical CSS for performance -->
+    <style>
+      /* Critical CSS for initial load */
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #f9fafb;
+      }
+      
+      /* Loading spinner styles */
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 20px;
+        color: #6b7280;
+        font-size: 16px;
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>
+      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>You need to enable JavaScript to run the Socratic CS Learning Platform.</p>
+        <p>This app uses interactive features that require JavaScript to function properly.</p>
+      </div>
+    </noscript>
+    
+    <!-- Loading fallback while React loads -->
+    <div id="loading-fallback" class="loading-container">
+      <div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Socratic CS Learning Platform...</div>
+      </div>
+    </div>
+    
+    <!-- Main React app container -->
     <div id="root"></div>
+    
+    <!-- Remove loading fallback once React loads -->
+    <script>
+      // Hide loading fallback once React takes over
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          const loadingFallback = document.getElementById('loading-fallback');
+          if (loadingFallback && document.getElementById('root').children.length > 0) {
+            loadingFallback.style.display = 'none';
+          }
+        }, 100);
+      });
+    </script>
+    
+    <!-- Performance monitoring script -->
+    <script>
+      // Basic performance monitoring
+      window.addEventListener('load', function() {
+        if ('performance' in window) {
+          const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+          console.log('Page load time:', loadTime + 'ms');
+        }
+      });
+    </script>
   </body>
 </html>
