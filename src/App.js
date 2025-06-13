@@ -1,8 +1,42 @@
-// App.js - Updated with Modern UI and Combined API Key Support
+// App.js - Updated with CS Fundamental Topics
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, Search, Sparkles, Clock, Play, Pause, RotateCcw, RefreshCw, Lightbulb, CheckCircle, MessageCircle, User, Bot } from 'lucide-react';
 import { getSocraticResponse } from './openaiAPI';
 import './App.css';
+
+// Specific CS Concepts from Different Domains for Deep Learning
+const csFundamentals = {
+  processScheduling: {
+    name: "Process Scheduling in OS",
+    description: "How operating systems decide which process runs next",
+    icon: "⚙️",
+    details: "Understand FCFS, Round Robin, Priority scheduling, context switching, and why your computer feels responsive"
+  },
+  acidProperties: {
+    name: "ACID Properties in Databases",
+    description: "What makes database transactions reliable and consistent",
+    icon: "🗄️",
+    details: "Deep dive into Atomicity, Consistency, Isolation, Durability and how databases guarantee data integrity"
+  },
+  tcpHandshake: {
+    name: "TCP Three-Way Handshake",
+    description: "How reliable internet connections are established",
+    icon: "🌐",
+    details: "Understand SYN, SYN-ACK, ACK packets, connection states, and why web browsing works reliably"
+  },
+  solidPrinciples: {
+    name: "SOLID Design Principles",
+    description: "Five principles that make code maintainable and flexible",
+    icon: "🏗️",
+    details: "Master Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, and Dependency Inversion"
+  },
+  cacheHierarchy: {
+    name: "CPU Cache Hierarchy",
+    description: "How computers achieve blazing fast memory access",
+    icon: "💾",
+    details: "Understand L1, L2, L3 caches, cache hits/misses, locality of reference, and why RAM isn't enough"
+  }
+};
 
 const learningPaths = {
   conceptual: { 
@@ -47,7 +81,7 @@ const questioningStyles = {
 
 function App() {
   const [step, setStep] = useState('concept');
-  const [userConcept, setUserConcept] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState(''); // Changed from userConcept
   const [learningPath, setLearningPath] = useState('');
   const [questioningStyle, setQuestioningStyle] = useState('');
   const [messages, setMessages] = useState([]);
@@ -61,7 +95,7 @@ function App() {
   const [apiKey, setApiKey] = useState('');
   const [isApiKeyLoaded, setIsApiKeyLoaded] = useState(false);
   const [tempApiKey, setTempApiKey] = useState('');
-  const [apiKeySource, setApiKeySource] = useState(''); // Track where the key came from
+  const [apiKeySource, setApiKeySource] = useState('');
   const messageEndRef = useRef(null);
 
   // Timer effect
@@ -89,17 +123,14 @@ function App() {
   useEffect(() => {
     console.log('=== API KEY LOADING ===');
     
-    // Priority 1: Environment variable (for development)
     const envApiKey = process.env.REACT_APP_OPENAI_API_KEY;
     console.log('Environment API key available:', !!envApiKey);
     console.log('Environment API key length:', envApiKey?.length);
     
-    // Priority 2: localStorage (for user input)
     const savedApiKey = localStorage.getItem('socratic_openai_key');
     console.log('Saved API key available:', !!savedApiKey);
     console.log('Saved API key length:', savedApiKey?.length);
     
-    // Use environment first, then saved key
     let finalKey = null;
     let source = '';
     
@@ -134,7 +165,6 @@ function App() {
       localStorage.setItem('socratic_openai_key', key);
       console.log('Key saved to localStorage successfully');
       
-      // Verify it was saved
       const verification = localStorage.getItem('socratic_openai_key');
       console.log('Verification - key exists after save:', !!verification);
       
@@ -150,7 +180,6 @@ function App() {
   const clearApiKey = () => {
     localStorage.removeItem('socratic_openai_key');
     
-    // Check if environment key exists
     const envKey = process.env.REACT_APP_OPENAI_API_KEY;
     if (envKey && envKey.trim() && envKey !== 'undefined') {
       setApiKey(envKey.trim());
@@ -179,7 +208,7 @@ function App() {
       return { 
         status: 'env', 
         message: '✅ API Key from Environment (.env file)',
-        showChange: false // Don't show change button for env key
+        showChange: false
       };
     } else if (savedKey && savedKey.trim() && savedKey !== 'null' && savedKey !== 'undefined') {
       return { 
@@ -197,7 +226,6 @@ function App() {
   };
 
   const handleStart = () => {
-    // Check all possible sources for API key
     const finalApiKey = getCurrentApiKey();
     
     console.log('=== HANDLE START DEBUG ===');
@@ -212,11 +240,9 @@ function App() {
       return;
     }
     
-    // Make sure we're using the final key in state
     if (!apiKey && finalApiKey) {
       setApiKey(finalApiKey);
       
-      // Determine source for display
       if (process.env.REACT_APP_OPENAI_API_KEY) {
         setApiKeySource('environment');
       } else {
@@ -226,7 +252,10 @@ function App() {
     
     setStep('learning');
     setTimerActive(true);
-    const welcome = `🎓 Welcome! You've selected **${learningPaths[learningPath].name}** with **${questioningStyles[questioningStyle].name}** style to explore **"${userConcept}"**.\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin your learning journey!`;
+    
+    // Get the selected topic details
+    const topicDetails = csFundamentals[selectedTopic];
+    const welcome = `🎓 Welcome! You've selected **${topicDetails.name}** with **${learningPaths[learningPath].name}** approach using **${questioningStyles[questioningStyle].name}** style.\n\n**Topic Focus:** ${topicDetails.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${topicDetails.name}!`;
     
     setMessages([{ 
       type: 'bot', 
@@ -239,7 +268,6 @@ function App() {
   const handleSubmit = async () => {
     if (!userInput.trim() || isThinking || timeRemaining <= 0) return;
     
-    // Get the current API key from all sources
     const currentApiKey = getCurrentApiKey();
     
     console.log('=== HANDLE SUBMIT DEBUG ===');
@@ -257,12 +285,14 @@ function App() {
     setMessages(prev => [...prev, userMessage]);
     
     try {
+      // Use the topic name instead of user concept
+      const topicName = csFundamentals[selectedTopic].name;
       const botReply = await getSocraticResponse(
-        userConcept, 
+        topicName, 
         userInput, 
         learningPath, 
         questioningStyle,
-        currentApiKey // Use the current API key from all sources
+        currentApiKey
       );
       
       const botMessage = { 
@@ -318,8 +348,8 @@ function App() {
       if (tempApiKey.trim()) {
         saveApiKey(tempApiKey.trim());
         setShowApiSetup(false);
-        setTempApiKey(''); // Clear temp key after saving
-        if (step === 'concept' && userConcept && learningPath && questioningStyle) {
+        setTempApiKey('');
+        if (step === 'concept' && selectedTopic && learningPath && questioningStyle) {
           handleStart();
         }
       }
@@ -332,7 +362,6 @@ function App() {
             <h2>🔑 API Key Setup</h2>
             <p>To use the Socratic AI tutor, you need an OpenAI API key.</p>
             
-            {/* Show environment variable info if available */}
             {process.env.REACT_APP_OPENAI_API_KEY ? (
               <div style={{ background: '#e8f5e8', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
                 <strong>📝 Note:</strong> You have an API key in your .env file, but it seems there might be an issue with it. 
@@ -382,7 +411,7 @@ function App() {
               <button 
                 onClick={() => {
                   setShowApiSetup(false);
-                  setTempApiKey(''); // Clear temp key on cancel
+                  setTempApiKey('');
                 }}
                 className="btn btn-secondary"
               >
@@ -402,7 +431,7 @@ function App() {
     );
   }
 
-  // Concept Selection Screen
+  // Topic Selection Screen
   if (step === 'concept') {
     const apiStatus = getApiKeyStatus();
     
@@ -412,9 +441,8 @@ function App() {
           <div className="header">
             <Brain className="header-icon" />
             <h1>Socratic CS Tutor</h1>
-            <p>Learn through guided discovery and thoughtful questioning</p>
+            <p>Explore core concepts from Operating Systems, Databases, Networks, Software Engineering, and Computer Architecture</p>
             
-            {/* Enhanced API Key Status */}
             {isApiKeyLoaded && (
               <div className="api-status">
                 {apiStatus.status === 'missing' ? (
@@ -438,17 +466,28 @@ function App() {
             )}
           </div>
 
+          {/* CS Fundamentals Selection */}
           <div className="form-section">
             <label className="form-label">
               <Lightbulb size={18} />
-              What concept do you want to explore?
+              Choose a Core CS Concept from Different Domains
             </label>
-            <input
-              className="form-input"
-              placeholder="e.g., recursion, sorting algorithms, data structures, OOP concepts..."
-              value={userConcept}
-              onChange={(e) => setUserConcept(e.target.value)}
-            />
+            <div className="options-grid">
+              {Object.entries(csFundamentals).map(([key, topic]) => (
+                <div
+                  key={key}
+                  className={`option-card ${selectedTopic === key ? 'selected' : ''}`}
+                  onClick={() => setSelectedTopic(key)}
+                >
+                  <span className="option-icon">{topic.icon}</span>
+                  <h3>{topic.name}</h3>
+                  <p>{topic.description}</p>
+                  <small style={{ marginTop: '8px', display: 'block', fontStyle: 'italic' }}>
+                    {topic.details}
+                  </small>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="form-section">
@@ -488,7 +527,7 @@ function App() {
           <button 
             className="btn btn-primary btn-large"
             onClick={handleStart}
-            disabled={!userConcept || !learningPath || !questioningStyle}
+            disabled={!selectedTopic || !learningPath || !questioningStyle}
           >
             <Sparkles size={20} />
             Start Learning Journey
@@ -507,7 +546,7 @@ function App() {
           <div className="session-info">
             <h2>
               <Brain size={24} />
-              Learning: {userConcept}
+              Learning: {csFundamentals[selectedTopic]?.name}
             </h2>
             <div className="session-meta">
               <span className="path-badge">
