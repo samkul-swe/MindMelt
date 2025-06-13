@@ -1,205 +1,101 @@
-# 🍦 SocraCode - Socratic CS Learning Platform
+# CS Learning MVP - Interview Prep
 
-Learn Computer Science concepts through discovery using the Socratic method with our unique melting ice cream timer!
+A React-based web application for computer science interview preparation through adaptive questioning.
 
-## ✨ Features
+## Features
 
-- **🤔 Socratic Method Learning**: AI guides you to discover concepts through strategic questioning
-- **🍦 Melting Ice Cream Timer**: Visual break reminder that prevents burnout
-- **🚫 No Copy-Paste**: Forces original thinking and genuine understanding
-- **🎯 Adaptive Learning**: Questions adapt to your learning style and progress
-- **💡 Deep Understanding**: Build knowledge that sticks through discovery
+- **Adaptive Learning**: Questions get progressively harder based on performance
+- **Multiple Learning Tracks**: Conceptual, Applied, and Comprehensive approaches
+- **Various Question Types**: Socratic, Puzzle-based, and Role-play methods
+- **Ice Cream Timer**: Focus timer that increases with correct answers (8-25 minutes)
+- **Progress Tracking**: Track correct streaks and difficulty progression
+- **Pseudocode Focus**: No syntax requirements, focus on logic building
 
-## 🚀 Quick Start
+## Setup Instructions
 
 ### Prerequisites
-- Node.js (v14 or higher)
+- Node.js (version 14 or higher)
 - npm or yarn
 
 ### Installation
 
-1. **Clone the repository**
+1. **Create a new React app directory:**
    ```bash
-   git clone <your-repo-url>
-   cd socracode
+   mkdir cs-learning-mvp
+   cd cs-learning-mvp
    ```
 
-2. **Install dependencies**
+2. **Initialize the project:**
    ```bash
-   npm install
+   npx create-react-app . --template minimal
    ```
 
-3. **Set up environment variables (optional)**
+3. **Install dependencies:**
    ```bash
-   cp .env.example .env
-   # Add your OpenAI API key if using real AI integration
+   npm install lucide-react tailwindcss postcss autoprefixer
    ```
 
-4. **Start the development server**
+4. **Initialize Tailwind CSS:**
+   ```bash
+   npx tailwindcss init -p
+   ```
+
+5. **Replace/Create the following files with the provided content:**
+   - `package.json`
+   - `src/App.js`
+   - `src/App.css`
+   - `src/index.js`
+   - `src/index.css`
+   - `tailwind.config.js`
+   - `postcss.config.js`
+   - `public/index.html`
+
+6. **Start the development server:**
    ```bash
    npm start
    ```
 
-5. **Open your browser**
-   - Navigate to `http://localhost:3000`
-   - Start learning! 🎉
+The app will be available at `http://localhost:3000`.
 
-## 🎯 How to Use
-
-1. **Choose Your Path**: Select an algorithm and learning style
-2. **Start Learning**: Get your fresh ice cream and begin the Socratic conversation
-3. **Think & Discover**: Answer questions in your own words (no copy-paste!)
-4. **Take Breaks**: When your ice cream melts, take a brain break
-5. **Build Understanding**: Genuine knowledge through guided discovery
-
-## 🧠 Available Topics
-
-### Algorithms
-- **Euclidean Algorithm**: Learn GCD through pattern discovery
-- **Binary Search**: Master divide-and-conquer thinking
-
-### Learning Styles
-- **Conceptual**: Focus on understanding the "why"
-- **Applied**: Emphasis on implementation and practice
-- **Comprehensive**: Theory, applications, and everything
-
-## 🛠️ Technical Stack
-
-- **Frontend**: React 18 with hooks
-- **Styling**: Custom CSS with gradients and animations
-- **AI Service**: Mock implementation (ready for OpenAI integration)
-- **State Management**: React useState and useEffect
-- **Build Tool**: Create React App
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-socracode/
+cs-learning-mvp/
 ├── public/
 │   └── index.html
 ├── src/
-│   ├── components/
-│   │   ├── MeltingIceCream.jsx    # 🍦 The star of the show
-│   │   ├── ChatInterface.jsx      # Socratic conversation
-│   │   ├── BreakScreen.jsx        # Rest and progress summary
-│   │   ├── TopicSelection.jsx     # Algorithm and style picker
-│   │   └── LandingPage.jsx        # Welcome and features
-│   ├── services/
-│   │   └── aiService.js           # AI question generation
-│   ├── styles/
-│   │   └── *.css                  # Beautiful, responsive styles
-│   ├── utils/
-│   │   └── algorithms.js          # Algorithm metadata
-│   └── App.js                     # Main app component
-└── package.json
+│   ├── App.js          # Main application component
+│   ├── App.css         # Application styles
+│   ├── index.js        # React entry point
+│   └── index.css       # Global styles
+├── package.json        # Dependencies and scripts
+├── tailwind.config.js  # Tailwind configuration
+└── postcss.config.js   # PostCSS configuration
 ```
 
-## 🎨 The Melting Ice Cream Timer
+## Current Topics Available
 
-Our signature feature! Here's how it works:
+1. **Queues** - FIFO data structures (fully implemented)
+2. **Binary Trees** - Tree structures (partially implemented)
+3. **Sorting Algorithms** - Placeholder
+4. **TCP/IP Basics** - Placeholder
+5. **Process Management** - Placeholder
 
-### Visual States
-1. **🍦 Fresh**: Perfect scoops, ready to learn
-2. **🍦 Warming**: Slight melting, keep going
-3. **🍧 Soft**: Half melted, getting close
-4. **💧 Dripping**: Warning state, almost break time
-5. **💧💧 Melted**: Time for a break!
+## Next Steps for Development
 
-### Technical Implementation
-- SVG-based animation for crisp visuals
-- CSS transitions for smooth melting effect
-- React hooks for timer management
-- Responsive design for all devices
+1. **Add ChatGPT Integration**: Replace mock assessment with actual AI evaluation
+2. **Expand Question Bank**: Add more questions for all topics and difficulty levels
+3. **User Authentication**: Add user accounts and progress saving
+4. **Analytics**: Track learning patterns and performance metrics
+5. **Video Integration**: Add video-based answer evaluation
 
-## 🔧 Development
+## Technology Stack
 
-### Available Scripts
+- **Frontend**: React 18, Tailwind CSS
+- **Icons**: Lucide React
+- **Build Tool**: Create React App
+- **Styling**: Tailwind CSS with custom orange/yellow theme
 
-- `npm start`: Development server
-- `npm run build`: Production build
-- `npm test`: Run tests
-- `npm run eject`: Eject from Create React App
+## License
 
-### Adding New Algorithms
-
-1. **Update algorithm data** in `src/utils/algorithms.js`
-2. **Add question sets** in `src/services/aiService.js`
-3. **Test the Socratic flow** with various user responses
-
-### Customizing the Ice Cream Timer
-
-Edit `src/components/MeltingIceCream.jsx`:
-- Adjust `duration` prop for different session lengths
-- Modify SVG paths for different ice cream designs
-- Change melt stages and animations
-
-## 🚀 Deployment
-
-### Quick Deploy to Netlify/Vercel
-
-1. **Build the project**
-   ```bash
-   npm run build
-   ```
-
-2. **Deploy the `build` folder** to your preferred hosting service
-
-### Environment Variables for Production
-
-- `REACT_APP_OPENAI_API_KEY`: For real AI integration
-- `REACT_APP_ENV`: Environment flag
-
-## 🎓 Educational Philosophy
-
-### Why Socratic Method?
-- **Active Learning**: Students construct knowledge vs. passive consumption
-- **Deep Understanding**: Questions reveal underlying mental models
-- **Critical Thinking**: Develops reasoning and problem-solving skills
-- **Metacognition**: Students become aware of their thinking process
-
-### Why the Ice Cream Timer?
-- **Prevents Burnout**: Forces healthy learning breaks
-- **Removes Guilt**: External timer vs. self-imposed stopping
-- **Memorable**: Creates emotional connection to learning
-- **Sustainable**: Promotes long-term learning habits
-
-## 🎯 Hackathon Demo Tips
-
-### Perfect 3-Minute Demo Flow
-
-1. **Intro** (30s): "Meet SocraCode - learning CS through discovery"
-2. **Socratic Conversation** (90s): Show AI guiding user to insights
-3. **Ice Cream Melts** (45s): Break screen celebrates progress
-4. **Value Prop** (15s): "No more copy-paste learning!"
-
-### Demo Preparation
-- Practice the conversation flow
-- Have backup responses ready
-- Start with confident user responses
-- End with the "aha!" moment
-
-## 🤝 Contributing
-
-We welcome contributions! Here are ways to help:
-
-1. **Algorithm Content**: Add new CS topics and question sets
-2. **UI/UX**: Improve the visual design and user experience  
-3. **AI Integration**: Enhance the question generation logic
-4. **Mobile Experience**: Optimize for mobile devices
-5. **Accessibility**: Make the app more accessible
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **Socrates**: For the timeless method of learning through questioning
-- **Ice Cream**: For making everything better 🍦
-- **CS Education Community**: For inspiring better ways to learn algorithms
-
----
-
-**Built with ❤️ for the future of computer science education**
-
-*Ready to stop copy-pasting and start discovering? Let's learn! 🚀*
+This project is for educational purposes.
