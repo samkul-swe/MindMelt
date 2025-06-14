@@ -1,7 +1,5 @@
-// PostCSS configuration for Socratic CS Learning Platform
-// Enhanced for local development with optimization and debugging
-
-const path = require('path');
+// postcss.config.js
+// PostCSS configuration for MindMelt Socratic Learning Platform
 
 module.exports = {
   plugins: [
@@ -16,231 +14,19 @@ module.exports = {
         'not dead',
         'not op_mini all',
         'last 2 versions',
-        'Firefox ESR',
-        'not IE 11'
+        'Firefox ESR'
       ],
       // Grid support
       grid: 'autoplace',
-      // Flexbox support
-      flexbox: 'no-2009',
       // Remove outdated prefixes
       remove: true
-    }),
-    
-    // CSS Nano for production optimization (only in production)
-    ...(process.env.NODE_ENV === 'production' ? [
-      require('cssnano')({
-        preset: ['default', {
-          // Optimize calculations
-          calc: {
-            precision: 5
-          },
-          // Normalize whitespace
-          normalizeWhitespace: {
-            exclude: false
-          },
-          // Minify selectors
-          minifySelectors: true,
-          // Minify font values
-          minifyFontValues: true,
-          // Convert colors to shorter formats
-          colormin: true,
-          // Merge rules
-          mergeRules: true,
-          // Remove comments
-          discardComments: {
-            removeAll: true
-          },
-          // Remove unused CSS (be careful with this)
-          discardUnused: false,
-          // Remove duplicate rules
-          discardDuplicates: true,
-          // Normalize URLs
-          normalizeUrl: true,
-          // Optimize z-index values
-          zindex: false, // Disabled to avoid conflicts
-          // Reduce transform values
-          reduceTransforms: true,
-          // Merge media queries
-          mergeMediaQueries: true
-        }]
-      })
-    ] : []),
-    
-    // PurgeCSS for removing unused CSS (production only)
-    ...(process.env.NODE_ENV === 'production' ? [
-      require('@fullhuman/postcss-purgecss')({
-        content: [
-          './src/**/*.{js,jsx,ts,tsx}',
-          './public/index.html',
-          './public/**/*.html'
-        ],
-        defaultExtractor: content => {
-          // Capture as liberally as possible, including things like `h-(screen-1.5)`
-          const broadMatches = content.match(/[^<>"'`\s]*[^<>"'`\s:]/g) || [];
-          
-          // Capture classes within other delimiters like .block(class="w-2")
-          const innerMatches = content.match(/[^<>"'`\s.()]*[^<>"'`\s.():]/g) || [];
-          
-          return broadMatches.concat(innerMatches);
-        },
-        // Safelist important classes that might be dynamically generated
-        safelist: [
-          // Tailwind base classes
-          'html', 'body', 'root',
-          // Animation classes
-          /^animate-/,
-          // Dynamic classes for learning paths
-          /^bg-(indigo|green|purple)-(50|100|500|600|700)$/,
-          /^text-(indigo|green|purple)-(600|700|800)$/,
-          /^border-(indigo|green|purple)-(200|300)$/,
-          // Message bubble classes
-          /^message-bubble/,
-          // Progress bar classes
-          /^progress-/,
-          // Focus and hover states
-          /^(hover|focus|active):/,
-          // Responsive classes
-          /^(sm|md|lg|xl|2xl):/,
-          // Dark mode classes (for future use)
-          /^dark:/,
-          // Custom component classes
-          'learning-path-card',
-          'ice-cream-button',
-          'thinking-dots',
-          'celebration-text',
-          'chat-scroll',
-          'focus-ring',
-          // Lucide icon classes
-          /^lucide-/
-        ],
-        // Blocklist classes to always remove
-        blocklist: [
-          'unused-class',
-          'debug-class'
-        ]
-      })
-    ] : []),
-    
-    // CSS Variables plugin for better custom properties support
-    require('postcss-custom-properties')({
-      preserve: true, // Keep custom properties for runtime
-      importFrom: [
-        // You can import variables from files
-        // './src/styles/variables.css'
-      ]
-    }),
-    
-    // Nested CSS support (additional to what Tailwind provides)
-    require('postcss-nested'),
-    
-    // Import support for CSS files
-    require('postcss-import')({
-      path: [
-        path.resolve(__dirname, 'src'),
-        path.resolve(__dirname, 'node_modules')
-      ]
-    }),
-    
-    // URL resolution
-    require('postcss-url')({
-      url: 'rebase'
-    }),
-    
-    // Flexbox bug fixes
-    require('postcss-flexbugs-fixes'),
-    
-    // Modern CSS features
-    require('postcss-preset-env')({
-      stage: 3,
-      features: {
-        'nesting-rules': true,
-        'custom-properties': {
-          preserve: true
-        },
-        'color-mod-function': {
-          unresolved: 'warn'
-        }
-      },
-      autoprefixer: false // We're using autoprefixer separately
-    }),
-    
-    // Development-only plugins
-    ...(process.env.NODE_ENV === 'development' ? [
-      // CSS debugging helpers
-      require('postcss-debug')({
-        // Enable debugging in development
-        enabled: true
-      }),
-      
-      // Reporter for better error messages
-      require('postcss-reporter')({
-        clearReportedMessages: true,
-        throwError: false
-      })
-    ] : [])
-  ],
-  
-  // Source map configuration
-  map: process.env.NODE_ENV === 'development' ? {
-    inline: false,
-    annotation: true,
-    sourcesContent: true
-  } : false,
-  
-  // Parser configuration
-  parser: require('postcss-scss'), // Allows SCSS-like syntax
-  
-  // Custom configuration for the Socratic CS platform
-  socraticConfig: {
-    // Theme customization
-    themes: {
-      light: {
-        primary: '#3b82f6',
-        secondary: '#6366f1',
-        accent: '#ec4899'
-      },
-      dark: {
-        primary: '#60a5fa',
-        secondary: '#818cf8',
-        accent: '#f472b6'
-      }
-    },
-    
-    // Animation settings
-    animations: {
-      duration: '300ms',
-      easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-      reducedMotion: process.env.REACT_APP_REDUCED_MOTION === 'true'
-    },
-    
-    // Breakpoints
-    breakpoints: {
-      mobile: '640px',
-      tablet: '768px',
-      desktop: '1024px',
-      wide: '1280px'
-    }
-  }
+    })
+  ]
 };
 
-// Development utilities
+// Simple development logging
 if (process.env.NODE_ENV === 'development') {
-  // Log PostCSS configuration
-  console.log('🎨 PostCSS configured for development with:');
-  console.log('  - Tailwind CSS');
-  console.log('  - Autoprefixer');
-  console.log('  - CSS Nesting');
-  console.log('  - Custom Properties');
-  console.log('  - Source Maps');
-  console.log('  - Debug Helpers');
-}
-
-// Production optimizations
-if (process.env.NODE_ENV === 'production') {
-  console.log('🚀 PostCSS configured for production with:');
-  console.log('  - CSS Minification (cssnano)');
-  console.log('  - Unused CSS Removal (PurgeCSS)');
-  console.log('  - Optimized Vendor Prefixes');
-  console.log('  - Modern CSS Features');
+  console.log('🎨 PostCSS: Development mode with Tailwind + Autoprefixer');
+} else if (process.env.NODE_ENV === 'production') {
+  console.log('🚀 PostCSS: Production mode with optimizations');
 }

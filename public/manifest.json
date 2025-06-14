@@ -1,7 +1,7 @@
 {
-  "short_name": "Socratic CS",
-  "name": "Socratic CS Learning Platform",
-  "description": "Discover computer science through guided questioning. Learn algorithms interactively using the Socratic method.",
+  "short_name": "MindMelt",
+  "name": "MindMelt",
+  "description": "🧠 Train your brain before your ice cream melts! 🍦",
   "icons": [
     {
       "src": "favicon.ico",
@@ -35,14 +35,14 @@
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Mobile view of the Socratic CS Learning Platform"
+      "label": "Mobile view of MindMelt"
     },
     {
       "src": "screenshot-desktop.png", 
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Desktop view of the Socratic CS Learning Platform"
+      "label": "Desktop view of MindMelt"
     }
   ],
   "shortcuts": [

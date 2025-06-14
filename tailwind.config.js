@@ -7,7 +7,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Custom color palette for educational app
         primary: {
           50: '#eff6ff',
           100: '#dbeafe', 
@@ -21,7 +20,6 @@ module.exports = {
           900: '#1e3a8a',
           950: '#172554',
         },
-        // Ice cream button colors
         icecream: {
           50: '#fdf2f8',
           100: '#fce7f3',
@@ -35,7 +33,6 @@ module.exports = {
           900: '#831843',
           950: '#500724',
         },
-        // Success/progress colors
         success: {
           50: '#f0fdf4',
           100: '#dcfce7',
@@ -49,7 +46,6 @@ module.exports = {
           900: '#14532d',
           950: '#052e16',
         },
-        // Warning colors for hints
         warning: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -63,7 +59,6 @@ module.exports = {
           900: '#78350f',
           950: '#451a03',
         },
-        // Learning path specific colors
         conceptual: {
           50: '#eef2ff',
           500: '#6366f1',
@@ -261,7 +256,6 @@ module.exports = {
   },
   plugins: [
     require('@tailwindcss/typography'),
-    // Custom plugin for educational components
     function({ addComponents, theme }) {
       addComponents({
         '.learning-card': {

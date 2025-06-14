@@ -1,7 +1,7 @@
 // App.js - Updated with MindMelt Branding and Ice Cream Timer
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, Search, Sparkles, Clock, Play, Pause, RotateCcw, RefreshCw, Lightbulb, CheckCircle, MessageCircle, User, Bot } from 'lucide-react';
-import { getSocraticResponse } from './openaiAPI';
+import { Brain, Sparkles, Play, Pause, RotateCcw, RefreshCw, Lightbulb, CheckCircle, MessageCircle, User, Bot } from 'lucide-react';
+import { getSocraticResponse } from './aiService';
 import './App.css';
 
 // Specific CS Concepts from Different Domains for Deep Learning
@@ -620,7 +620,7 @@ function App() {
   useEffect(() => {
     console.log('=== API KEY LOADING ===');
     
-    const envApiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    const envApiKey = process.env.REACT_APP_AI_API_KEY;
     console.log('Environment API key available:', !!envApiKey);
     console.log('Environment API key length:', envApiKey?.length);
     
@@ -673,33 +673,18 @@ function App() {
     }
   };
 
-  // Clear API key from localStorage
-  const clearApiKey = () => {
-    localStorage.removeItem('mindmelt_openai_key');
-    
-    const envKey = process.env.REACT_APP_OPENAI_API_KEY;
-    if (envKey && envKey.trim() && envKey !== 'undefined') {
-      setApiKey(envKey.trim());
-      setApiKeySource('environment');
-    } else {
-      setApiKey('');
-      setApiKeySource('none');
-      setShowApiSetup(true);
-    }
-  };
-
   // Get current API key from all sources
   const getCurrentApiKey = () => {
     return apiKey || 
-           process.env.REACT_APP_OPENAI_API_KEY || 
-           localStorage.getItem('mindmelt_openai_key') || 
+           process.env.REACT_APP_AI_API_KEY || 
+           localStorage.getItem('mindmelt_ai_key') || 
            null;
   };
 
   // Get API key status for display
   const getApiKeyStatus = () => {
-    const envKey = process.env.REACT_APP_OPENAI_API_KEY;
-    const savedKey = localStorage.getItem('mindmelt_openai_key');
+    const envKey = process.env.REACT_APP_AI_API_KEY;
+    const savedKey = localStorage.getItem('mindmelt_ai_key');
     
     if (envKey && envKey.trim() && envKey !== 'undefined') {
       return { 
@@ -735,8 +720,8 @@ function App() {
     
     console.log('=== HANDLE START DEBUG ===');
     console.log('Current apiKey state:', !!apiKey);
-    console.log('Environment key:', !!process.env.REACT_APP_OPENAI_API_KEY);
-    console.log('LocalStorage key:', !!localStorage.getItem('mindmelt_openai_key'));
+    console.log('Environment key:', !!process.env.REACT_APP_AI_API_KEY);
+    console.log('LocalStorage key:', !!localStorage.getItem('mindmelt_ai_key'));
     console.log('Final API key available:', !!finalApiKey);
     
     if (!finalApiKey) {
@@ -748,7 +733,7 @@ function App() {
     if (!apiKey && finalApiKey) {
       setApiKey(finalApiKey);
       
-      if (process.env.REACT_APP_OPENAI_API_KEY) {
+      if (process.env.REACT_APP_AI_API_KEY) {
         setApiKeySource('environment');
       } else {
         setApiKeySource('localStorage');
@@ -884,14 +869,14 @@ function App() {
             <h2>🔑 API Key Setup</h2>
             <p>To use the MindMelt Socratic AI tutor, you need an OpenAI API key.</p>
             
-            {process.env.REACT_APP_OPENAI_API_KEY ? (
+            {process.env.REACT_APP_AI_API_KEY ? (
               <div style={{ background: '#e8f5e8', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
                 <strong>📝 Note:</strong> You have an API key in your .env file, but it seems there might be an issue with it. 
                 You can override it by entering a new key below.
               </div>
             ) : (
               <div style={{ background: '#f0f8ff', padding: '10px', borderRadius: '5px', marginBottom: '15px' }}>
-                <strong>💡 Tip:</strong> For development, you can also add <code>REACT_APP_OPENAI_API_KEY=your-key</code> to your .env file 
+                <strong>💡 Tip:</strong> For development, you can also add <code>REACT_APP_AI_API_KEY=your-key</code> to your .env file 
                 instead of entering it here each time.
               </div>
             )}

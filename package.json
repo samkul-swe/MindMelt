@@ -1,5 +1,5 @@
 {
-  "name": "socratic-cs-learning",
+  "name": "mind-melt",
   "version": "1.0.0",
   "description": "An adaptive learning app that uses AI-generated Socratic questioning to guide users through computer science concepts",
   "private": true,
@@ -53,13 +53,13 @@
     "interactive",
     "react"
   ],
-  "author": "Socratic CS Learning Platform",
+  "author": "Sampada Kulkarni & Keerthana Devanand",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/socratic-cs-learning.git"
+    "url": "https://github.com/samkul-swe/MindMelt.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/socratic-cs-learning/issues"
+    "url": "https://github.com/samkul-swe/MindMelt/issues"
   }
 }
