@@ -745,7 +745,7 @@ function App() {
     
     // Get the selected topic details
     const topicDetails = csFundamentals[selectedTopic];
-    const welcome = `🧠 Welcome to **MindMelt**! You've selected **${topicDetails.name}** with **${learningPaths[learningPath].name}** approach using **${questioningStyles[questioningStyle].name}** style.\n\n🍦 **Your Ice Cream Timer:** Watch your ice cream melt as time passes! Answer well to refreeze it and gain more focus time.\n\n**Topic Focus:** ${topicDetails.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${topicDetails.name} before your ice cream melts!`;
+    const welcome = `🧠 Welcome to MindMelt! You've selected ${topicDetails.name} with ${learningPaths[learningPath].name} approach using ${questioningStyles[questioningStyle].name} style.\n\n🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer well to refreeze it and gain more focus time.\n\nTopic Focus: ${topicDetails.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${topicDetails.name} before your ice cream melts!`;
     
     setMessages([{ 
       type: 'bot', 
@@ -756,6 +756,7 @@ function App() {
   };
 
   const handleSubmit = async () => {
+    console.log(userInput)
     if (!userInput.trim() || isThinking || timeRemaining <= 0) return;
     
     const currentApiKey = getCurrentApiKey();

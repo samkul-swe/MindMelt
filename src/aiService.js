@@ -1,5 +1,4 @@
-// geminiAPI.js - MindMelt Gemini API Integration
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const AI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 /**
  * Get API key from multiple sources (priority order)
@@ -12,19 +11,18 @@ export function getApiKey() {
 }
 
 /**
- * Generate Socratic response using Gemini API for MindMelt
+ * Generate Socratic response using AI API for MindMelt
  * @param {string} concept - The CS concept being learned
  * @param {string} userResponse - The user's response/question
  * @param {string} learningPath - conceptual, applied, or comprehensive
  * @param {string} questioningStyle - socratic, scenario, puzzle, or analogy
- * @param {string} apiKey - The Gemini API key
+ * @param {string} apiKey - The AI API key
  * @returns {Promise<string>} - The AI's Socratic response
  */
 export async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey) {
-  // Use the passed API key first, then fall back to getApiKey()
   const finalApiKey = apiKey || getApiKey();
   
-  console.log('=== MINDMELT GEMINI API DEBUG ===');
+  console.log('=== MINDMELT AI API DEBUG ===');
   console.log('Learning CS concept:', concept);
   console.log('Learning path:', learningPath);
   console.log('Questioning style:', questioningStyle);
@@ -33,17 +31,15 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
   console.log('API Key starts with AIza:', finalApiKey?.startsWith('AIza'));
   
   if (!finalApiKey) {
-    throw new Error('🔑 Gemini API key not found. Please set your API key in MindMelt settings to start learning!');
+    throw new Error('🔑 AI API key not found. Please set your API key in MindMelt settings to start learning!');
   }
 
-  // Create the MindMelt-specific system prompt
   const systemPrompt = createMindMeltPrompt(concept, learningPath, questioningStyle);
-  
-  // Combine system prompt with user response for Gemini
+
   const fullPrompt = `${systemPrompt}\n\nStudent's response: "${userResponse}"\n\nYour next Socratic question to guide their learning:`;
 
   try {
-    console.log('🧠 MindMelt: Making API call to Gemini for CS learning...');
+    console.log('🧠 MindMelt: Making API call to AI for CS learning...');
     
     const requestBody = {
       contents: [{
@@ -78,7 +74,7 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
       ]
     };
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${finalApiKey}`, {
+    const response = await fetch(`${AI_API_URL}?key=${finalApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -86,16 +82,16 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
       body: JSON.stringify(requestBody)
     });
 
-    console.log('🍦 MindMelt: Gemini API Response status:', response.status);
+    console.log('🍦 MindMelt: AI API Response status:', response.status);
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('❌ MindMelt: Gemini API Error Details:', errorData);
+      console.error('❌ MindMelt: AI API Error Details:', errorData);
       
       if (response.status === 400) {
         throw new Error(`🚫 MindMelt API Error: ${errorData.error?.message || 'Bad request - please check your API key format'}`);
       } else if (response.status === 403) {
-        throw new Error('🔒 MindMelt: API access forbidden - please check your Gemini API key permissions and billing');
+        throw new Error('🔒 MindMelt: API access forbidden - please check your AI API key permissions and billing');
       } else if (response.status === 429) {
         throw new Error('⏳ MindMelt: Rate limit reached - your ice cream needs a moment to refreeze! Please wait and try again');
       } else {
@@ -104,7 +100,7 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
     }
 
     const data = await response.json();
-    console.log('✅ MindMelt: Gemini API Response received successfully');
+    console.log('✅ MindMelt: AI API Response received successfully');
     
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('🤔 MindMelt: No response generated - try rephrasing your answer');
@@ -130,13 +126,13 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
     return responseText.trim();
     
   } catch (error) {
-    console.error('💥 MindMelt: Error calling Gemini API:', error);
+    console.error('💥 MindMelt: Error calling AI API:', error);
     
     // Return MindMelt-specific error messages
     if (error.message.includes('API key') || error.message.includes('403')) {
-      throw new Error('🔑 Invalid API key. Please check your Gemini API key in MindMelt settings.');
+      throw new Error('🔑 Invalid API key. Please check your AI API key in MindMelt settings.');
     } else if (error.message.includes('quota') || error.message.includes('billing')) {
-      throw new Error('💳 API quota exceeded. Please check your Google Cloud billing or try again later.');
+      throw new Error('💳 API quota exceeded. Please check your API billing or try again later.');
     } else if (error.message.includes('rate limit') || error.message.includes('429')) {
       throw new Error('🍦 Rate limit reached! Your ice cream timer is giving you a break - please wait a moment and try again.');
     } else if (error.message.includes('network') || error.name === 'TypeError') {
@@ -238,7 +234,7 @@ Build complete, integrated understanding of the CS topic.`
 }
 
 /**
- * Validate Gemini API key format
+ * Validate AI API key format
  */
 export function validateApiKey(apiKey) {
   if (!apiKey) {
@@ -246,11 +242,11 @@ export function validateApiKey(apiKey) {
   }
   
   if (!apiKey.startsWith('AIza')) {
-    return { valid: false, message: 'Gemini API key should start with "AIza"' };
+    return { valid: false, message: 'AI API key should start with "AIza"' };
   }
   
   if (apiKey.length < 30) {
-    return { valid: false, message: 'API key appears to be too short for Gemini' };
+    return { valid: false, message: 'API key appears to be too short for AI' };
   }
   
   return { valid: true, message: 'API key format looks correct! 🎉' };
@@ -264,7 +260,7 @@ export async function testApiKey(apiKey) {
     const testRequestBody = {
       contents: [{
         parts: [{
-          text: "Hello! I'm testing MindMelt's connection to Gemini. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else."
+          text: "Hello! I'm testing MindMelt's connection to AI. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else."
         }]
       }],
       generationConfig: {
@@ -273,7 +269,7 @@ export async function testApiKey(apiKey) {
       }
     };
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetch(`${AI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -284,7 +280,7 @@ export async function testApiKey(apiKey) {
     if (response.ok) {
       const data = await response.json();
       if (data.candidates && data.candidates.length > 0) {
-        return { success: true, message: '🎉 Gemini API key is working perfectly with MindMelt!' };
+        return { success: true, message: '🎉 AI API key is working perfectly with MindMelt!' };
       } else {
         return { success: false, message: 'API key works but no response generated' };
       }
@@ -344,7 +340,7 @@ Keep the assessment to one line only.`;
       }
     };
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${finalApiKey}`, {
+    const response = await fetch(`${AI_API_URL}?key=${finalApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -415,13 +411,13 @@ function assessBasicQuality(userResponse) {
  */
 export function getApiSetupInstructions() {
   return {
-    title: "🔑 Get Your Gemini API Key for MindMelt",
-    subtitle: "Connect MindMelt to Google's Gemini AI for personalized CS learning",
+    title: "🔑 Get Your AI API Key for MindMelt",
+    subtitle: "Connect MindMelt to AI for personalized CS learning",
     steps: [
       {
         step: 1,
-        title: "Visit Google AI Studio",
-        description: "Go to Google's AI development platform",
+        title: "Visit AI Studio",
+        description: "Go to your AI development platform",
         link: "https://aistudio.google.com",
         action: "Click to open Google AI Studio"
       },
@@ -460,7 +456,7 @@ export function getApiSetupInstructions() {
 }
 
 // MindMelt-specific Gemini configuration
-export const MINDMELT_GEMINI_CONFIG = {
+export const MINDMELT_AI_CONFIG = {
   model: 'gemini-1.5-flash', // Best balance of speed and capability for education
   
   settings: {
@@ -495,5 +491,5 @@ export default {
   validateApiKey,
   testApiKey,
   getApiSetupInstructions,
-  MINDMELT_GEMINI_CONFIG
+  MINDMELT_AI_CONFIG
 };
