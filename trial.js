@@ -12,7 +12,7 @@ async function makeGMIRequest() {
         messages: [
           {
             role: "user",
-            content: "Hello!"
+            content: "How much time does a sloth sleep?"
           }
         ],
         max_tokens: 2000,
@@ -28,7 +28,8 @@ async function makeGMIRequest() {
     }
 
     const data = await response.json();
-    console.log('Response:', data);
+    console.log('Response:', data.choices[0].message.content);
+    
     return data;
   } catch (error) {
     console.error('Error making request:', error);
