@@ -4,24 +4,26 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Socratic CS Learning Platform - Discover computer science through guided questioning. Learn algorithms like Euclidean Algorithm through interactive Socratic dialogue." />
-    <meta name="keywords" content="computer science, learning, algorithms, Socratic method, education, programming, interactive learning" />
-    <meta name="author" content="Socratic CS Learning Platform" />
+    <meta name="theme-color" content="#D2691E" />
+    <meta name="description" content="MindMelt - Master computer science concepts through adaptive questioning before your ice cream melts! Learn CS fundamentals with AI-powered Socratic tutoring." />
+    <meta name="keywords" content="computer science, CS learning, adaptive learning, Socratic method, programming education, algorithms, data structures, ice cream timer, gamified learning, AI tutor" />
+    <meta name="author" content="MindMelt Learning Platform" />
     
     <!-- Open Graph tags for social media sharing -->
-    <meta property="og:title" content="Socratic CS Learning Platform" />
-    <meta property="og:description" content="Discover computer science through guided questioning. Learn algorithms interactively!" />
+    <meta property="og:title" content="MindMelt - CS Learning Platform" />
+    <meta property="og:description" content="🧠🍦 Train your brain before your ice cream melts! Master CS fundamentals through AI-powered Socratic questioning." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="%PUBLIC_URL%" />
+    <meta property="og:image" content="%PUBLIC_URL%/mindmelt-og-image.png" />
     
     <!-- Twitter Card tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Socratic CS Learning Platform" />
-    <meta name="twitter:description" content="Discover computer science through guided questioning. Learn algorithms interactively!" />
+    <meta name="twitter:title" content="MindMelt - Train Your Brain Before Your Ice Cream Melts!" />
+    <meta name="twitter:description" content="🧠🍦 Adaptive CS learning with AI tutoring and melting ice cream timer. Master algorithms, data structures, and more!" />
+    <meta name="twitter:image" content="%PUBLIC_URL%/mindmelt-twitter-card.png" />
     
     <!-- Apple Touch Icon -->
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     
     <!-- Manifest for PWA -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
@@ -29,13 +31,19 @@
     <!-- Preload critical fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Favicon variations -->
     <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
     
-    <title>Socratic CS Learning Platform</title>
+    <!-- PWA theme and mobile optimization -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="MindMelt">
+    
+    <title>MindMelt - CS Learning Platform</title>
     
     <!-- Inline critical CSS for performance -->
     <style>
@@ -45,25 +53,47 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #f9fafb;
+        background: linear-gradient(135deg, #F4E4BC 0%, #E8B86D 100%);
+        min-height: 100vh;
       }
       
-      /* Loading spinner styles */
+      /* Loading spinner styles with MindMelt branding */
       .loading-container {
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         height: 100vh;
-        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        background: linear-gradient(135deg, #F4E4BC 0%, #E8B86D 100%);
+        padding: 2rem;
+      }
+      
+      .loading-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        max-width: 400px;
+        width: 100%;
+      }
+      
+      .loading-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: melt 2s ease-in-out infinite alternate;
       }
       
       .loading-spinner {
         width: 40px;
         height: 40px;
-        border: 4px solid #e5e7eb;
-        border-top: 4px solid #3b82f6;
+        border: 4px solid #F4E4BC;
+        border-top: 4px solid #D2691E;
         border-radius: 50%;
         animation: spin 1s linear infinite;
+        margin: 1rem auto;
       }
       
       @keyframes spin {
@@ -71,28 +101,77 @@
         100% { transform: rotate(360deg); }
       }
       
+      @keyframes melt {
+        0% { transform: translateY(0px); }
+        100% { transform: translateY(5px); }
+      }
+      
+      .loading-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 1rem 0 0.5rem 0;
+        background: linear-gradient(135deg, #D2691E 0%, #E8B86D 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      .loading-subtitle {
+        color: #8B4513;
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 1rem;
+      }
+      
       .loading-text {
-        margin-top: 20px;
         color: #6b7280;
-        font-size: 16px;
-        text-align: center;
+        font-size: 0.875rem;
+        margin-top: 1rem;
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 480px) {
+        .loading-content {
+          padding: 2rem;
+          margin: 1rem;
+        }
+        
+        .loading-title {
+          font-size: 1.5rem;
+        }
+        
+        .loading-icon {
+          font-size: 3rem;
+        }
       }
     </style>
   </head>
   <body>
     <noscript>
-      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-        <h1>JavaScript Required</h1>
-        <p>You need to enable JavaScript to run the Socratic CS Learning Platform.</p>
-        <p>This app uses interactive features that require JavaScript to function properly.</p>
+      <div style="text-align: center; padding: 50px; font-family: 'Inter', Arial, sans-serif; background: linear-gradient(135deg, #F4E4BC 0%, #E8B86D 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 3rem; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 500px;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🍦🧠</div>
+          <h1 style="color: #D2691E; margin-bottom: 1rem;">JavaScript Required for MindMelt</h1>
+          <p style="color: #6b7280; margin-bottom: 1rem;">You need to enable JavaScript to use MindMelt's interactive learning features.</p>
+          <p style="color: #8B4513; font-size: 0.9rem;">MindMelt uses AI-powered tutoring and real-time ice cream animations that require JavaScript to function properly.</p>
+          <div style="margin-top: 2rem; padding: 1rem; background: #F4E4BC; border-radius: 12px; font-size: 0.8rem; color: #8B4513;">
+            <strong>How to enable JavaScript:</strong><br>
+            • Chrome/Edge: Settings → Privacy and security → Site Settings → JavaScript<br>
+            • Firefox: about:config → javascript.enabled → true<br>
+            • Safari: Preferences → Security → Enable JavaScript
+          </div>
+        </div>
       </div>
     </noscript>
     
     <!-- Loading fallback while React loads -->
     <div id="loading-fallback" class="loading-container">
-      <div>
+      <div class="loading-content">
+        <div class="loading-icon">🍦</div>
+        <h1 class="loading-title">MindMelt</h1>
+        <p class="loading-subtitle">Train your brain before your ice cream melts!</p>
         <div class="loading-spinner"></div>
-        <div class="loading-text">Loading Socratic CS Learning Platform...</div>
+        <div class="loading-text">Loading your CS learning adventure...</div>
       </div>
     </div>
     
@@ -103,24 +182,78 @@
     <script>
       // Hide loading fallback once React takes over
       document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
+        // Check every 100ms if React has loaded
+        const checkReactLoaded = setInterval(function() {
+          const rootElement = document.getElementById('root');
           const loadingFallback = document.getElementById('loading-fallback');
-          if (loadingFallback && document.getElementById('root').children.length > 0) {
-            loadingFallback.style.display = 'none';
+          
+          if (rootElement && rootElement.children.length > 0 && loadingFallback) {
+            // Add fade out animation
+            loadingFallback.style.transition = 'opacity 0.5s ease-out';
+            loadingFallback.style.opacity = '0';
+            
+            // Remove element after animation
+            setTimeout(function() {
+              if (loadingFallback.parentNode) {
+                loadingFallback.parentNode.removeChild(loadingFallback);
+              }
+            }, 500);
+            
+            clearInterval(checkReactLoaded);
           }
         }, 100);
+        
+        // Fallback: remove loading screen after 10 seconds max
+        setTimeout(function() {
+          const loadingFallback = document.getElementById('loading-fallback');
+          if (loadingFallback && loadingFallback.parentNode) {
+            loadingFallback.parentNode.removeChild(loadingFallback);
+          }
+          clearInterval(checkReactLoaded);
+        }, 10000);
       });
     </script>
     
-    <!-- Performance monitoring script -->
+    <!-- Performance monitoring script for MindMelt -->
     <script>
-      // Basic performance monitoring
+      // Enhanced performance monitoring for learning platform
       window.addEventListener('load', function() {
         if ('performance' in window) {
-          const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-          console.log('Page load time:', loadTime + 'ms');
+          const navigation = performance.getEntriesByType('navigation')[0];
+          const loadTime = navigation ? navigation.loadEventEnd - navigation.loadEventStart : 0;
+          
+          // Log performance metrics in development
+          if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🍦 MindMelt Performance Metrics:');
+            console.log('  Page load time:', loadTime + 'ms');
+            console.log('  DOM content loaded:', navigation ? (navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart) + 'ms' : 'N/A');
+            
+            // Warn if load time is slow (might affect ice cream timer experience)
+            if (loadTime > 3000) {
+              console.warn('⚠️ MindMelt: Slow loading detected. This might affect the ice cream timer experience.');
+            }
+          }
+          
+          // Track performance for analytics (if enabled)
+          if (window.gtag && typeof window.gtag === 'function') {
+            window.gtag('event', 'page_load_time', {
+              event_category: 'Performance',
+              event_label: 'MindMelt Load',
+              value: Math.round(loadTime)
+            });
+          }
         }
       });
+      
+      // Detect if user prefers reduced motion (accessibility)
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.style.setProperty('--animation-duration', '0ms');
+        console.log('🎯 MindMelt: Reduced motion preferences detected - animations disabled for accessibility');
+      }
     </script>
+    
+    <!-- Preload critical resources for better performance -->
+    <link rel="preload" href="/static/css/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/static/css/main.css"></noscript>
   </body>
 </html>
