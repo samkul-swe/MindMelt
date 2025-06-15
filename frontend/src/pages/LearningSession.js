@@ -966,23 +966,32 @@ const LearningSession = () => {
 
           <div className="input-area">
             <div className="input-container">
-              <input
-                className="message-input"
-                placeholder={
-                  isLoadingFirstQuestion ? "Loading your first question..." :
-                  timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
-                  "Type your response..."
+            <input
+              className="message-input"
+              placeholder={
+                isLoadingFirstQuestion ? "Loading your first question..." :
+                timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
+                "Type your response..."
+              }
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
                 }
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
-                disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
-              />
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                // Show a brief message to the user
+                const pasteWarning = createMessage(MESSAGE_TYPES.BOT,
+                  "🚫 Pasting is disabled to encourage authentic learning. Please type your thoughts and responses!",
+                  { isError: true }
+                );
+                setMessages(prev => [...prev, pasteWarning]);
+              }}
+              disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
+            />
               <button 
                 className="send-btn"
                 onClick={handleSubmit}
