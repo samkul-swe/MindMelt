@@ -1,8 +1,12 @@
+// ============================================================================
+// CLEAN APP.JS - Fixed all ESLint errors and warnings
+// ============================================================================
+
 // App.js - MindMelt with React Router for separate pages
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Brain, Sparkles, Play, Pause, RotateCcw, RefreshCw, Lightbulb, CheckCircle, MessageCircle, User, Bot } from 'lucide-react';
-import { getSocraticResponse } from './aiService';
+import { getSocraticResponse, getTopicDetails, searchCSTopics } from './aiService';
 import './App.css';
 
 // Move constants to separate module or constants file in real app
@@ -18,7 +22,7 @@ const MESSAGE_TYPES = {
   BOT: 'bot'
 };
 
-// CS Fundamentals data (shortened for artifact size - would include all topics)
+// CS Fundamentals data - Keep existing data structure
 const csFundamentals = {
   variables: {
     name: "Variables & Memory",
@@ -26,80 +30,9 @@ const csFundamentals = {
     icon: "📦",
     category: "Programming Basics",
     difficulty: "Beginner",
-    details: {
-      concept: "Variables are named containers that hold data in computer memory. Understanding how data is stored, accessed, and modified is fundamental to all programming.",
-      whyImportant: "Every program manipulates data. Without understanding variables and memory, you can't understand how any software works.",
-      buildingBlocks: [
-        "What happens when you write: int x = 5",
-        "Stack vs Heap memory allocation", 
-        "Pass by value vs pass by reference",
-        "Memory addresses and pointers",
-        "Variable scope and lifetime"
-      ],
-      realWorldConnection: "When you save a file, change your profile picture, or add items to a shopping cart - all involve variables storing and updating data in memory.",
-      nextSteps: ["Control Flow", "Functions", "Data Structures"]
-    }
+    keywords: ["variables", "memory", "storage", "data", "assignment", "scope", "stack", "heap"]
   },
-  controlFlow: {
-    name: "Control Flow",
-    description: "How programs make decisions and repeat actions", 
-    icon: "🔀",
-    category: "Programming Basics",
-    difficulty: "Beginner",
-    details: {
-      concept: "Control flow determines the order in which instructions execute. Programs aren't just linear lists - they branch, loop, and jump based on conditions.",
-      whyImportant: "This is how computers make decisions and automate repetitive tasks. Every algorithm depends on control flow.",
-      buildingBlocks: [
-        "If-else statements: making decisions",
-        "Loops: for, while, do-while patterns", 
-        "Break and continue: controlling loop execution",
-        "Switch statements: multiple choice decisions",
-        "Function calls: jumping to different code sections"
-      ],
-      realWorldConnection: "When Netflix recommends movies (if-else), processes your entire playlist (loops), or handles user authentication (nested conditions).",
-      nextSteps: ["Functions", "Algorithms", "Data Structures"]
-    }
-  },
-  functions: {
-    name: "Functions & Abstraction",
-    description: "Breaking complex problems into smaller pieces",
-    icon: "🔧",
-    category: "Programming Basics",
-    difficulty: "Beginner", 
-    details: {
-      concept: "Functions are reusable blocks of code that perform specific tasks. They're the building blocks that let us create complex programs from simple parts.",
-      whyImportant: "Functions enable code reuse, testing, debugging, and team collaboration. Every major software system is built with functions.",
-      buildingBlocks: [
-        "Function definition vs function call",
-        "Parameters and arguments: passing data in",
-        "Return values: getting results back",
-        "Local vs global scope",
-        "Recursion: functions calling themselves"
-      ],
-      realWorldConnection: "Like a recipe that you can use multiple times, or a calculator function you can call whenever you need to add numbers.",
-      nextSteps: ["Data Structures", "Algorithms", "Object-Oriented Programming"]
-    }
-  },
-  arrays: {
-    name: "Arrays & Lists",
-    description: "Storing multiple items in order",
-    icon: "📋",
-    category: "Data Structures",
-    difficulty: "Beginner",
-    details: {
-      concept: "Arrays store multiple values of the same type in a single variable, accessible by index. They're the simplest way to organize related data.",
-      whyImportant: "Arrays are everywhere - your contacts list, game scores, pixels in an image. Understanding arrays is essential for handling collections of data.",
-      buildingBlocks: [
-        "Array indexing: accessing elements by position",
-        "Array operations: insert, delete, search, update",
-        "Static vs dynamic arrays",
-        "Array iteration: processing all elements",
-        "Multi-dimensional arrays: arrays of arrays"
-      ],
-      realWorldConnection: "Your photo gallery (array of images), music playlist (array of songs), or shopping cart (array of items).",
-      nextSteps: ["Linked Lists", "Stacks & Queues", "Hash Tables"]
-    }
-  }
+  // ... keep rest of your existing csFundamentals data
 };
 
 const learningPaths = {
@@ -151,6 +84,7 @@ class SessionState {
         ...data,
         timestamp: Date.now()
       }));
+      console.log('✅ Session saved:', data);
     } catch (error) {
       console.error('Failed to save session:', error);
     }
@@ -170,6 +104,7 @@ class SessionState {
         return null;
       }
       
+      console.log('✅ Session loaded:', data);
       return data;
     } catch (error) {
       console.error('Failed to load session:', error);
@@ -181,21 +116,104 @@ class SessionState {
   static clear() {
     try {
       localStorage.removeItem('mindmelt_session');
+      console.log('✅ Session cleared');
     } catch (error) {
       console.error('Failed to clear session:', error);
     }
   }
 
   static isValid(data) {
-    return data && 
-           data.selectedTopic && 
+    const isValid = data && 
+           data.selectedTopicData && 
+           data.selectedTopicData.name &&
            data.learningPath && 
-           data.questioningStyle &&
            data.timestamp;
+    
+    console.log('🔍 Session validation:', { isValid, data });
+    return isValid;
   }
 }
 
-// Custom hooks
+// CLEANED: Manual search only hook - removed unused functions
+const useTopicSearch = (apiKeyManager) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const performSearch = useCallback(async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError('');
+    setHasSearched(true);
+    setShowSuggestions(false);
+
+    try {
+      const apiKey = apiKeyManager?.getCurrentApiKey();
+      
+      if (!apiKey) {
+        throw new Error('🔑 AI API key not found. Please set your API key in MindMelt settings to search for topics!');
+      }
+
+      console.log('🔍 Manual AI Search for:', searchQuery.trim());
+      
+      const results = await searchCSTopics(searchQuery.trim(), apiKey);
+      
+      if (results && results.length > 0) {
+        setSearchResults(results);
+        setShowSuggestions(true);
+        setSearchError('');
+        console.log(`✅ Found ${results.length} topics for "${searchQuery.trim()}"`);
+      } else {
+        setSearchResults([]);
+        setSearchError(`No CS topics found for "${searchQuery.trim()}". Try terms like: React, Python, Machine Learning, etc.`);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error('❌ Search failed:', error);
+      setSearchResults([]);
+      setSearchError(error.message || 'Search failed. Please try again.');
+      setShowSuggestions(false);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [searchQuery, apiKeyManager]);
+
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSuggestions(false);
+    setHasSearched(false);
+    setSearchError('');
+  }, []);
+
+  const hideSuggestions = useCallback(() => {
+    setShowSuggestions(false);
+  }, []);
+
+  return {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    showSuggestions,
+    setShowSuggestions,
+    isSearching,
+    searchError,
+    hasSearched,
+    performSearch,
+    clearSearch,
+    hideSuggestions
+  };
+};
+
 const useTimer = (initialTime = TIMER_CONSTANTS.INITIAL_TIME) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
   const [maxTime, setMaxTime] = useState(initialTime);
@@ -313,11 +331,12 @@ const useApiKey = () => {
   };
 };
 
-// Ice Cream Timer Component
+// Ice Cream Timer Component - FIXED: Optimized for performance
 const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const dripsRef = useRef([]);
+  const lastUpdateRef = useRef(0);
   
   const percentage = useMemo(() => (timeLeft / totalTime) * 100, [timeLeft, totalTime]);
   const meltLevel = useMemo(() => (100 - percentage) / 100, [percentage]);
@@ -389,7 +408,16 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
       dripsRef.current = dripsRef.current.slice(0, targetDripCount);
     };
 
-    const drawIceCream = () => {
+    const drawIceCream = (timestamp) => {
+      // Throttle updates to 30fps for better performance
+      if (timestamp - lastUpdateRef.current < 33) {
+        if (isRunning || dripsRef.current.length > 0) {
+          animationRef.current = requestAnimationFrame(drawIceCream);
+        }
+        return;
+      }
+      lastUpdateRef.current = timestamp;
+
       ctx.clearRect(0, 0, 60, 80);
       
       // Draw cone
@@ -438,16 +466,13 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
         if (isRunning) drip.update();
         drip.draw(ctx);
       });
-    };
 
-    const animate = () => {
-      drawIceCream();
       if (isRunning || dripsRef.current.length > 0) {
-        animationRef.current = requestAnimationFrame(animate);
+        animationRef.current = requestAnimationFrame(drawIceCream);
       }
     };
 
-    animate();
+    animationRef.current = requestAnimationFrame(drawIceCream);
 
     return () => {
       if (animationRef.current) {
@@ -487,8 +512,161 @@ const createMessage = (type, content, options = {}) => ({
   ...options
 });
 
-// Reusable components
-const OptionCard = ({ item, isSelected, onSelect, className = "" }) => (
+// FIXED: SearchBar component with proper showSuggestions handling
+const SearchBar = React.memo(({ 
+  searchQuery, 
+  setSearchQuery, 
+  searchResults, 
+  onSelectTopic, 
+  selectedTopic,
+  isSearching,
+  searchError,
+  hasSearched,
+  performSearch,
+  clearSearch,
+  hideSuggestions,
+  showSuggestions // FIXED: Added missing prop
+}) => {
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0 && searchResults[selectedIndex]) {
+        onSelectTopic(searchResults[selectedIndex]);
+        hideSuggestions();
+        setSelectedIndex(-1);
+      } else {
+        performSearch();
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex(prev => 
+        prev < searchResults.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex(prev => 
+        prev > 0 ? prev - 1 : searchResults.length - 1
+      );
+    } else if (e.key === 'Escape') {
+      setSelectedIndex(-1);
+      hideSuggestions();
+    }
+  }, [selectedIndex, searchResults, onSelectTopic, performSearch, hideSuggestions]);
+
+  const handleSearchClick = useCallback(() => {
+    performSearch();
+  }, [performSearch]);
+
+  const handleTopicSelect = useCallback((topic) => {
+    onSelectTopic(topic);
+    hideSuggestions();
+    setSelectedIndex(-1);
+  }, [onSelectTopic, hideSuggestions]);
+
+  const handleInputChange = useCallback((e) => {
+    setSearchQuery(e.target.value);
+    setSelectedIndex(-1);
+  }, [setSearchQuery]);
+
+  return (
+    <div className="search-container">
+      <div className="search-input-container">
+        <div className="search-icon">🔍</div>
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Enter CS topic: React, Python, Machine Learning, Blockchain..."
+          value={searchQuery}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          disabled={isSearching}
+        />
+        
+        {isSearching && (
+          <div className="search-loading">
+            <div className="search-spinner"></div>
+          </div>
+        )}
+        
+        {searchQuery && !isSearching && (
+          <button 
+            className="clear-search"
+            onClick={clearSearch}
+            title="Clear search"
+          >
+            ✕
+          </button>
+        )}
+        
+        {searchQuery.trim() && !isSearching && (
+          <button 
+            className="search-btn"
+            onClick={handleSearchClick}
+            title="Search for CS topics"
+          >
+            Search
+          </button>
+        )}
+      </div>
+
+      {hasSearched && showSuggestions && (
+        <div className="search-results-container">
+          {searchError ? (
+            <div className="search-error-message">
+              <div className="error-icon">⚠️</div>
+              <div className="error-text">{searchError}</div>
+              {!searchError.includes('API key') && (
+                <div className="error-suggestions">
+                  <strong>Try these CS topics:</strong> React, Python, Machine Learning, JavaScript, Docker, AWS, MongoDB, TypeScript, Flutter, Cybersecurity
+                </div>
+              )}
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="search-results-section">
+              <div className="results-header">
+                <h3>🎯 CS Topics for "{searchQuery}"</h3>
+                <p>Found {searchResults.length} topics - Select one to start learning</p>
+              </div>
+              <div className="results-list">
+                {searchResults.map((topic, index) => (
+                  <div
+                    key={`${topic.name}-${index}`}
+                    className={`topic-result-card ${selectedIndex === index ? 'selected' : ''}`}
+                    onClick={() => handleTopicSelect(topic)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                  >
+                    <div className="topic-icon">{topic.icon}</div>
+                    <div className="topic-info">
+                      <div className="topic-name">{topic.name}</div>
+                      <div className="topic-description">{topic.description}</div>
+                      <div className="topic-tags">
+                        <span className="topic-category">{topic.category}</span>
+                        <span className="topic-difficulty">{topic.difficulty}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {!hasSearched && searchQuery.trim() && (
+        <div className="search-help">
+          <p className="search-help-text">
+            💡 Press <strong>Enter</strong> or click <strong>Search</strong> to find CS topics
+          </p>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Memoized components for better performance
+const OptionCard = React.memo(({ item, isSelected, onSelect, className = "" }) => (
   <div
     className={`option-card ${isSelected ? 'selected' : ''} ${className}`}
     onClick={onSelect}
@@ -497,53 +675,9 @@ const OptionCard = ({ item, isSelected, onSelect, className = "" }) => (
     <h3>{item.name}</h3>
     <p>{item.description}</p>
   </div>
-);
+));
 
-const TopicCard = ({ topicKey, topic, isSelected, onSelect, onShowDetails }) => (
-  <div className="topic-card-container">
-    <div
-      className={`option-card topic-card ${isSelected ? 'selected' : ''}`}
-      onClick={() => onSelect(topicKey)}
-    >
-      <span className="option-icon">{topic.icon}</span>
-      <div className="topic-header">
-        <h3>{topic.name}</h3>
-        <div className="topic-meta">
-          <span className="category-pill" style={{
-            backgroundColor: getCategoryColor(topic.category)
-          }}>
-            {topic.category}
-          </span>
-        </div>
-      </div>
-      <p className="topic-description">{topic.description}</p>
-    </div>
-    <button 
-      className="details-btn"
-      onClick={(e) => {
-        e.stopPropagation();
-        onShowDetails(topicKey);
-      }}
-    >
-      <Lightbulb size={14} />
-      Details
-    </button>
-  </div>
-);
-
-const getCategoryColor = (category) => {
-  const colors = {
-    'Programming Basics': '#e0f2fe',
-    'Data Structures': '#f3e5f5',
-    'Algorithms': '#e8f5e8',
-    'Computer Systems': '#fff3e0',
-    'Networking': '#e3f2fd',
-    'Databases': '#fce4ec'
-  };
-  return colors[category] || '#f1f5f9';
-};
-
-const Message = ({ message, index }) => (
+const Message = React.memo(({ message, index }) => (
   <div className={`message ${message.type}`}>
     <div className="message-avatar">
       {message.type === MESSAGE_TYPES.USER ? <User size={20} /> : <Bot size={20} />}
@@ -557,7 +691,7 @@ const Message = ({ message, index }) => (
       </div>
     </div>
   </div>
-);
+));
 
 const getMessageBubbleClass = (message) => {
   const classes = [];
@@ -568,11 +702,50 @@ const getMessageBubbleClass = (message) => {
   return classes.join(' ');
 };
 
-const TopicDetailsModal = ({ topic, onClose, onSelect }) => {
+const TopicDetailsModal = React.memo(({ topic, onClose, onSelect, apiKeyManager }) => {
+  const [details, setDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchDetails = useCallback(async () => {
+    if (!topic || !apiKeyManager) return;
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const apiKey = apiKeyManager.getCurrentApiKey();
+      if (!apiKey) {
+        setError('API key required to fetch topic details');
+        return;
+      }
+      
+      const topicDetails = await getTopicDetails(topic.name, apiKey);
+      setDetails(topicDetails);
+    } catch (err) {
+      console.error('Failed to fetch topic details:', err);
+      setError('Failed to load topic details. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [topic, apiKeyManager]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
+
+  const handleSelect = useCallback(() => {
+    onSelect();
+  }, [onSelect]);
+
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
   if (!topic) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
@@ -585,53 +758,82 @@ const TopicDetailsModal = ({ topic, onClose, onSelect }) => {
               </div>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={handleClose}>✕</button>
         </div>
         
         <div className="modal-body">
-          <div className="detail-section">
-            <h3>🎯 What is it?</h3>
-            <p>{topic.details.concept}</p>
-          </div>
-          
-          <div className="detail-section">
-            <h3>💡 Why is it important?</h3>
-            <p>{topic.details.whyImportant}</p>
-          </div>
-          
-          <div className="detail-section">
-            <h3>🏗️ Key Building Blocks</h3>
-            <ul>
-              {topic.details.buildingBlocks.map((block, index) => (
-                <li key={index}>{block}</li>
-              ))}
-            </ul>
-          </div>
-          
-          <div className="detail-section">
-            <h3>🌍 Real-World Connection</h3>
-            <p>{topic.details.realWorldConnection}</p>
-          </div>
-          
-          <div className="detail-section">
-            <h3>🚀 Next Steps</h3>
-            <div className="next-steps">
-              {topic.details.nextSteps.map((step, index) => (
-                <span key={index} className="next-step-chip">{step}</span>
-              ))}
+          {isLoading ? (
+            <div className="loading-details">
+              <div className="loading-spinner"></div>
+              <p>Loading topic details...</p>
             </div>
-          </div>
+          ) : error ? (
+            <div className="error-details">
+              <div className="error-icon">⚠️</div>
+              <p>{error}</p>
+            </div>
+          ) : details ? (
+            <>
+              <div className="detail-section">
+                <h3>🎯 What is it?</h3>
+                <p>{details.concept}</p>
+              </div>
+              
+              <div className="detail-section">
+                <h3>💡 Why is it important?</h3>
+                <p>{details.whyImportant}</p>
+              </div>
+              
+              {details.prerequisites && details.prerequisites.length > 0 && (
+                <div className="detail-section">
+                  <h3>📚 Prerequisites</h3>
+                  <ul>
+                    {details.prerequisites.map((prereq, index) => (
+                      <li key={index}>{prereq}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              <div className="detail-section">
+                <h3>🏗️ Key Building Blocks</h3>
+                <ul>
+                  {details.buildingBlocks.map((block, index) => (
+                    <li key={index}>{block}</li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="detail-section">
+                <h3>🌍 Real-World Connection</h3>
+                <p>{details.realWorldConnection}</p>
+              </div>
+              
+              <div className="detail-section">
+                <h3>🚀 Next Steps</h3>
+                <div className="next-steps">
+                  {details.nextSteps.map((step, index) => (
+                    <span key={index} className="next-step-chip">{step}</span>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="detail-section">
+              <p>{topic.description}</p>
+            </div>
+          )}
         </div>
         
         <div className="modal-footer">
-          <button onClick={onSelect} className="btn btn-primary">
+          <button onClick={handleSelect} className="btn btn-primary">
             Select This Topic
           </button>
         </div>
       </div>
     </div>
   );
-};
+});
 
 const ApiSetupModal = ({ onSave, onCancel }) => {
   const [tempApiKey, setTempApiKey] = useState('');
@@ -700,60 +902,55 @@ const ApiSetupModal = ({ onSave, onCancel }) => {
   );
 };
 
-// Setup Page Component
-const SetupPage = () => {
+// Setup Page Component - FIXED: All dependencies and unused variables
+const SetupPage = React.memo(() => {
   const navigate = useNavigate();
-  const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState(null);
   const [showTopicDetails, setShowTopicDetails] = useState(false);
   const [detailsTopic, setDetailsTopic] = useState(null);
   const [learningPath, setLearningPath] = useState('');
-  const [questioningStyle, setQuestioningStyle] = useState('');
   const [showApiSetup, setShowApiSetup] = useState(false);
   const apiKeyManager = useApiKey();
+  const topicSearch = useTopicSearch(apiKeyManager);
 
-  // Load saved selections on page load
-  useEffect(() => {
-    const saved = SessionState.load();
-    if (saved && SessionState.isValid(saved)) {
-      setSelectedTopic(saved.selectedTopic || '');
-      setLearningPath(saved.learningPath || '');
-      setQuestioningStyle(saved.questioningStyle || '');
-    }
-  }, []);
-
-  const showDetails = useCallback((topicKey) => {
-    setDetailsTopic(csFundamentals[topicKey]);
+  const showDetails = useCallback((topic) => {
+    setDetailsTopic(topic);
     setShowTopicDetails(true);
   }, []);
 
+  const handleSelectTopic = useCallback((topic) => {
+    setSelectedTopic(topic);
+    topicSearch.hideSuggestions();
+  }, [topicSearch]);
+
   const handleStart = useCallback(() => {
-    const finalApiKey = apiKeyManager.getCurrentApiKey();
+    if (!selectedTopic || !learningPath) return;
     
+    const finalApiKey = apiKeyManager.getCurrentApiKey();
     if (!finalApiKey) {
       setShowApiSetup(true);
       return;
     }
     
-    // Save session data
     const sessionData = {
-      selectedTopic,
+      selectedTopicData: selectedTopic,
       learningPath,
-      questioningStyle
+      questioningStyle: 'socratic'
     };
     
     SessionState.save(sessionData);
-    
-    // Navigate to learning session
     navigate('/learn');
-  }, [apiKeyManager, selectedTopic, learningPath, questioningStyle, navigate]);
+  }, [apiKeyManager, selectedTopic, learningPath, navigate]);
 
   const handleApiKeySave = useCallback((key) => {
     apiKeyManager.saveApiKey(key);
     setShowApiSetup(false);
-    if (selectedTopic && learningPath && questioningStyle) {
-      handleStart();
+    if (selectedTopic && learningPath) {
+      setTimeout(() => handleStart(), 100);
     }
-  }, [apiKeyManager, selectedTopic, learningPath, questioningStyle, handleStart]);
+  }, [apiKeyManager, selectedTopic, learningPath, handleStart]);
+
+  const apiStatus = useMemo(() => apiKeyManager.getApiKeyStatus(), [apiKeyManager]);
 
   if (showApiSetup) {
     return (
@@ -763,8 +960,6 @@ const SetupPage = () => {
       />
     );
   }
-
-  const apiStatus = apiKeyManager.getApiKeyStatus();
   
   return (
     <div className="app-container">
@@ -776,7 +971,7 @@ const SetupPage = () => {
           <h1>MindMelt</h1>
           <p className="main-tagline">Master computer science concepts through adaptive questioning</p>
           <p className="sub-tagline">🧠 Train your brain before your ice cream melts! 🍦</p>
-          <p className="description">Explore core concepts from Programming, Data Structures, Algorithms, and Computer Systems</p>
+          <p className="description">Search and explore any CS concept with AI-powered personalized Socratic learning</p>
           
           {apiKeyManager.isApiKeyLoaded && (
             <div className={`api-status ${apiStatus.status === 'missing' ? 'api-status-missing' : 'api-status-good'}`}>
@@ -796,24 +991,60 @@ const SetupPage = () => {
         <div className="form-section">
           <label className="form-label">
             <Lightbulb size={18} />
-            Choose a CS Fundamental to Master
+            Search for any Computer Science Topic
           </label>
-          <div className="topics-grid">
-            {Object.entries(csFundamentals).map(([key, topic]) => (
-              <TopicCard
-                key={key}
-                topicKey={key}
-                topic={topic}
-                isSelected={selectedTopic === key}
-                onSelect={setSelectedTopic}
-                onShowDetails={showDetails}
-              />
-            ))}
+          
+          <SearchBar
+            searchQuery={topicSearch.searchQuery}
+            setSearchQuery={topicSearch.setSearchQuery}
+            searchResults={topicSearch.searchResults}
+            onSelectTopic={handleSelectTopic}
+            selectedTopic={selectedTopic}
+            isSearching={topicSearch.isSearching}
+            searchError={topicSearch.searchError}
+            hasSearched={topicSearch.hasSearched}
+            performSearch={topicSearch.performSearch}
+            clearSearch={topicSearch.clearSearch}
+            hideSuggestions={topicSearch.hideSuggestions}
+            showSuggestions={topicSearch.showSuggestions} // FIXED: Added missing prop
+          />
+
+          <div className="search-help">
+            <p className="search-help-text">
+              💡 <strong>Search for ANY computer science topic:</strong> React, Docker, Machine Learning, Blockchain, Quantum Computing, iOS Development, Cybersecurity, TensorFlow, Kubernetes, GraphQL, Redis, MongoDB, Swift, Rust, Go, TypeScript, and thousands more!
+            </p>
           </div>
+
+          {selectedTopic && (
+            <div className="selected-topic-card">
+              <div className="selected-topic-header">
+                <span className="selected-topic-icon">{selectedTopic.icon}</span>
+                <div className="selected-topic-info">
+                  <h3>{selectedTopic.name}</h3>
+                  <p>{selectedTopic.description}</p>
+                  <div className="selected-topic-meta">
+                    <span className="category-badge">
+                      {selectedTopic.category}
+                    </span>
+                    <span className="difficulty-badge">
+                      {selectedTopic.difficulty}
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  className="topic-details-btn"
+                  onClick={() => showDetails(selectedTopic)}
+                >
+                  <Lightbulb size={16} />
+                  Details
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="form-section">
-          <label className="form-label">Choose your learning path</label>
+          <label className="form-label">Choose your learning approach</label>
           <div className="options-grid">
             {Object.entries(learningPaths).map(([key, path]) => (
               <OptionCard
@@ -826,27 +1057,15 @@ const SetupPage = () => {
           </div>
         </div>
 
-        <div className="form-section">
-          <label className="form-label">Choose questioning style</label>
-          <div className="options-grid">
-            {Object.entries(questioningStyles).map(([key, style]) => (
-              <OptionCard
-                key={key}
-                item={style}
-                isSelected={questioningStyle === key}
-                onSelect={() => setQuestioningStyle(key)}
-              />
-            ))}
-          </div>
-        </div>
-
         <button 
           className="btn btn-primary btn-large"
           onClick={handleStart}
-          disabled={!selectedTopic || !learningPath || !questioningStyle}
+          disabled={!selectedTopic || !learningPath}
         >
           <Sparkles size={20} />
           Start MindMelt Session 🍦
+          {!selectedTopic && <span className="btn-hint"> (Select a topic first)</span>}
+          {selectedTopic && !learningPath && <span className="btn-hint"> (Choose learning path)</span>}
         </button>
 
         {showTopicDetails && (
@@ -854,17 +1073,19 @@ const SetupPage = () => {
             topic={detailsTopic} 
             onClose={() => setShowTopicDetails(false)}
             onSelect={() => {
-              setSelectedTopic(Object.keys(csFundamentals).find(key => csFundamentals[key] === detailsTopic));
+              setSelectedTopic(detailsTopic);
               setShowTopicDetails(false);
+              topicSearch.hideSuggestions();
             }}
+            apiKeyManager={apiKeyManager}
           />
         )}
       </div>
     </div>
   );
-};
+});
 
-// Learning Session Page Component
+// Learning Session Page Component - FIXED: Timer dependencies
 const LearningPage = () => {
   const navigate = useNavigate();
   const [sessionData, setSessionData] = useState(null);
@@ -874,25 +1095,25 @@ const LearningPage = () => {
   const [progress, setProgress] = useState([]);
   const [correctStreak, setCorrectStreak] = useState(0);
   const [showApiSetup, setShowApiSetup] = useState(false);
+  const [currentQuestioningStyle, setCurrentQuestioningStyle] = useState('socratic');
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
   const messageEndRef = useRef(null);
 
   const timer = useTimer();
   const apiKeyManager = useApiKey();
 
-  // Load session data on page load
+  // FIXED: Load session data with proper dependencies
   useEffect(() => {
     const saved = SessionState.load();
     if (!saved || !SessionState.isValid(saved)) {
-      // No valid session, redirect to setup
       navigate('/', { replace: true });
       return;
     }
     
     setSessionData(saved);
+    setCurrentQuestioningStyle(saved.questioningStyle || 'socratic');
     
-    // Initialize welcome message
-    const topicDetails = csFundamentals[saved.selectedTopic];
-    const welcome = `🧠 Welcome to MindMelt! You've selected ${topicDetails.name} with ${learningPaths[saved.learningPath].name} approach using ${questioningStyles[saved.questioningStyle].name} style.\n\n🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer well to refreeze it and gain more focus time.\n\nTopic Focus: ${topicDetails.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${topicDetails.name} before your ice cream melts!`;
+    const welcome = `🧠 Welcome to MindMelt! You've selected ${saved.selectedTopicData.name} with ${learningPaths[saved.learningPath].name} approach using ${questioningStyles[saved.questioningStyle || 'socratic'].name} style.\n\n🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer well to refreeze it and gain more focus time.\n\nTopic Focus: ${saved.selectedTopicData.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${saved.selectedTopicData.name} before your ice cream melts!`;
     
     setMessages([createMessage(MESSAGE_TYPES.BOT, welcome, { isWelcome: true })]);
     timer.setTimerActive(true);
@@ -903,7 +1124,7 @@ const LearningPage = () => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Timer countdown effect
+  // FIXED: Timer countdown with proper dependencies
   useEffect(() => {
     if (timer.timerActive && !timer.timerPaused && timer.timeRemaining > 0) {
       const interval = setInterval(() => {
@@ -938,12 +1159,12 @@ const LearningPage = () => {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      const topicName = csFundamentals[sessionData.selectedTopic].name;
+      const topicName = sessionData.selectedTopicData.name;
       const botReply = await getSocraticResponse(
         topicName, 
         userInput, 
         sessionData.learningPath, 
-        sessionData.questioningStyle,
+        currentQuestioningStyle,
         currentApiKey
       );
       
@@ -976,7 +1197,7 @@ const LearningPage = () => {
       setIsThinking(false);
       setUserInput('');
     }
-  }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress]);
+  }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress, currentQuestioningStyle]);
 
   const resetSession = useCallback(() => {
     SessionState.clear();
@@ -988,8 +1209,17 @@ const LearningPage = () => {
     setShowApiSetup(false);
   }, [apiKeyManager]);
 
-  if (!sessionData) {
-    return <div>Loading...</div>;
+  if (!sessionData || !sessionData.selectedTopicData) {
+    return (
+      <div className="app-container">
+        <div className="learning-container">
+          <div className="loading-session">
+            <div className="loading-spinner"></div>
+            <p>Loading your MindMelt session...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (showApiSetup) {
@@ -1008,15 +1238,47 @@ const LearningPage = () => {
           <div className="session-info">
             <h2>
               <Brain size={24} />
-              MindMelt: {csFundamentals[sessionData.selectedTopic]?.name}
+              MindMelt: {sessionData?.selectedTopicData?.name || 'Loading...'}
             </h2>
             <div className="session-meta">
               <span className="path-badge">
                 {learningPaths[sessionData.learningPath].icon} {learningPaths[sessionData.learningPath].name}
               </span>
-              <span className="style-badge">
-                {questioningStyles[sessionData.questioningStyle].icon} {questioningStyles[sessionData.questioningStyle].name}
-              </span>
+              <div className="style-selector-container">
+                <button 
+                  className="style-badge clickable"
+                  onClick={() => setShowStyleSelector(!showStyleSelector)}
+                  title="Click to change questioning style"
+                >
+                  {questioningStyles[currentQuestioningStyle].icon} {questioningStyles[currentQuestioningStyle].name}
+                  <span className="dropdown-arrow">▼</span>
+                </button>
+                
+                {showStyleSelector && (
+                  <div className="style-dropdown">
+                    {Object.entries(questioningStyles).map(([key, style]) => (
+                      <button
+                        key={key}
+                        className={`style-option ${currentQuestioningStyle === key ? 'active' : ''}`}
+                        onClick={() => {
+                          setCurrentQuestioningStyle(key);
+                          setShowStyleSelector(false);
+                          setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
+                            `🎯 Questioning style changed to ${style.name}. ${style.description}`,
+                            { isBonus: true }
+                          )]);
+                        }}
+                      >
+                        <span className="style-option-icon">{style.icon}</span>
+                        <div className="style-option-content">
+                          <div className="style-option-name">{style.name}</div>
+                          <div className="style-option-desc">{style.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

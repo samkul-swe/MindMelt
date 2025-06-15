@@ -1,4 +1,4 @@
-// aiService.js - Optimized with reduced repetition and better structure
+// aiService.js - Cleaned version with no unused functions
 const AI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 // Configuration constants
@@ -37,7 +37,6 @@ const ERROR_MESSAGES = {
 
 /**
  * Get API key from multiple sources with priority order
- * @returns {string|null} The API key or null if not found
  */
 export function getApiKey() {
   return process.env.REACT_APP_AI_API_KEY || 
@@ -47,8 +46,6 @@ export function getApiKey() {
 
 /**
  * Validate API key format
- * @param {string} apiKey - The API key to validate
- * @returns {Object} Validation result with valid boolean and message
  */
 export function validateApiKey(apiKey) {
   if (!apiKey) {
@@ -68,9 +65,6 @@ export function validateApiKey(apiKey) {
 
 /**
  * Create standardized request body for AI API calls
- * @param {string} prompt - The prompt to send
- * @param {Object} config - Configuration overrides
- * @returns {Object} Request body object
  */
 function createRequestBody(prompt, config = {}) {
   return {
@@ -87,8 +81,6 @@ function createRequestBody(prompt, config = {}) {
 
 /**
  * Handle API response and extract text
- * @param {Response} response - Fetch response object
- * @returns {Promise<string>} Extracted response text
  */
 async function handleApiResponse(response) {
   const data = await response.json();
@@ -116,9 +108,6 @@ async function handleApiResponse(response) {
 
 /**
  * Get appropriate error message based on status code and response data
- * @param {number} status - HTTP status code
- * @param {Object} errorData - Error response data
- * @returns {string} User-friendly error message
  */
 function getErrorMessage(status, errorData) {
   const baseMessage = errorData.error?.message || 'Unknown error occurred';
@@ -137,13 +126,10 @@ function getErrorMessage(status, errorData) {
 
 /**
  * Handle API call errors and return appropriate error messages
- * @param {Error} error - The caught error
- * @returns {Error} Processed error with user-friendly message
  */
 function handleApiError(error) {
   console.error('💥 MindMelt: Error calling AI API:', error);
   
-  // Check for specific error types
   if (error.message.includes('API key') || error.message.includes('403')) {
     return new Error(ERROR_MESSAGES.API_KEY_INVALID);
   }
@@ -164,16 +150,11 @@ function handleApiError(error) {
     return new Error(ERROR_MESSAGES.SAFETY_BLOCKED);
   }
   
-  // Return original error if no specific handling needed
   return new Error(`🤖 MindMelt AI Error: ${error.message}`);
 }
 
 /**
  * Make API call with error handling and logging
- * @param {string} prompt - The prompt to send
- * @param {string} apiKey - The API key to use
- * @param {Object} config - Configuration overrides
- * @returns {Promise<string>} AI response text
  */
 async function makeApiCall(prompt, apiKey, config = {}) {
   console.log('🧠 MindMelt: Making API call to AI...');
@@ -193,23 +174,9 @@ async function makeApiCall(prompt, apiKey, config = {}) {
 
 /**
  * Generate Socratic response using AI API for MindMelt
- * @param {string} concept - The CS concept being learned
- * @param {string} userResponse - The user's response/question
- * @param {string} learningPath - conceptual, applied, or comprehensive
- * @param {string} questioningStyle - socratic, scenario, puzzle, or analogy
- * @param {string} apiKey - The AI API key
- * @returns {Promise<string>} The AI's Socratic response
  */
 export async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey) {
   const finalApiKey = apiKey || getApiKey();
-  
-  console.log('=== MINDMELT AI API DEBUG ===');
-  console.log('Learning CS concept:', concept);
-  console.log('Learning path:', learningPath);
-  console.log('Questioning style:', questioningStyle);
-  console.log('API Key available:', !!finalApiKey);
-  console.log('API Key length:', finalApiKey?.length);
-  console.log('API Key starts with AIza:', finalApiKey?.startsWith('AIza'));
   
   if (!finalApiKey) {
     throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
@@ -229,8 +196,6 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
 
 /**
  * Test API key by making a simple MindMelt request
- * @param {string} apiKey - The API key to test
- * @returns {Promise<Object>} Test result with success boolean and message
  */
 export async function testApiKey(apiKey) {
   const testPrompt = "Hello! I'm testing MindMelt's connection to AI. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else.";
@@ -255,10 +220,6 @@ export async function testApiKey(apiKey) {
 
 /**
  * Assess user understanding quality for ice cream timer bonus
- * @param {string} concept - The CS concept being learned
- * @param {string} userResponse - The user's response
- * @param {string} apiKey - The API key
- * @returns {Promise<Object>} Assessment with score and feedback
  */
 export async function assessUnderstandingQuality(concept, userResponse, apiKey) {
   const finalApiKey = apiKey || getApiKey();
@@ -303,9 +264,177 @@ Keep the assessment to one line only.`;
 }
 
 /**
+ * Fast search for computer science topics using AI - Returns exactly 5 results
+ */
+export async function searchCSTopics(query, apiKey) {
+  const finalApiKey = apiKey || getApiKey();
+  
+  if (!finalApiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  if (!query || query.trim().length < 2) {
+    return [];
+  }
+
+  const searchPrompt = `You are a CS education expert. For the search "${query.trim()}", provide EXACTLY 5 relevant computer science topics.
+
+Include topics from: programming languages, web development, mobile development, data science, AI/ML, databases, cloud computing, cybersecurity, algorithms, data structures, DevOps, blockchain, game development, etc.
+
+Return ONLY this exact JSON format with exactly 5 topics:
+
+[
+  {
+    "name": "Topic Name",
+    "description": "Brief 40-50 character description",
+    "category": "Programming Languages|Web Development|Data Science|AI & ML|Cloud Computing|Mobile Development|Databases|Cybersecurity|Algorithms|DevOps|Blockchain|Game Development",
+    "difficulty": "Beginner|Intermediate|Advanced",
+    "icon": "🐍",
+    "keywords": ["key1", "key2", "key3"]
+  }
+]
+
+Search: "${query.trim()}"
+JSON (exactly 5):`;
+
+  try {
+    console.log('🔍 Fast AI Search:', query.trim());
+    
+    const responseText = await makeApiCall(searchPrompt, finalApiKey, {
+      temperature: 0.4,
+      maxOutputTokens: 800,
+      topK: 20,
+      topP: 0.8
+    });
+
+    console.log('🤖 AI Response received');
+
+    // Clean and extract JSON
+    let cleanResponse = responseText.trim();
+    cleanResponse = cleanResponse.replace(/```json\s*|\s*```/g, '');
+    
+    const jsonStart = cleanResponse.indexOf('[');
+    const jsonEnd = cleanResponse.lastIndexOf(']') + 1;
+    
+    if (jsonStart === -1 || jsonEnd === 0) {
+      throw new Error('No JSON found');
+    }
+    
+    cleanResponse = cleanResponse.substring(jsonStart, jsonEnd);
+    const topics = JSON.parse(cleanResponse);
+    
+    if (!Array.isArray(topics)) {
+      throw new Error('Invalid response format');
+    }
+
+    // Validate and return exactly 5 topics
+    const validTopics = topics.filter(topic => 
+      topic && topic.name && topic.description && topic.category
+    ).slice(0, 5);
+
+    // If we don't have 5 topics, pad with generated ones
+    while (validTopics.length < 5) {
+      validTopics.push({
+        name: `${query.trim()} Topic ${validTopics.length + 1}`,
+        description: `Advanced concepts in ${query.trim()}`,
+        category: "Computer Science",
+        difficulty: "Intermediate",
+        icon: "💻",
+        keywords: [query.trim().toLowerCase(), "cs", "programming"]
+      });
+    }
+
+    console.log(`✅ Returning ${validTopics.length} topics`);
+    return validTopics;
+    
+  } catch (error) {
+    console.error('AI search failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get detailed information about a CS topic using AI
+ */
+export async function getTopicDetails(topicName, apiKey) {
+  const finalApiKey = apiKey || getApiKey();
+  
+  if (!finalApiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  const detailsPrompt = `You are a computer science education expert. Provide detailed information about the CS topic "${topicName}" in JSON format.
+
+Return ONLY valid JSON with these exact fields:
+{
+  "concept": "2-3 sentence explanation of what this topic is",
+  "whyImportant": "2-3 sentences explaining why this topic matters in CS",
+  "buildingBlocks": ["5-7 key concepts/skills within this topic"],
+  "realWorldConnection": "2-3 sentences connecting this to real applications",
+  "nextSteps": ["3-5 related topics to learn next"],
+  "prerequisites": ["2-4 topics that should be learned before this"]
+}
+
+Topic: "${topicName}"
+
+Response (JSON only):`;
+
+  try {
+    const responseText = await makeApiCall(detailsPrompt, finalApiKey, {
+      temperature: 0.4,
+      maxOutputTokens: 600
+    });
+
+    try {
+      const details = JSON.parse(responseText);
+      
+      // Validate required fields
+      const requiredFields = ['concept', 'whyImportant', 'buildingBlocks', 'realWorldConnection', 'nextSteps'];
+      const hasAllFields = requiredFields.every(field => 
+        details[field] && 
+        (typeof details[field] === 'string' || Array.isArray(details[field]))
+      );
+
+      if (!hasAllFields) {
+        console.warn('AI topic details response missing required fields');
+        return getDefaultTopicDetails(topicName);
+      }
+
+      return details;
+      
+    } catch (parseError) {
+      console.warn('Failed to parse topic details JSON:', responseText);
+      return getDefaultTopicDetails(topicName);
+    }
+    
+  } catch (error) {
+    console.error('Topic details fetch failed:', error);
+    return getDefaultTopicDetails(topicName);
+  }
+}
+
+/**
+ * Get default topic details when AI call fails
+ */
+function getDefaultTopicDetails(topicName) {
+  return {
+    concept: `${topicName} is an important computer science concept that involves understanding fundamental principles and practical applications.`,
+    whyImportant: `Learning ${topicName} is essential for building a strong foundation in computer science and developing problem-solving skills.`,
+    buildingBlocks: [
+      "Understanding the basic concepts and terminology",
+      "Learning the fundamental principles",
+      "Exploring practical applications",
+      "Understanding implementation details",
+      "Recognizing common patterns and use cases"
+    ],
+    realWorldConnection: `${topicName} is used in many real-world applications including software development, system design, and technology solutions.`,
+    nextSteps: ["Related advanced topics", "Practical implementation", "System design applications"],
+    prerequisites: ["Basic programming concepts", "Mathematical foundations"]
+  };
+}
+
+/**
  * Basic quality assessment without API (fallback)
- * @param {string} userResponse - The user's response
- * @returns {Object} Assessment with score and feedback
  */
 function assessBasicQuality(userResponse) {
   const response = userResponse.toLowerCase();
@@ -341,10 +470,6 @@ function assessBasicQuality(userResponse) {
 
 /**
  * Create MindMelt-specific system prompt for CS learning
- * @param {string} concept - The CS concept
- * @param {string} learningPath - The learning path
- * @param {string} questioningStyle - The questioning style
- * @returns {string} Complete system prompt
  */
 function createMindMeltPrompt(concept, learningPath, questioningStyle) {
   const basePrompt = `You are the AI tutor for MindMelt, an innovative CS learning platform where students race against a melting ice cream timer! 🍦🧠
@@ -385,8 +510,6 @@ When they show good understanding, you can say things like:
 
 /**
  * Get learning path specific instructions
- * @param {string} learningPath - The learning path
- * @returns {string} Path-specific instructions
  */
 function getPathInstructions(learningPath) {
   const pathInstructions = {
@@ -417,8 +540,6 @@ Build complete, integrated understanding of the CS topic.`
 
 /**
  * Get questioning style specific instructions
- * @param {string} questioningStyle - The questioning style
- * @returns {string} Style-specific instructions
  */
 function getStyleInstructions(questioningStyle) {
   const styleInstructions = {
@@ -452,7 +573,6 @@ function getStyleInstructions(questioningStyle) {
 
 /**
  * Get MindMelt API setup instructions
- * @returns {Object} Setup instructions with steps and benefits
  */
 export function getApiSetupInstructions() {
   return {
@@ -502,7 +622,6 @@ export function getApiSetupInstructions() {
 
 // Export configuration and thresholds
 export const MINDMELT_AI_CONFIG = {
-  model: API_CONFIG.model,
   settings: API_CONFIG,
   qualityThresholds: QUALITY_THRESHOLDS,
   assessmentCriteria: [
@@ -514,16 +633,15 @@ export const MINDMELT_AI_CONFIG = {
   ]
 };
 
-// Named exports object for default export
-const aiServiceExports = {
+// Default export
+export default {
   getSocraticResponse,
   assessUnderstandingQuality,
   getApiKey,
   validateApiKey,
   testApiKey,
   getApiSetupInstructions,
+  searchCSTopics,
+  getTopicDetails,
   MINDMELT_AI_CONFIG
 };
-
-// Default export
-export default aiServiceExports;
