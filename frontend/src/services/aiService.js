@@ -1,12 +1,20 @@
 // aiService.js - Cleaned version with no unused functions
-const AI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const AI_API_URL = 'https://api.gmi-serving.com/v1/chat/completions';
 
-// Configuration constants
 const API_CONFIG = {
+  model: "deepseek-ai/DeepSeek-Prover-V2-671B", // GMI model
   temperature: 0.8,
-  topK: 40,
-  topP: 0.95,
-  maxOutputTokens: 400
+  max_tokens: 400,
+  stream: false,
+  top_p: 0.95,
+  top_k: 40
+};
+
+const HINT_CONFIG = {
+  temperature: 0.7,
+  topK: 30,
+  topP: 0.9,
+  maxOutputTokens: 200 // Shorter responses for hints
 };
 
 const QUALITY_THRESHOLDS = {
@@ -15,13 +23,6 @@ const QUALITY_THRESHOLDS = {
   okay: 55,
   poor: 40
 };
-
-const SAFETY_SETTINGS = [
-  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
-];
 
 // Error messages mapping
 const ERROR_MESSAGES = {
@@ -67,43 +68,67 @@ export function validateApiKey(apiKey) {
  * Create standardized request body for AI API calls
  */
 function createRequestBody(prompt, config = {}) {
+  const finalConfig = { ...API_CONFIG, ...config };
+ 
   return {
-    contents: [{
-      parts: [{ text: prompt }]
-    }],
-    generationConfig: {
-      ...API_CONFIG,
-      ...config
-    },
-    safetySettings: SAFETY_SETTINGS
+    model: finalConfig.model,
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    max_tokens: finalConfig.max_tokens,
+    temperature: finalConfig.temperature,
+    top_p: finalConfig.top_p,
+    stream: finalConfig.stream
   };
 }
+
 
 /**
  * Handle API response and extract text
  */
+
 async function handleApiResponse(response) {
-  const data = await response.json();
-  
+  let data;
+ 
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    console.error('Failed to parse API response:', parseError);
+    throw new Error('Invalid response format from AI service');
+  }
+
+
   if (!response.ok) {
     throw new Error(getErrorMessage(response.status, data));
   }
 
-  if (!data.candidates || data.candidates.length === 0) {
+
+  // GMI API response format validation
+  if (!data.choices || data.choices.length === 0) {
     throw new Error(ERROR_MESSAGES.NO_RESPONSE);
   }
 
-  const candidate = data.candidates[0];
-  
-  if (candidate.finishReason === 'SAFETY') {
-    throw new Error(ERROR_MESSAGES.SAFETY_BLOCKED);
+
+  const choice = data.choices[0];
+ 
+  // Handle different GMI API finish reasons
+  if (choice.finish_reason === 'content_filter') {
+    throw new Error(ERROR_MESSAGES.CONTENT_FILTERED);
   }
-  
-  if (!candidate.content?.parts?.[0]?.text) {
+ 
+  if (choice.finish_reason === 'length' || choice.finish_reason === 'max_tokens') {
+    console.warn('Response was truncated due to length limits');
+  }
+ 
+  if (!choice.message?.content) {
     throw new Error(ERROR_MESSAGES.EMPTY_RESPONSE);
   }
 
-  return candidate.content.parts[0].text.trim();
+
+  return choice.message.content.trim();
 }
 
 /**
@@ -157,15 +182,20 @@ function handleApiError(error) {
  * Make API call with error handling and logging
  */
 async function makeApiCall(prompt, apiKey, config = {}) {
+  console.log(apiKey);
   console.log('🧠 MindMelt: Making API call to AI...');
   
   const requestBody = createRequestBody(prompt, config);
-  
-  const response = await fetch(`${AI_API_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
+
+  const response = await fetch(AI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
 
   console.log('🍦 MindMelt: AI API Response status:', response.status);
   
@@ -175,9 +205,17 @@ async function makeApiCall(prompt, apiKey, config = {}) {
 /**
  * Generate Socratic response using AI API for MindMelt
  */
-export async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey) {
+export async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, returnParsed = false) {
   const finalApiKey = apiKey || getApiKey();
-  
+ 
+  console.log('=== MINDMELT GMI API DEBUG ===');
+  console.log('Learning CS concept:', concept);
+  console.log('Learning path:', learningPath);
+  console.log('Questioning style:', questioningStyle);
+  console.log('API Key available:', !!finalApiKey);
+  console.log('API Key length:', finalApiKey?.length);
+  console.log('Using GMI model:', API_CONFIG.model);
+ 
   if (!finalApiKey) {
     throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
   }
@@ -185,14 +223,38 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
   const systemPrompt = createMindMeltPrompt(concept, learningPath, questioningStyle);
   const fullPrompt = `${systemPrompt}\n\nStudent's response: "${userResponse}"\n\nYour next Socratic question to guide their learning:`;
 
-  try {
-    const responseText = await makeApiCall(fullPrompt, finalApiKey);
-    console.log('✅ MindMelt: AI API Response received successfully');
-    return responseText;
+    try {
+    const rawResponse = await makeApiCall(fullPrompt, finalApiKey);
+    console.log('✅ MindMelt: GMI API Response received successfully');
+   
+    // Parse the response
+    const parsedResponse = parseAIResponse(rawResponse);
+    console.log('📋 MindMelt: Parsed response:', parsedResponse);
+   
+    // Return based on returnParsed parameter
+    if (returnParsed) {
+      // Return full parsed data for components that need it
+      return {
+        displayText: formatResponseForDisplay(parsedResponse),
+        parsed: parsedResponse,
+        raw: rawResponse,
+        metadata: {
+          level: parsedResponse.level,
+          levelName: parsedResponse.levelName,
+          levelEmoji: parsedResponse.levelEmoji,
+          hasPun: !!parsedResponse.pun,
+          hasQuestion: !!parsedResponse.question
+        }
+      };
+    } else {
+      // Return just the display text for backward compatibility
+      return formatResponseForDisplay(parsedResponse);
+    }
   } catch (error) {
     throw handleApiError(error);
   }
 }
+
 
 /**
  * Test API key by making a simple MindMelt request
@@ -217,6 +279,118 @@ export async function testApiKey(apiKey) {
     };
   }
 }
+
+//parseAIResponse method
+function parseAIResponse(rawResponse) {
+  // Default structure
+  const parsed = {
+    level: null,
+    levelEmoji: null,
+    levelName: null,
+    pun: null,
+    question: null,
+    fullResponse: null,
+    raw: rawResponse
+  };
+
+
+  try {
+    // Extract level information
+    const levelMatch = rawResponse.match(/###\s*Level\s*(\d+)\s*-\s*([^📝💡🔧🔍⚖️🚀]+)\s*(📝|💡|🔧|🔍|⚖️|🚀)?/i);
+    if (levelMatch) {
+      parsed.level = parseInt(levelMatch[1]);
+      parsed.levelName = levelMatch[2].trim();
+      parsed.levelEmoji = levelMatch[3] || '';
+    }
+
+
+    // Extract pun
+    const punMatch = rawResponse.match(/\*\*Pun:\*\*\s*"?([^"\n]+)"?/i);
+    if (punMatch) {
+      parsed.pun = punMatch[1].trim();
+    }
+
+
+    // Extract question
+    const questionMatch = rawResponse.match(/\*\*Question:\*\*\s*"?([^"\n]+)"?/i);
+    if (questionMatch) {
+      parsed.question = questionMatch[1].trim();
+    }
+
+
+    // If we couldn't parse structured format, try to extract content more flexibly
+    if (!parsed.pun && !parsed.question) {
+      // Split by explanation section to remove it
+      const beforeExplanation = rawResponse.split(/\*\*Explanation of Approach:\*\*/i)[0];
+     
+      // Look for any pun-like content (usually the first engaging sentence)
+      const lines = beforeExplanation.split('\n').filter(line => line.trim());
+     
+      // Find pun and question in a more flexible way
+      for (const line of lines) {
+        const cleanLine = line.replace(/\*\*/g, '').trim();
+       
+        // Skip level headers
+        if (cleanLine.match(/^###\s*Level/i)) continue;
+       
+        // Look for pun indicators
+        if (cleanLine.toLowerCase().includes('pun:') ||
+            (cleanLine.includes('!') && !parsed.pun && !cleanLine.endsWith('?'))) {
+          parsed.pun = cleanLine.replace(/^(Pun:\s*)/i, '').replace(/["']/g, '').trim();
+        }
+        // Look for question indicators
+        else if (cleanLine.toLowerCase().includes('question:') ||
+                 (cleanLine.endsWith('?') && !parsed.question)) {
+          parsed.question = cleanLine.replace(/^(Question:\s*)/i, '').replace(/["']/g, '').trim();
+        }
+      }
+    }
+
+
+    // Create clean full response
+    if (parsed.pun && parsed.question) {
+      parsed.fullResponse = `${parsed.pun}\n\n${parsed.question}`;
+    } else if (parsed.question) {
+      parsed.fullResponse = parsed.question;
+    } else {
+      // Fallback: remove explanation section and clean up
+      const cleanContent = rawResponse
+        .split(/\*\*Explanation of Approach:\*\*/i)[0]
+        .replace(/###\s*Level\s*\d+[^📝💡🔧🔍⚖️🚀\n]*[📝💡🔧🔍⚖️🚀]?\s*/gi, '')
+        .replace(/\*\*(Pun|Question):\*\*/gi, '')
+        .replace(/["']/g, '')
+        .trim();
+     
+      parsed.fullResponse = cleanContent || rawResponse;
+    }
+
+
+  } catch (error) {
+    console.error('Error parsing AI response:', error);
+    // Fallback to raw response without explanation
+    parsed.fullResponse = rawResponse.split(/\*\*Explanation of Approach:\*\*/i)[0].trim();
+  }
+
+  return parsed;
+}
+
+//formatResponseForDisplay method
+function formatResponseForDisplay(parsedResponse) {
+  // If we have both pun and question, format them nicely
+  if (parsedResponse.pun && parsedResponse.question) {
+    return `${parsedResponse.pun}\n\n${parsedResponse.question}`;
+  }
+ 
+  // Otherwise return the full response
+  return parsedResponse.fullResponse || parsedResponse.raw;
+}
+
+
+//getSocraticResponseWithMetadata method
+export async function getSocraticResponseWithMetadata(concept, userResponse, learningPath, questioningStyle, apiKey) {
+  return getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, true);
+}
+
 
 /**
  * Assess user understanding quality for ice cream timer bonus
@@ -472,31 +646,137 @@ function assessBasicQuality(userResponse) {
  * Create MindMelt-specific system prompt for CS learning
  */
 function createMindMeltPrompt(concept, learningPath, questioningStyle) {
-  const basePrompt = `You are the AI tutor for MindMelt, an innovative CS learning platform where students race against a melting ice cream timer! 🍦🧠
+  const basePrompt = `You are helping a student learn "${concept}" through Socratic questioning and Bloom's taxonomy progression.
 
-You're helping a student learn "${concept}" - a fundamental computer science concept. Your mission is to be their Socratic guide, helping them discover answers through strategic questioning rather than direct explanations.
 
-MINDMELT PERSONALITY:
-- Be encouraging and enthusiastic about CS learning
-- Use occasional ice cream/melting metaphors when appropriate
-- Keep responses concise (1-3 sentences max) - their ice cream is melting!
-- Always end with ONE clear, thought-provoking question
-- Be patient but engaging - make learning fun!
+RESPONSE APPROACH:
+- Start with a clever pun or wordplay related to the concept
+- Jump immediately into focused questioning
+- Be concise but informative - pack understanding into few words
+- Never introduce yourself, welcome the student, or explain what you're doing
+- Each response should advance their understanding while staying brief
+- Use natural, conversational language without rigid formatting
 
-CORE SOCRATIC RULES:
-- NEVER give direct answers or full explanations
-- Guide discovery through strategic questions
-- Build on their previous responses  
-- Ask questions that reveal deeper understanding
-- Encourage critical thinking about CS concepts
-- Use "What if...", "Why do you think...", "How would..." questions
 
-MINDMELT SUCCESS INDICATORS:
-When they show good understanding, you can say things like:
-- "Great thinking! That's getting closer to the core concept."
-- "You're connecting the dots well!"
-- "That insight shows you're really understanding this!"
+CORE PRINCIPLES:
+- Start with concept-related pun, then ask focused questions
+- NEVER give direct answers - guide discovery through questions
+- Build understanding progressively through Bloom's taxonomy
+- Keep responses short but information-dense
+- Each question should teach while asking
+- Skip introductions, explanations of your role, or concept definitions
 
+
+BLOOM'S TAXONOMY PROGRESSION SYSTEM:
+You must adapt your questioning based on the student's current understanding level:
+
+
+LEVEL 1 - REMEMBER 📝 (Foundation Building)
+- Focus on basic facts, definitions, and terminology
+- Ask "What is...", "Can you identify...", "Name the key components..."
+- Check recall of fundamental concepts
+- Build vocabulary and recognition
+- ADVANCE WHEN: They show accurate recall and proper terminology
+
+
+LEVEL 2 - UNDERSTAND 💡 (Comprehension Building)  
+- Focus on explanations and interpretation
+- Ask "Why does this work...", "How would you explain...", "What does this mean..."
+- Check if they can paraphrase and give examples
+- Help them see relationships and patterns
+- ADVANCE WHEN: They demonstrate clear understanding and can explain in their own words
+
+
+LEVEL 3 - APPLY 🔧 (Problem Solving)
+- Focus on using knowledge in new situations
+- Present realistic scenarios: "How would you use this to...", "Solve this problem using..."
+- Check transfer of knowledge to practical contexts
+- Guide them through implementation thinking
+- ADVANCE WHEN: They successfully apply concepts to solve new problems
+
+
+LEVEL 4 - ANALYZE 🔍 (Critical Examination)
+- Focus on breaking down complex ideas and examining relationships
+- Ask "Compare this with...", "What are the key differences...", "How do these parts relate..."
+- Check ability to see patterns, causes, and effects
+- Guide systematic analysis and critical thinking
+- ADVANCE WHEN: They demonstrate analytical thinking and can break down complexity
+
+
+LEVEL 5 - EVALUATE ⚖️ (Judgment and Assessment)
+- Focus on making reasoned judgments and assessments
+- Ask "Which approach is better and why...", "What are the trade-offs...", "How would you critique..."
+- Check evidence-based reasoning and evaluation skills
+- Guide them to assess alternatives thoughtfully
+- ADVANCE WHEN: They make well-reasoned judgments with supporting evidence
+
+
+LEVEL 6 - CREATE 🚀 (Innovation and Synthesis)
+- Focus on combining ideas to create something new
+- Challenge them: "Design a new approach...", "How would you innovate...", "Create a solution that..."
+- Check ability to synthesize and generate original ideas
+- Guide creative problem-solving and innovation
+- MASTERY ACHIEVED: When they demonstrate creative synthesis and original thinking
+
+
+RECURSIVE LEARNING STRATEGY:
+- Assess the student's response level and adjust accordingly
+- If they show mastery at current level → Prepare questions for next level
+- If they show partial understanding → Deepen current level with different questioning angle
+- If they show confusion → Consider returning briefly to previous level
+- If they show misconceptions → Address directly with corrective Socratic questioning
+
+
+ADAPTIVE QUESTIONING RULES:
+- Start with their demonstrated level based on their response
+- Each question should build on their previous answer
+- Escalate complexity gradually within each Bloom's level
+- Use their specific words and examples in follow-up questions
+- Never skip levels - ensure solid foundation before advancing
+
+
+RESPONSE FORMAT:
+Always structure your response EXACTLY like this:
+
+
+### Level [NUMBER] - [LEVEL NAME] [EMOJI]
+
+
+**Pun:** "[Your clever pun or wordplay about the concept]"
+
+
+**Question:** "[Your focused Socratic question]"
+
+
+**Explanation of Approach:** [Brief explanation of why you chose this level and question approach - this helps track progression]
+
+
+RESPONSE STYLE:
+- Open with concept-related pun or clever wordplay
+- Follow immediately with strategic question
+- Pack maximum learning into minimum words
+- Make each question teach while asking
+- Vary your approach but stay concise
+- Build understanding through inquiry, not explanation
+
+
+RESPONSE EXAMPLES:
+- Pun + Question: "Life's all about choices, and so is programming! What happens when code needs to pick between two different paths?"
+- Build on response: "Smart thinking! Now what determines which path the program actually takes?"
+- Scenario: "Picture a login screen - what must the program check before letting someone in?"
+- Progressive: "Exactly! So what happens if that condition isn't met?"
+
+
+AVOID:
+- Welcoming messages or introductions
+- Explaining your role as a tutor
+- Lengthy setups or background information
+- Repetitive formatting or emoji patterns
+- Telling them what concept they're learning
+- Saying "let's begin" or similar transition phrases
+
+
+Remember: Pun + focused question = effective learning. Build understanding through strategic questioning, not explanation.
 `;
 
   const pathInstructions = getPathInstructions(learningPath);
@@ -504,8 +784,7 @@ When they show good understanding, you can say things like:
 
   return basePrompt + 
          `\n${pathInstructions}\n\n` +
-         `${styleInstructions}\n\n` +
-         `Remember: You're their MindMelt tutor helping them master CS fundamentals. Guide their discovery with your next strategic question! 🎯`;
+         `${styleInstructions}`;
 }
 
 /**
@@ -572,76 +851,142 @@ function getStyleInstructions(questioningStyle) {
 }
 
 /**
+ * Generate helpful hint for the current learning context
+ */
+export async function getHintResponse(concept, conversationContext, learningPath, questioningStyle, apiKey) {
+  const finalApiKey = apiKey || getApiKey();
+  
+  if (!finalApiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  const hintPrompt = createHintPrompt(concept, conversationContext, learningPath, questioningStyle);
+
+  try {
+    const responseText = await makeApiCall(hintPrompt, finalApiKey, {
+      temperature: 0.7,
+      max_tokens: 200 // Shorter responses for hints
+    });
+    console.log('💡 MindMelt: Hint generated successfully');
+    return responseText;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+}
+
+/**
+ * Create hint-specific prompt for the AI
+ */
+function createHintPrompt(concept, conversationContext, learningPath, questioningStyle) {
+  const pathContext = getPathInstructions(learningPath);
+  const styleContext = getStyleInstructions(questioningStyle);
+  
+  return `You are a helpful hint provider for MindMelt, a CS learning platform. A student is learning "${concept}" and has requested a hint.
+
+CONTEXT:
+Recent conversation:
+${conversationContext}
+
+Learning Focus: ${pathContext}
+Questioning Style: ${styleContext}
+
+HINT GUIDELINES:
+- Provide a helpful but not complete hint (1-2 sentences max)
+- Don't give away the full answer - guide them toward discovery
+- Use encouraging language with a lightbulb emoji 💡
+- Focus on the specific concept they're stuck on
+- Give a gentle nudge in the right direction
+- Make it feel supportive, not like giving up
+- Connect to their learning path and style preferences
+
+Examples of good hints:
+💡 "Think about what happens to the data when you need to access it frequently..."
+💡 "Consider the trade-offs between memory usage and processing speed here..."
+💡 "What if you broke this problem down into smaller parts?"
+💡 "Try connecting this concept to something you use in everyday life..."
+
+Your hint for "${concept}":`;
+}
+
+/**
  * Get MindMelt API setup instructions
  */
 export function getApiSetupInstructions() {
   return {
-    title: "🔑 Get Your AI API Key for MindMelt",
-    subtitle: "Connect MindMelt to AI for personalized CS learning",
+    title: "🔑 Get Your GMI API Key for MindMelt",
+    subtitle: "Connect MindMelt to GMI AI for advanced CS learning",
     steps: [
       {
         step: 1,
-        title: "Visit AI Studio",
-        description: "Go to your AI development platform",
-        link: "https://aistudio.google.com",
-        action: "Click to open Google AI Studio"
+        title: "Visit GMI Platform",
+        description: "Go to the GMI API platform",
+        link: "https://api.gmi-serving.com",
+        action: "Click to open GMI API platform"
       },
       {
         step: 2,
-        title: "Sign in with Google",
-        description: "Use your Google account to access the platform",
-        tip: "If you don't have a Google account, you'll need to create one first"
+        title: "Create Account",
+        description: "Sign up for a GMI API account if you don't have one",
+        tip: "You may need to verify your email and provide billing information"
       },
       {
         step: 3,
-        title: "Get API Key",
-        description: "Click 'Get API Key' and create a new key for MindMelt",
-        tip: "Choose 'Create API key in new project' if this is your first time"
+        title: "Generate API Key",
+        description: "Create a new API key in your GMI dashboard",
+        tip: "The key will be in JWT format (three parts separated by dots)"
       },
       {
         step: 4,
         title: "Copy Your Key",
-        description: "Copy your API key (starts with 'AIza') and paste it in MindMelt",
-        tip: "Keep this key private - don't share it with others!"
+        description: "Copy your JWT API key and paste it in MindMelt settings",
+        tip: "Keep this key private and secure - it provides access to your GMI account!"
       }
     ],
     benefits: [
-      "🆓 Gemini API offers generous free tier limits",
-      "⚡ Fast responses perfect for learning sessions", 
-      "🧠 Advanced AI tuned for educational conversations",
-      "🔒 Your API key stays private in your browser"
+      "🚀 Advanced DeepSeek-Prover model for complex CS reasoning",
+      "⚡ High-performance API designed for educational applications",
+      "🧠 Specialized in mathematical and logical reasoning",
+      "🔒 Secure JWT-based authentication"
     ],
     notes: [
-      "Your API key will be stored locally in your browser only",
+      "Your GMI API key will be stored locally in your browser only",
       "MindMelt never sees or stores your API key on our servers",
-      "Free tier includes thousands of learning interactions per month",
-      "You can change or remove your API key anytime in settings"
+      "GMI API offers competitive pricing for educational use",
+      "You can update or remove your API key anytime in settings"
     ]
   };
 }
 
-// Export configuration and thresholds
 export const MINDMELT_AI_CONFIG = {
+  model: API_CONFIG.model,
   settings: API_CONFIG,
   qualityThresholds: QUALITY_THRESHOLDS,
+  apiProvider: "GMI",
+  supportedModels: [
+    "deepseek-ai/DeepSeek-Prover-V2-671B",
+  ],
   assessmentCriteria: [
     "Depth of CS understanding demonstrated",
-    "Proper use of technical terminology", 
+    "Proper use of technical terminology",
     "Evidence of critical thinking",
     "Connections to broader CS concepts",
     "Clarity and detail in explanations"
   ]
 };
 
-// Default export
-export default {
+const aiServiceExports = {
   getSocraticResponse,
+  getSocraticResponseWithMetadata,
+  searchCSTopics,
+  getTopicDetails,
   assessUnderstandingQuality,
   getApiKey,
   validateApiKey,
   testApiKey,
   getApiSetupInstructions,
-  searchCSTopics,
-  getTopicDetails,
+  parseAIResponse,
+  formatResponseForDisplay,
   MINDMELT_AI_CONFIG
 };
+
+export default aiServiceExports;

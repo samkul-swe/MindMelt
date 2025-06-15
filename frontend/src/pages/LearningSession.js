@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/LearningSession.js - Complete Learning Session Page with UI Fixes
+// pages/LearningSession.js - Enhanced with Hint System
 // ============================================================================
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -16,11 +16,14 @@ import {
   Bot,
   Home,
   Info,
-  Settings
+  Settings,
+  Lightbulb,
+  Coffee,
+  Code
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
-import { getSocraticResponse, assessUnderstandingQuality } from '../services/aiService';
+import { getSocraticResponse, getHintResponse, assessUnderstandingQuality } from '../services/aiService';
 import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/learning-session.css'
@@ -35,7 +38,13 @@ const TIMER_CONSTANTS = {
 
 const MESSAGE_TYPES = {
   USER: 'user',
-  BOT: 'bot'
+  BOT: 'bot',
+  HINT: 'hint'
+};
+
+const HINT_CONSTANTS = {
+  MAX_HINTS: 3,
+  RESET_ON_NEW_TOPIC: true
 };
 
 const learningPaths = {
@@ -115,7 +124,41 @@ const useTimer = (initialTime = TIMER_CONSTANTS.INITIAL_TIME) => {
   };
 };
 
-// Ice Cream Timer Component
+// Hints Hook
+const useHints = (initialCount = HINT_CONSTANTS.MAX_HINTS) => {
+  const [hintsRemaining, setHintsRemaining] = useState(initialCount);
+  const [isRequestingHint, setIsRequestingHint] = useState(false);
+  const [hintsExhausted, setHintsExhausted] = useState(false);
+
+  const useHint = useCallback(() => {
+    if (hintsRemaining > 0) {
+      setHintsRemaining(prev => {
+        const newCount = prev - 1;
+        if (newCount === 0) {
+          setHintsExhausted(true);
+        }
+        return newCount;
+      });
+    }
+  }, [hintsRemaining]);
+
+  const resetHints = useCallback(() => {
+    setHintsRemaining(HINT_CONSTANTS.MAX_HINTS);
+    setHintsExhausted(false);
+  }, []);
+
+  return {
+    hintsRemaining,
+    hintsExhausted,
+    isRequestingHint,
+    setIsRequestingHint,
+    useHint,
+    resetHints,
+    canUseHint: hintsRemaining > 0 && !isRequestingHint
+  };
+};
+
+// Ice Cream Timer Component (keeping existing implementation)
 const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
@@ -230,15 +273,15 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
       };
 
       // Draw scoops with melting effects - always visible
-      if (percentage > -10) { // Changed from > 10 to ensure always visible
-        const opacity = Math.max(0.3, percentage / 100); // Minimum 30% opacity
+      if (percentage > -10) {
+        const opacity = Math.max(0.3, percentage / 100);
         ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 32 + meltSag, 13, 
           { light: '#fef3c7', dark: '#f59e0b' }, meltLevel);
         ctx.globalAlpha = 1;
       }
       
-      if (percentage > -40) { // Changed from > 40
+      if (percentage > -40) {
         const opacity = Math.max(0.3, percentage / 100);
         ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 22 + meltSag * 0.7, 11, 
@@ -246,7 +289,7 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
         ctx.globalAlpha = 1;
       }
       
-      if (percentage > -70) { // Changed from > 70
+      if (percentage > -70) {
         const opacity = Math.max(0.3, percentage / 100);
         ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 14 + meltSag * 0.5, 9, 
@@ -309,7 +352,9 @@ const createMessage = (type, content, options = {}) => ({
 const Message = React.memo(({ message }) => (
   <div className={`message ${message.type}`}>
     <div className="message-avatar">
-      {message.type === MESSAGE_TYPES.USER ? <User size={20} /> : <Bot size={20} />}
+      {message.type === MESSAGE_TYPES.USER ? <User size={20} /> : 
+       message.type === MESSAGE_TYPES.HINT ? <Lightbulb size={20} /> :
+       <Bot size={20} />}
     </div>
     <div className="message-content">
       <div className={`message-bubble ${getMessageBubbleClass(message)}`}>
@@ -328,8 +373,66 @@ const getMessageBubbleClass = (message) => {
   if (message.isError) classes.push('error');
   if (message.isBonus) classes.push('bonus');
   if (message.isTimeUp) classes.push('time-up');
+  if (message.type === MESSAGE_TYPES.HINT) classes.push('hint');
   return classes.join(' ');
 };
+
+// Hint Counter Component
+const HintCounter = React.memo(({ hintsRemaining, onHintRequest, canUseHint, isRequestingHint }) => (
+  <div className="hint-counter">
+    <div className="hint-info">
+      <div className="hint-bulbs">
+        {[...Array(3)].map((_, index) => (
+          <Lightbulb
+            key={index}
+            size={16}
+            className={`hint-bulb ${index < hintsRemaining ? 'active' : 'used'}`}
+          />
+        ))}
+      </div>
+      <span className="hint-text">
+        {hintsRemaining} hint{hintsRemaining !== 1 ? 's' : ''} left
+      </span>
+    </div>
+    <button
+      className="hint-btn"
+      onClick={onHintRequest}
+      disabled={!canUseHint}
+      title={canUseHint ? "Get a helpful hint" : "No hints remaining"}
+    >
+      {isRequestingHint ? (
+        <div className="thinking-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      ) : (
+        <Lightbulb size={18} />
+      )}
+      Hint
+    </button>
+  </div>
+));
+
+// Exhausted Hints Actions Component
+const ExhaustedHintsActions = React.memo(({ onVisualize, onTakeBreak }) => (
+  <div className="exhausted-hints-actions">
+    <div className="exhausted-message">
+      <Lightbulb size={20} />
+      <span>No more hints available! Choose your next step:</span>
+    </div>
+    <div className="action-buttons">
+      <button className="action-btn visualize-btn" onClick={onVisualize}>
+        <Code size={18} />
+        Visualize with Code
+      </button>
+      <button className="action-btn break-btn" onClick={onTakeBreak}>
+        <Coffee size={18} />
+        Take a Break
+      </button>
+    </div>
+  </div>
+));
 
 // Main Learning Session Component
 const LearningSession = () => {
@@ -352,6 +455,7 @@ const LearningSession = () => {
   const [sessionStartTime] = useState(Date.now());
 
   const timer = useTimer();
+  const hints = useHints();
   const apiKeyManager = useApiKey();
   const messageEndRef = useRef(null);
   
@@ -397,6 +501,11 @@ const LearningSession = () => {
           setCorrectStreak(sessionInfo.correctStreak || 0);
           setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
           
+          // Restore hint state
+          if (sessionInfo.hintsRemaining !== undefined) {
+            hints.setHintsRemaining(sessionInfo.hintsRemaining);
+          }
+          
           // Restore timer state
           if (sessionInfo.timerRemaining) {
             timer.setTimeRemaining(sessionInfo.timerRemaining);
@@ -420,7 +529,8 @@ const LearningSession = () => {
             topicName: sessionInfo.topicData.name,
             topicData: sessionInfo.topicData,
             learningPath: sessionInfo.learningPath,
-            questioningStyle: sessionInfo.questioningStyle || 'socratic'
+            questioningStyle: sessionInfo.questioningStyle || 'socratic',
+            hintsRemaining: HINT_CONSTANTS.MAX_HINTS
           });
           
           // Update URL with new session ID
@@ -484,6 +594,67 @@ const LearningSession = () => {
     }
   }, [apiKeyManager]);
 
+  // Request hint function
+  const handleHintRequest = useCallback(async () => {
+    if (!hints.canUseHint || !sessionData) return;
+    
+    const currentApiKey = apiKeyManager.getCurrentApiKey();
+    if (!currentApiKey) {
+      return;
+    }
+    
+    hints.setIsRequestingHint(true);
+    
+    try {
+      const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      const recentMessages = messages.slice(-6); // Get last 6 messages for context
+      const conversationContext = recentMessages.map(msg => 
+        `${msg.type === MESSAGE_TYPES.USER ? 'Student' : 'Tutor'}: ${msg.content}`
+      ).join('\n');
+      
+      const hintResponse = await getHintResponse(
+        topicName,
+        conversationContext,
+        sessionData.learningPath,
+        currentQuestioningStyle,
+        currentApiKey
+      );
+      
+      const hintMessage = createMessage(MESSAGE_TYPES.HINT, hintResponse, { isHint: true });
+      setMessages(prev => [...prev, hintMessage]);
+      
+      hints.useHint();
+      
+    } catch (error) {
+      const errorMessage = createMessage(MESSAGE_TYPES.BOT,
+        `❌ Hint Error: ${error.message}`,
+        { isError: true }
+      );
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      hints.setIsRequestingHint(false);
+    }
+  }, [hints, sessionData, apiKeyManager, messages, currentQuestioningStyle]);
+
+  // Handle visualization action
+  const handleVisualize = useCallback(() => {
+    const visualizationMessage = createMessage(MESSAGE_TYPES.BOT,
+      "🎨 Let's create a visualization! Try writing some code to represent what you've learned about this topic. You can use pseudocode, diagrams, or actual code snippets.",
+      { isBonus: true }
+    );
+    setMessages(prev => [...prev, visualizationMessage]);
+  }, []);
+
+  // Handle take break action
+  const handleTakeBreak = useCallback(() => {
+    timer.togglePause();
+    const breakMessage = createMessage(MESSAGE_TYPES.BOT,
+      "☕ Taking a break is important for learning! Your timer is paused. When you're ready, feel free to continue our discussion or return to the dashboard.",
+      { isBonus: true }
+    );
+    setMessages(prev => [...prev, breakMessage]);
+  }, [timer]);
+
   // Auto-scroll messages
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -521,6 +692,7 @@ const LearningSession = () => {
           correctStreak,
           questioningStyle: currentQuestioningStyle,
           timerRemaining: timer.timeRemaining,
+          hintsRemaining: hints.hintsRemaining,
           duration: Math.floor((Date.now() - sessionStartTime) / 1000),
           lastActivity: new Date().toISOString()
         });
@@ -531,7 +703,7 @@ const LearningSession = () => {
 
     const saveInterval = setInterval(saveSession, 30000); // Save every 30 seconds
     return () => clearInterval(saveInterval);
-  }, [sessionData, sessionId, messages, progress, correctStreak, currentQuestioningStyle, timer.timeRemaining, sessionStartTime]);
+  }, [sessionData, sessionId, messages, progress, correctStreak, currentQuestioningStyle, timer.timeRemaining, hints.hintsRemaining, sessionStartTime]);
 
   const handleSubmit = useCallback(async () => {
     if (!userInput.trim() || isThinking || timer.timeRemaining <= 0 || !sessionData) return;
@@ -621,11 +793,14 @@ const LearningSession = () => {
     setUserInput('');
     setIsThinking(false);
     
+    // Reset hints when restarting
+    hints.resetHints();
+    
     timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
     timer.setTimerActive(true);
     
     const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
-      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle].name}! Starting fresh with new questions.`, 
+      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle].name}! Starting fresh with new questions and full hints restored.`, 
       { isBonus: true }
     );
     setMessages([restartMessage]);
@@ -634,7 +809,7 @@ const LearningSession = () => {
       getFirstQuestion(updatedSessionData);
     }, 1000);
     
-  }, [sessionData, timer, getFirstQuestion]);
+  }, [sessionData, timer, hints, getFirstQuestion]);
 
   if (!sessionData) {
     return <LoadingSpinner message="Loading your learning session..." />;
@@ -817,6 +992,23 @@ const LearningSession = () => {
               </button>
             </div>
             
+            {/* Hint System */}
+            <div className="hint-system">
+              {!hints.hintsExhausted ? (
+                <HintCounter
+                  hintsRemaining={hints.hintsRemaining}
+                  onHintRequest={handleHintRequest}
+                  canUseHint={hints.canUseHint}
+                  isRequestingHint={hints.isRequestingHint}
+                />
+              ) : (
+                <ExhaustedHintsActions
+                  onVisualize={handleVisualize}
+                  onTakeBreak={handleTakeBreak}
+                />
+              )}
+            </div>
+            
             <div className="session-controls">
               <div className="progress-info">
                 <CheckCircle size={16} className="progress-icon" />
@@ -831,7 +1023,7 @@ const LearningSession = () => {
           </div>
         </div>
 
-        {/* Info Modal */}
+        {/* Info Modal - keeping existing implementation */}
         {showInfo && (
           <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
             <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
@@ -858,6 +1050,7 @@ const LearningSession = () => {
                   <div className="welcome-text">
                     <p>🧠 You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
                     <p>🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
+                    <p>💡 Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
                     <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
                     <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
                   </div>
@@ -876,6 +1069,9 @@ const LearningSession = () => {
                       </div>
                       <div className="summary-item">
                         <strong>Progress:</strong> {progress.length} exchanges completed
+                      </div>
+                      <div className="summary-item">
+                        <strong>Hints:</strong> {hints.hintsRemaining} remaining
                       </div>
                     </div>
                   </div>

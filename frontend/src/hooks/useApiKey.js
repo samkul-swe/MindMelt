@@ -25,6 +25,7 @@ export const useApiKey = () => {
   const getApiKeyStatus = useCallback(() => {
     const envKey = process.env.REACT_APP_AI_API_KEY;
     const savedKey = localStorage.getItem('mindmelt_ai_key');
+    console.log(envKey);
     
     if (envKey?.trim() && envKey !== 'undefined') {
       return { 
