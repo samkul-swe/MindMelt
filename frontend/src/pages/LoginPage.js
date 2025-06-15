@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Brain, Mail, Lock, Eye, EyeOff, Sparkles, BookOpen, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/pages/auth.css';
 
 const LoginPage = () => {
   const navigate = useNavigate();

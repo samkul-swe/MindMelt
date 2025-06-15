@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/LearningSession.js - Complete Learning Session Page with Authentication
+// pages/LearningSession.js - Complete Learning Session Page with UI Fixes
 // ============================================================================
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -23,6 +23,7 @@ import { api } from '../services/authAPI';
 import { getSocraticResponse, assessUnderstandingQuality } from '../services/aiService';
 import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
+import '../styles/pages/learning-session.css'
 
 // Timer Constants
 const TIMER_CONSTANTS = {
@@ -228,19 +229,29 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
         ctx.fill();
       };
 
-      if (percentage > 10) {
+      // Draw scoops with melting effects - always visible
+      if (percentage > -10) { // Changed from > 10 to ensure always visible
+        const opacity = Math.max(0.3, percentage / 100); // Minimum 30% opacity
+        ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 32 + meltSag, 13, 
           { light: '#fef3c7', dark: '#f59e0b' }, meltLevel);
+        ctx.globalAlpha = 1;
       }
       
-      if (percentage > 40) {
+      if (percentage > -40) { // Changed from > 40
+        const opacity = Math.max(0.3, percentage / 100);
+        ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 22 + meltSag * 0.7, 11, 
           { light: '#fce7f3', dark: '#ec4899' }, meltLevel * 0.8);
+        ctx.globalAlpha = 1;
       }
       
-      if (percentage > 70) {
+      if (percentage > -70) { // Changed from > 70
+        const opacity = Math.max(0.3, percentage / 100);
+        ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 14 + meltSag * 0.5, 9, 
           { light: '#fed7aa', dark: '#ea580c' }, meltLevel * 0.6);
+        ctx.globalAlpha = 1;
       }
 
       updateDrips();
@@ -343,6 +354,30 @@ const LearningSession = () => {
   const timer = useTimer();
   const apiKeyManager = useApiKey();
   const messageEndRef = useRef(null);
+  
+  // Refs for click-outside detection
+  const styleDropdownRef = useRef(null);
+  const styleBadgeRef = useRef(null);
+
+  // Click outside handler to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showStyleSelector &&
+        styleDropdownRef.current &&
+        styleBadgeRef.current &&
+        !styleDropdownRef.current.contains(event.target) &&
+        !styleBadgeRef.current.contains(event.target)
+      ) {
+        setShowStyleSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStyleSelector]);
 
   // Initialize session
   useEffect(() => {
@@ -608,267 +643,273 @@ const LearningSession = () => {
   const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name || 'Unknown Topic';
 
   return (
-    <div className="learning-session-container">
-      <div className="learning-container">
-        <div className="learning-header">
-          <div className="session-info">
-            <div className="session-title">
-              <button
-                onClick={handleBackToDashboard}
-                className="back-btn"
-                title="Back to Dashboard"
-              >
-                <Home size={20} />
-              </button>
-              <h2>
-                <Brain size={24} />
-                {topicName}
-              </h2>
-            </div>
-            <div className="session-meta">
-              <div className="path-badge">
-                {learningPaths[sessionData.learningPath].icon} {learningPaths[sessionData.learningPath].name}
-              </div>
-
-              <div className="style-selector-container">
-                <button 
-                  className="style-badge clickable enhanced"
-                  onClick={() => setShowStyleSelector(!showStyleSelector)}
-                  title="Click to change questioning style (restarts session)"
+    <div className="learning-session-page">
+      <div className="learning-session-container">
+        <div className="learning-container">
+          <div className="learning-header">
+            <div className="session-info">
+              <div className="session-title">
+                <button
+                  onClick={handleBackToDashboard}
+                  className="back-btn"
+                  title="Back to Dashboard"
                 >
-                  {questioningStyles[currentQuestioningStyle].icon} {questioningStyles[currentQuestioningStyle].name}
-                  <span className="dropdown-arrow">🔄</span>
+                  <Home size={20} />
                 </button>
+                <h2>
+                  <Brain size={24} />
+                  {topicName}
+                </h2>
+              </div>
+              <div className="session-meta">
+                <div className="path-badge">
+                  {learningPaths[sessionData.learningPath].icon} {learningPaths[sessionData.learningPath].name}
+                </div>
+
+                <div className="style-selector-container">
+                  <button 
+                    ref={styleBadgeRef}
+                    className="style-badge clickable enhanced"
+                    onClick={() => setShowStyleSelector(!showStyleSelector)}
+                    title="Click to change questioning style (restarts session)"
+                  >
+                    {questioningStyles[currentQuestioningStyle].icon} {questioningStyles[currentQuestioningStyle].name}
+                    <span className="dropdown-arrow">🔄</span>
+                  </button>
+                  
+                  {showStyleSelector && (
+                    <>
+                      <div className="dropdown-overlay" />
+                      <div ref={styleDropdownRef} className="style-dropdown enhanced">
+                        <div className="dropdown-header enhanced">
+                          <h4>💭 Change Questioning Style</h4>
+                          <p>⚠️ This will restart your session with fresh questions</p>
+                        </div>
+                        {Object.entries(questioningStyles).map(([key, style]) => (
+                          <button
+                            key={key}
+                            className={`style-option concise ${currentQuestioningStyle === key ? 'active' : ''}`}
+                            onClick={() => {
+                              if (key !== currentQuestioningStyle) {
+                                restartWithNewQuestioningStyle(key);
+                              }
+                              setShowStyleSelector(false);
+                            }}
+                          >
+                            <span className="style-option-icon">{style.icon}</span>
+                            <span className="style-option-name">{style.name}</span>
+                            {currentQuestioningStyle === key && <span className="current-badge">Current</span>}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <button 
+                  className="info-btn enhanced"
+                  onClick={handleInfoClick}
+                  title="Session Information (Auto-pauses timer)"
+                >
+                  <Info size={18} />
+                  <span className="info-text">Info</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="timer-controls">
+              <div className="ice-cream-timer-container">
+                <IceCreamTimer 
+                  timeLeft={timer.timeRemaining} 
+                  totalTime={timer.maxTime} 
+                  isRunning={timer.timerActive && !timer.timerPaused} 
+                />
+                <div className="timer-info">
+                  <div className={`timer-display ${timer.timeRemaining < TIMER_CONSTANTS.WARNING_THRESHOLD ? 'timer-warning' : ''}`}>
+                    {formatTime(timer.timeRemaining)}
+                  </div>
+                  <div className="timer-label">
+                    Focus Time • Max: {Math.floor(timer.maxTime / 60)}min
+                    {showInfo && <span className="paused-label"> • Paused</span>}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="timer-buttons">
+                <button 
+                  onClick={timer.togglePause}
+                  className="timer-btn"
+                  title={timer.timerPaused ? 'Resume' : 'Pause'}
+                >
+                  {timer.timerPaused ? <Play size={16} /> : <Pause size={16} />}
+                </button>
+                <button 
+                  onClick={timer.resetTimer}
+                  className="timer-btn"
+                  title="Reset Timer"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="messages-container">
+            {isLoadingFirstQuestion ? (
+              <div className="loading-first-question">
+                <div className="loading-spinner"></div>
+                <p>🧠 Preparing your {learningPaths[sessionData.learningPath].name.toLowerCase()} question...</p>
+              </div>
+            ) : (
+              <>
+                {messages.map((message, index) => (
+                  <Message key={index} message={message} />
+                ))}
                 
-                {showStyleSelector && (
-                  <div className="style-dropdown enhanced">
-                    <div className="dropdown-header enhanced">
-                      <h4>💭 Change Questioning Style</h4>
-                      <p>⚠️ This will restart your session with fresh questions</p>
+                {isThinking && (
+                  <div className="message bot">
+                    <div className="message-avatar">
+                      <Bot size={20} />
                     </div>
-                    {Object.entries(questioningStyles).map(([key, style]) => (
-                      <button
-                        key={key}
-                        className={`style-option concise ${currentQuestioningStyle === key ? 'active' : ''}`}
-                        onClick={() => {
-                          if (key !== currentQuestioningStyle) {
-                            restartWithNewQuestioningStyle(key);
-                          }
-                          setShowStyleSelector(false);
-                        }}
-                      >
-                        <span className="style-option-icon">{style.icon}</span>
-                        <span className="style-option-name">{style.name}</span>
-                        {currentQuestioningStyle === key && <span className="current-badge">Current</span>}
-                      </button>
-                    ))}
+                    <div className="message-content">
+                      <div className="thinking-bubble">
+                        <div className="thinking-dots">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        Thinking...
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
-
-              <button 
-                className="info-btn enhanced"
-                onClick={handleInfoClick}
-                title="Session Information (Auto-pauses timer)"
-              >
-                <Info size={18} />
-                <span className="info-text">Info</span>
-              </button>
-            </div>
-          </div>
-          
-          <div className="timer-controls">
-            <div className="ice-cream-timer-container">
-              <IceCreamTimer 
-                timeLeft={timer.timeRemaining} 
-                totalTime={timer.maxTime} 
-                isRunning={timer.timerActive && !timer.timerPaused} 
-              />
-              <div className="timer-info">
-                <div className={`timer-display ${timer.timeRemaining < TIMER_CONSTANTS.WARNING_THRESHOLD ? 'timer-warning' : ''}`}>
-                  {formatTime(timer.timeRemaining)}
-                </div>
-                <div className="timer-label">
-                  Focus Time • Max: {Math.floor(timer.maxTime / 60)}min
-                  {showInfo && <span className="paused-label"> • Paused</span>}
-                </div>
-              </div>
-            </div>
+              </>
+            )}
             
-            <div className="timer-buttons">
-              <button 
-                onClick={timer.togglePause}
-                className="timer-btn"
-                title={timer.timerPaused ? 'Resume' : 'Pause'}
-              >
-                {timer.timerPaused ? <Play size={16} /> : <Pause size={16} />}
-              </button>
-              <button 
-                onClick={timer.resetTimer}
-                className="timer-btn"
-                title="Reset Timer"
-              >
-                <RotateCcw size={16} />
-              </button>
-            </div>
+            <div ref={messageEndRef} />
           </div>
-        </div>
 
-        <div className="messages-container">
-          {isLoadingFirstQuestion ? (
-            <div className="loading-first-question">
-              <div className="loading-spinner"></div>
-              <p>🧠 Preparing your {learningPaths[sessionData.learningPath].name.toLowerCase()} question...</p>
-            </div>
-          ) : (
-            <>
-              {messages.map((message, index) => (
-                <Message key={index} message={message} />
-              ))}
-              
-              {isThinking && (
-                <div className="message bot">
-                  <div className="message-avatar">
-                    <Bot size={20} />
-                  </div>
-                  <div className="message-content">
-                    <div className="thinking-bubble">
-                      <div className="thinking-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                      Thinking...
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          
-          <div ref={messageEndRef} />
-        </div>
-
-        <div className="input-area">
-          <div className="input-container">
-            <input
-              className="message-input"
-              placeholder={
-                isLoadingFirstQuestion ? "Loading your first question..." :
-                timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
-                "Type your response..."
-              }
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
+          <div className="input-area">
+            <div className="input-container">
+              <input
+                className="message-input"
+                placeholder={
+                  isLoadingFirstQuestion ? "Loading your first question..." :
+                  timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
+                  "Type your response..."
                 }
-              }}
-              disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
-            />
-            <button 
-              className="send-btn"
-              onClick={handleSubmit}
-              disabled={timer.timeRemaining <= 0 || isThinking || !userInput.trim() || isLoadingFirstQuestion}
-            >
-              <MessageCircle size={20} />
-            </button>
-          </div>
-          
-          <div className="session-controls">
-            <div className="progress-info">
-              <CheckCircle size={16} className="progress-icon" />
-              <span>{progress.length} exchanges • Streak: {correctStreak} 🔥</span>
-            </div>
-            
-            <button onClick={handleBackToDashboard} className="btn btn-secondary btn-sm">
-              <Home size={16} />
-              Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Info Modal */}
-      {showInfo && (
-        <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
-          <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header simplified">
-              <div className="modal-title">
-                <span className="modal-icon">🧠</span>
-                <div>
-                  <h2>Learning Session Info</h2>
-                  <div className="modal-badges">
-                    <span className="category-badge">{sessionData.topicData?.category || 'Computer Science'}</span>
-                    <span className="difficulty-badge">{sessionData.topicData?.difficulty || 'Intermediate'}</span>
-                    <span className="timer-badge">⏸️ Timer Paused</span>
-                  </div>
-                </div>
-              </div>
-              <button className="modal-close simplified" onClick={handleInfoClose}>
-                <span>✕</span>
-                <span className="close-hint">Resume</span>
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
+              />
+              <button 
+                className="send-btn"
+                onClick={handleSubmit}
+                disabled={timer.timeRemaining <= 0 || isThinking || !userInput.trim() || isLoadingFirstQuestion}
+              >
+                <MessageCircle size={20} />
               </button>
             </div>
             
-            <div className="modal-body simplified">
-              <div className="info-content">
-                <div className="welcome-text">
-                  <p>🧠 You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
-                  <p>🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
-                  <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
-                  <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
-                </div>
-                
-                <div className="current-session-info">
-                  <h3>📚 Current Session</h3>
-                  <div className="session-summary">
-                    <div className="summary-item">
-                      <strong>Topic:</strong> {topicName}
-                    </div>
-                    <div className="summary-item">
-                      <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath].name}
-                    </div>
-                    <div className="summary-item">
-                      <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
-                    </div>
-                    <div className="summary-item">
-                      <strong>Progress:</strong> {progress.length} exchanges completed
+            <div className="session-controls">
+              <div className="progress-info">
+                <CheckCircle size={16} className="progress-icon" />
+                <span>{progress.length} exchanges • Streak: {correctStreak} 🔥</span>
+              </div>
+              
+              <button onClick={handleBackToDashboard} className="btn btn-secondary btn-sm">
+                <Home size={16} />
+                Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Modal */}
+        {showInfo && (
+          <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
+            <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header simplified">
+                <div className="modal-title">
+                  <span className="modal-icon">🧠</span>
+                  <div>
+                    <h2>Learning Session Info</h2>
+                    <div className="modal-badges">
+                      <span className="category-badge">{sessionData.topicData?.category || 'Computer Science'}</span>
+                      <span className="difficulty-badge">{sessionData.topicData?.difficulty || 'Intermediate'}</span>
+                      <span className="timer-badge">⏸️ Timer Paused</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="questioning-styles-info">
-                  <h3>💭 Available Questioning Styles</h3>
-                  <p className="styles-intro">You can change your questioning style anytime. Each style offers a different approach:</p>
+                <button className="modal-close simplified" onClick={handleInfoClose}>
+                  <span>✕</span>
+                  <span className="close-hint">Resume</span>
+                </button>
+              </div>
+              
+              <div className="modal-body simplified">
+                <div className="info-content">
+                  <div className="welcome-text">
+                    <p>🧠 You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
+                    <p>🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
+                    <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
+                    <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
+                  </div>
                   
-                  <div className="styles-info-list">
-                    {Object.entries(questioningStyles).map(([key, style]) => (
-                      <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
-                        <div className="style-info-header">
-                          <span className="style-info-icon">{style.icon}</span>
-                          <span className="style-info-name">{style.name}</span>
-                          {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
-                        </div>
-                        <p className="style-info-desc">{style.description}</p>
+                  <div className="current-session-info">
+                    <h3>📚 Current Session</h3>
+                    <div className="session-summary">
+                      <div className="summary-item">
+                        <strong>Topic:</strong> {topicName}
                       </div>
-                    ))}
+                      <div className="summary-item">
+                        <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath].name}
+                      </div>
+                      <div className="summary-item">
+                        <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
+                      </div>
+                      <div className="summary-item">
+                        <strong>Progress:</strong> {progress.length} exchanges completed
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="questioning-styles-info">
+                    <h3>💭 Available Questioning Styles</h3>
+                    <p className="styles-intro">You can change your questioning style anytime. Each style offers a different approach:</p>
+                    
+                    <div className="styles-info-list">
+                      {Object.entries(questioningStyles).map(([key, style]) => (
+                        <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
+                          <div className="style-info-header">
+                            <span className="style-info-icon">{style.icon}</span>
+                            <span className="style-info-name">{style.name}</span>
+                            {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
+                          </div>
+                          <p className="style-info-desc">{style.description}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="modal-footer simplified">
-              <button onClick={handleInfoClose} className="btn btn-primary">
-                <Play size={16} />
-                Resume Learning 🚀
-              </button>
+              
+              <div className="modal-footer simplified">
+                <button onClick={handleInfoClose} className="btn btn-primary">
+                  <Play size={16} />
+                  Resume Learning 🚀
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

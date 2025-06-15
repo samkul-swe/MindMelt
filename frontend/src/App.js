@@ -10,7 +10,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import LearningSession from './pages/LearningSession';
-import './App.css';
+import './styles/globals/index.css'
 
 function App() {
   return (

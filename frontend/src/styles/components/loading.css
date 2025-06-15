@@ -1,0 +1,72 @@
+/* ============================================================================
+   styles/components/loading.css
+   ============================================================================ */
+
+/* Loading Spinner */
+.loading-spinner {
+  border: 3px solid var(--gray-300);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.sm { width: 20px; height: 20px; border-width: 2px; }
+.loading-spinner.md { width: 40px; height: 40px; }
+.loading-spinner.lg { width: 50px; height: 50px; border-width: 4px; }
+
+/* Loading States */
+.loading-details,
+.error-details {
+  padding: 2rem;
+  text-align: center;
+}
+
+.loading-details {
+  color: var(--gray-600);
+}
+
+.error-details {
+  color: var(--error);
+}
+
+.error-details .error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.loading-session,
+.loading-first-question {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--gray-600);
+}
+
+.loading-session .loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--gray-300);
+  border-top: 4px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-first-question .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--gray-300);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-first-question p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+}

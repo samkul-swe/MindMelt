@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Brain, Mail, Lock, Eye, EyeOff, User, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import '../styles/pages/auth.css';
 
 const SignupPage = () => {
   const navigate = useNavigate();

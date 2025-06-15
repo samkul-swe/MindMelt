@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/Dashboard.js - Main Dashboard with User Profile and Learning Sessions
+// pages/Dashboard.js - Dashboard with Daily Summary Bell
 // ============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,17 +10,18 @@ import {
   User, 
   LogOut, 
   Plus,
-  Play,
-  Pause,
-  Clock,
+  Bell,
   Calendar,
   TrendingUp,
   Target,
   BookOpen,
-  RotateCcw,
-  Trash2,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Trophy,
+  Clock,
+  CheckCircle,
+  Star,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
@@ -28,6 +29,7 @@ import { useTopicSearch } from '../hooks/useTopicSearch';
 import { useApiKey } from '../hooks/useApiKey';
 import SearchBar from '../components/SearchBar';
 import LoadingSpinner from '../components/LoadingSpinner';
+import '../styles/pages/dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -36,8 +38,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showNewSession, setShowNewSession] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showDailySummary, setShowDailySummary] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [learningPath, setLearningPath] = useState('');
+  const [dailySummary, setDailySummary] = useState(null);
+  const [bellNotificationCount, setBellNotificationCount] = useState(0);
 
   const apiKeyManager = useApiKey();
   const topicSearch = useTopicSearch(apiKeyManager);
@@ -48,6 +53,22 @@ const Dashboard = () => {
       setLoading(true);
       const sessions = await api.getLearningHistory();
       setLearningSessions(sessions || []);
+      
+      // Calculate bell notification count (sessions completed yesterday)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      
+      const tomorrowYesterday = new Date(yesterday);
+      tomorrowYesterday.setDate(tomorrowYesterday.getDate() + 1);
+      
+      const yesterdaysActivities = sessions.filter(session => {
+        const sessionDate = new Date(session.updatedAt);
+        return sessionDate >= yesterday && sessionDate < tomorrowYesterday && session.completed;
+      });
+      
+      setBellNotificationCount(yesterdaysActivities.length);
+      
     } catch (error) {
       console.error('Failed to fetch learning sessions:', error);
       setLearningSessions([]);
@@ -59,6 +80,113 @@ const Dashboard = () => {
   useEffect(() => {
     fetchLearningSessions();
   }, [fetchLearningSessions]);
+
+  // Generate daily summary when bell is clicked
+  const generateDailySummary = useCallback(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const tomorrowYesterday = new Date(yesterday);
+    tomorrowYesterday.setDate(tomorrowYesterday.getDate() + 1);
+    
+    // Filter sessions from yesterday
+    const yesterdaysSessions = learningSessions.filter(session => {
+      const sessionDate = new Date(session.updatedAt);
+      return sessionDate >= yesterday && sessionDate < tomorrowYesterday;
+    });
+    
+    // Calculate summary stats
+    const completedSessions = yesterdaysSessions.filter(s => s.completed);
+    const totalSessions = yesterdaysSessions.length;
+    const totalDuration = yesterdaysSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
+    const totalQuestions = yesterdaysSessions.reduce((acc, s) => acc + (s.questionsAsked || 0), 0);
+    const avgProgress = totalSessions > 0 
+      ? Math.round(yesterdaysSessions.reduce((acc, s) => acc + (s.progress || 0), 0) / totalSessions)
+      : 0;
+    
+    // Group by topics
+    const topicStats = {};
+    yesterdaysSessions.forEach(session => {
+      if (!topicStats[session.topicName]) {
+        topicStats[session.topicName] = {
+          count: 0,
+          duration: 0,
+          avgProgress: 0,
+          category: session.category,
+          difficulty: session.difficulty
+        };
+      }
+      topicStats[session.topicName].count++;
+      topicStats[session.topicName].duration += session.duration || 0;
+      topicStats[session.topicName].avgProgress += session.progress || 0;
+    });
+    
+    // Calculate averages for topics
+    Object.keys(topicStats).forEach(topic => {
+      topicStats[topic].avgProgress = Math.round(topicStats[topic].avgProgress / topicStats[topic].count);
+    });
+    
+    const summary = {
+      date: yesterday.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      totalSessions,
+      completedSessions: completedSessions.length,
+      totalDuration,
+      totalQuestions,
+      avgProgress,
+      topicStats,
+      sessions: yesterdaysSessions,
+      achievements: generateAchievements(yesterdaysSessions, completedSessions.length)
+    };
+    
+    setDailySummary(summary);
+    setShowDailySummary(true);
+    setBellNotificationCount(0); // Clear notification after viewing
+  }, [learningSessions]);
+
+  // Generate achievements based on yesterday's activity
+  const generateAchievements = (sessions, completed) => {
+    const achievements = [];
+    
+    if (completed >= 3) {
+      achievements.push({
+        icon: '🔥',
+        title: 'On Fire!',
+        description: `Completed ${completed} learning sessions`
+      });
+    } else if (completed >= 1) {
+      achievements.push({
+        icon: '⭐',
+        title: 'Consistent Learner',
+        description: `Completed ${completed} session${completed > 1 ? 's' : ''}`
+      });
+    }
+    
+    const totalDuration = sessions.reduce((acc, s) => acc + (s.duration || 0), 0);
+    if (totalDuration >= 1800) { // 30+ minutes
+      achievements.push({
+        icon: '⏰',
+        title: 'Time Master',
+        description: `Spent ${Math.round(totalDuration / 60)} minutes learning`
+      });
+    }
+    
+    const uniqueTopics = [...new Set(sessions.map(s => s.topicName))];
+    if (uniqueTopics.length >= 3) {
+      achievements.push({
+        icon: '🌟',
+        title: 'Topic Explorer',
+        description: `Explored ${uniqueTopics.length} different topics`
+      });
+    }
+    
+    return achievements;
+  };
 
   const handleLogout = async () => {
     try {
@@ -72,7 +200,6 @@ const Dashboard = () => {
   const startNewSession = () => {
     if (!selectedTopic || !learningPath) return;
     
-    // Navigate to learning session with topic data
     navigate('/learn', {
       state: {
         isNewSession: true,
@@ -83,26 +210,6 @@ const Dashboard = () => {
     });
   };
 
-  const continueSession = (session) => {
-    navigate(`/learn/${session.id}`, {
-      state: { sessionData: session }
-    });
-  };
-
-  const deleteSession = async (sessionId) => {
-    if (!window.confirm('Are you sure you want to delete this learning session?')) {
-      return;
-    }
-
-    try {
-      await api.deleteLearningSession(sessionId);
-      setLearningSessions(prev => prev.filter(s => s.id !== sessionId));
-    } catch (error) {
-      console.error('Failed to delete session:', error);
-      alert('Failed to delete session. Please try again.');
-    }
-  };
-
   const formatDuration = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -111,33 +218,6 @@ const Dashboard = () => {
       return `${hours}h ${minutes}m`;
     }
     return `${minutes}m`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    
-    return date.toLocaleDateString();
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty?.toLowerCase()) {
-      case 'beginner': return '#10B981';
-      case 'intermediate': return '#F59E0B';
-      case 'advanced': return '#EF4444';
-      default: return '#6B7280';
-    }
-  };
-
-  const getProgressColor = (progress) => {
-    if (progress >= 80) return '#10B981';
-    if (progress >= 50) return '#F59E0B';
-    return '#EF4444';
   };
 
   const learningPaths = {
@@ -191,7 +271,7 @@ const Dashboard = () => {
             <BookOpen size={20} />
             <div>
               <span className="stat-number">{learningSessions.length}</span>
-              <span className="stat-label">Sessions</span>
+              <span className="stat-label">Total Sessions</span>
             </div>
           </div>
           <div className="stat-item">
@@ -239,117 +319,253 @@ const Dashboard = () => {
             <h1>Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
             <p>Ready to continue your learning journey?</p>
           </div>
-          <button
-            onClick={() => setShowNewSession(true)}
-            className="btn btn-primary"
-          >
-            <Plus size={20} />
-            Start New Session
-          </button>
+          <div className="header-actions">
+            {/* Daily Summary Bell */}
+            <button
+              onClick={generateDailySummary}
+              className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
+              title="View yesterday's learning summary"
+            >
+              <Bell size={20} />
+              {bellNotificationCount > 0 && (
+                <span className="notification-badge">{bellNotificationCount}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setShowNewSession(true)}
+              className="btn btn-primary"
+            >
+              <Plus size={20} />
+              Start New Session
+            </button>
+          </div>
         </div>
 
-        {/* Learning Sessions */}
-        <div className="sessions-section">
-          <div className="section-header">
-            <h2>Your Learning Sessions</h2>
-            <span className="session-count">{learningSessions.length} sessions</span>
+        {/* Main Dashboard Content */}
+        <div className="dashboard-content">
+          <div className="welcome-section">
+            <div className="welcome-card">
+              <div className="welcome-header">
+                <Brain size={48} className="welcome-icon" />
+                <div>
+                  <h2>Ready to Melt Some Minds? 🧠</h2>
+                  <p>Start a new learning session or check your daily progress summary</p>
+                </div>
+              </div>
+              
+              <div className="quick-actions">
+                <button
+                  onClick={() => setShowNewSession(true)}
+                  className="quick-action-btn primary"
+                >
+                  <Sparkles size={24} />
+                  <div>
+                    <h4>Start Learning</h4>
+                    <p>Begin a new CS topic session</p>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={generateDailySummary}
+                  className="quick-action-btn secondary"
+                >
+                  <Trophy size={24} />
+                  <div>
+                    <h4>Yesterday's Summary</h4>
+                    <p>See what you accomplished</p>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {learningSessions.length === 0 ? (
-            <div className="empty-state">
-              <Brain size={64} className="empty-icon" />
-              <h3>No learning sessions yet</h3>
-              <p>Start your first MindMelt session to begin your journey!</p>
-              <button
-                onClick={() => setShowNewSession(true)}
-                className="btn btn-primary"
-              >
-                <Sparkles size={20} />
-                Create Your First Session
-              </button>
-            </div>
-          ) : (
-            <div className="sessions-grid">
-              {learningSessions.map((session) => (
-                <div key={session.id} className="session-card">
-                  <div className="session-header">
-                    <div className="session-info">
-                      <h3>{session.topicName}</h3>
-                      <div className="session-meta">
-                        <span className="category">{session.category}</span>
-                        <span 
-                          className="difficulty"
-                          style={{ color: getDifficultyColor(session.difficulty) }}
-                        >
-                          {session.difficulty}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="session-actions">
-                      <button
-                        onClick={() => deleteSession(session.id)}
-                        className="action-btn delete-btn"
-                        title="Delete session"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="session-progress">
-                    <div className="progress-header">
-                      <span>Progress</span>
-                      <span style={{ color: getProgressColor(session.progress) }}>
-                        {session.progress}%
-                      </span>
-                    </div>
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{ 
-                          width: `${session.progress}%`,
-                          backgroundColor: getProgressColor(session.progress)
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="session-details">
-                    <div className="detail-item">
-                      <Clock size={16} />
-                      <span>{formatDuration(session.duration)}</span>
-                    </div>
-                    <div className="detail-item">
-                      <Calendar size={16} />
-                      <span>{formatDate(session.updatedAt)}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="learning-path-indicator">
-                        {learningPaths[session.learningPath]?.icon} {learningPaths[session.learningPath]?.name}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="session-footer">
-                    <span className={`status-badge ${session.completed ? 'completed' : 'in-progress'}`}>
-                      {session.completed ? 'Completed' : 'In Progress'}
-                    </span>
-                    <button
-                      onClick={() => continueSession(session)}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      {session.completed ? 'Review' : 'Continue'}
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
+          {/* Recent Activity Overview */}
+          <div className="activity-overview">
+            <h3>Recent Learning Activity</h3>
+            <div className="activity-grid">
+              <div className="activity-stat">
+                <div className="stat-icon">
+                  <Calendar size={20} />
                 </div>
-              ))}
+                <div className="stat-content">
+                  <span className="stat-number">
+                    {learningSessions.filter(s => {
+                      const sessionDate = new Date(s.updatedAt);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return sessionDate >= today;
+                    }).length}
+                  </span>
+                  <span className="stat-label">Today's Sessions</span>
+                </div>
+              </div>
+              
+              <div className="activity-stat">
+                <div className="stat-icon">
+                  <Zap size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-number">
+                    {learningSessions.filter(s => {
+                      const sessionDate = new Date(s.updatedAt);
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return sessionDate >= weekAgo;
+                    }).length}
+                  </span>
+                  <span className="stat-label">This Week</span>
+                </div>
+              </div>
+              
+              <div className="activity-stat">
+                <div className="stat-icon">
+                  <CheckCircle size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-number">
+                    {Math.round((learningSessions.filter(s => s.completed).length / Math.max(learningSessions.length, 1)) * 100)}%
+                  </span>
+                  <span className="stat-label">Completion Rate</span>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* New Session Modal */}
+      {/* Daily Summary Modal */}
+      {showDailySummary && dailySummary && (
+        <div className="modal-overlay" onClick={() => setShowDailySummary(false)}>
+          <div className="modal-content daily-summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon">📊</span>
+                <div>
+                  <h2>Daily Learning Summary</h2>
+                  <p>{dailySummary.date}</p>
+                </div>
+              </div>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowDailySummary(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="summary-stats">
+                <div className="summary-stat">
+                  <div className="stat-icon">
+                    <BookOpen size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-number">{dailySummary.totalSessions}</span>
+                    <span className="stat-label">Sessions Started</span>
+                  </div>
+                </div>
+                
+                <div className="summary-stat">
+                  <div className="stat-icon">
+                    <CheckCircle size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-number">{dailySummary.completedSessions}</span>
+                    <span className="stat-label">Completed</span>
+                  </div>
+                </div>
+                
+                <div className="summary-stat">
+                  <div className="stat-icon">
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-number">{formatDuration(dailySummary.totalDuration)}</span>
+                    <span className="stat-label">Time Spent</span>
+                  </div>
+                </div>
+                
+                <div className="summary-stat">
+                  <div className="stat-icon">
+                    <TrendingUp size={24} />
+                  </div>
+                  <div>
+                    <span className="stat-number">{dailySummary.avgProgress}%</span>
+                    <span className="stat-label">Avg Progress</span>
+                  </div>
+                </div>
+              </div>
+
+              {dailySummary.achievements.length > 0 && (
+                <div className="achievements-section">
+                  <h3>🏆 Achievements Unlocked</h3>
+                  <div className="achievements-grid">
+                    {dailySummary.achievements.map((achievement, index) => (
+                      <div key={index} className="achievement-card">
+                        <span className="achievement-icon">{achievement.icon}</span>
+                        <div>
+                          <h4>{achievement.title}</h4>
+                          <p>{achievement.description}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Object.keys(dailySummary.topicStats).length > 0 && (
+                <div className="topics-section">
+                  <h3>📚 Topics Covered</h3>
+                  <div className="topics-list">
+                    {Object.entries(dailySummary.topicStats).map(([topic, stats]) => (
+                      <div key={topic} className="topic-summary">
+                        <div className="topic-info">
+                          <h4>{topic}</h4>
+                          <span className="topic-category">{stats.category}</span>
+                        </div>
+                        <div className="topic-stats">
+                          <span>{stats.count} session{stats.count > 1 ? 's' : ''}</span>
+                          <span>{formatDuration(stats.duration)}</span>
+                          <span>{stats.avgProgress}% progress</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dailySummary.totalSessions === 0 && (
+                <div className="empty-summary">
+                  <Bell size={48} className="empty-icon" />
+                  <h3>No Activity Yesterday</h3>
+                  <p>You didn't have any learning sessions yesterday. Ready to start today?</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowDailySummary(false)}
+                className="btn btn-secondary"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setShowDailySummary(false);
+                  setShowNewSession(true);
+                }}
+                className="btn btn-primary"
+              >
+                <Plus size={16} />
+                Start New Session
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Session Modal - Keep existing modal */}
       {showNewSession && (
         <div className="modal-overlay" onClick={() => setShowNewSession(false)}>
           <div className="modal-content new-session-modal" onClick={(e) => e.stopPropagation()}>
@@ -444,7 +660,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Profile Modal */}
+      {/* Profile Modal - Keep existing modal */}
       {showProfile && (
         <div className="modal-overlay" onClick={() => setShowProfile(false)}>
           <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
