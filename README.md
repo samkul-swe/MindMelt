@@ -72,6 +72,7 @@ MindMelt uses AI to teach computer science through questions, not lectures. Choo
 2. **Install dependencies**
    ```bash
    # Install backend dependencies
+   cd backend
    npm install
    
    # Install frontend dependencies
@@ -82,7 +83,6 @@ MindMelt uses AI to teach computer science through questions, not lectures. Choo
 3. **Set up environment variables**
    ```bash
    # Backend (.env)
-   JWT_SECRET=your_jwt_secret
    PORT=3001
    
    # Frontend (.env)
@@ -92,6 +92,7 @@ MindMelt uses AI to teach computer science through questions, not lectures. Choo
 4. **Start the development servers**
    ```bash
    # Start backend (from root directory)
+   cd backend
    npm start
    
    # Start frontend (from frontend directory)
@@ -164,7 +165,6 @@ mindmelt/
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `REACT_APP_AI_API_KEY` | GMI API key for AI features | Yes |
-| `JWT_SECRET` | Secret for JWT token signing | Yes |
 | `PORT` | Backend server port | No (default: 3001) |
 
 ## 🤝 Contributing
@@ -178,17 +178,6 @@ mindmelt/
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **GMI API** for powerful AI capabilities
-- **Socratic method** for the learning philosophy
-- **React community** for amazing tools and libraries
-
-## 📧 Contact
-
-- **GitHub**: [@yourusername](https://github.com/yourusername)
-- **Email**: your.email@example.com
 
 ---
 
