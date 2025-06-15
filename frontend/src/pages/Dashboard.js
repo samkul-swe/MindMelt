@@ -31,6 +31,51 @@ import SearchBar from '../components/SearchBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
 
+// Helper function to calculate learning streak
+const calculateStreak = (sessions) => {
+  if (!sessions.length) return 0;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const sessionDates = [...new Set(sessions.map(s => {
+    const date = new Date(s.updatedAt);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }))].sort((a, b) => b - a);
+  
+  let streak = 0;
+  for (let i = 0; i < sessionDates.length; i++) {
+    const expectedDate = new Date(today);
+    expectedDate.setDate(today.getDate() - i);
+    
+    if (sessionDates[i] === expectedDate.getTime()) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
+};
+
+// Generate motivational tech puns
+const getTechPun = () => {
+  const puns = [
+    { text: "Time to Debug Your Potential! 🐛", subtitle: "Let's squash some knowledge gaps together" },
+    { text: "Ready to Compile Some Brilliance? ⚡", subtitle: "Your brain is the best IDE for learning" },
+    { text: "Let's Cache Some Knowledge! 💾", subtitle: "Store these concepts in your long-term memory" },
+    { text: "Time to Push Your Limits! 🚀", subtitle: "Git ready for an amazing learning session" },
+    { text: "Ready to Parse Some Wisdom? 📚", subtitle: "Breaking down complex topics into digestible bits" },
+    { text: "Let's Refactor Your Understanding! 🔧", subtitle: "Clean code, clean mind, clean learning" },
+    { text: "Time to Optimize Your Brain! ⚡", subtitle: "Maximum learning efficiency loading..." },
+    { text: "Ready to Stack Some Skills? 📚", subtitle: "Building your knowledge data structure" },
+    { text: "Let's Initialize Your Growth! 🌱", subtitle: "constructor() { this.knowledge = new Map(); }" }
+  ];
+  
+  return puns[Math.floor(Math.random() * puns.length)];
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -42,6 +87,7 @@ const Dashboard = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [learningPath, setLearningPath] = useState('');
   const [dailySummary, setDailySummary] = useState(null);
+  const [userLearningData, setUserLearningData] = useState(null);
   const [bellNotificationCount, setBellNotificationCount] = useState(0);
 
   const apiKeyManager = useApiKey();
@@ -53,6 +99,19 @@ const Dashboard = () => {
       setLoading(true);
       const sessions = await api.getLearningHistory();
       setLearningSessions(sessions || []);
+      
+      // Transform sessions data for learning summary
+      const transformedData = {
+        sessions: sessions || [],
+        questions: sessions?.flatMap(s => s.questions || []) || [],
+        recentTopics: [...new Set(sessions?.slice(0, 10).map(s => s.topicName).filter(Boolean) || [])],
+        strengths: [],
+        weaknesses: [],
+        totalTimeMinutes: Math.round((sessions?.reduce((acc, s) => acc + (s.duration || 0), 0) || 0) / 60),
+        currentStreak: calculateStreak(sessions || [])
+      };
+      
+      setUserLearningData(transformedData);
       
       // Calculate bell notification count (sessions completed yesterday)
       const yesterday = new Date();
@@ -275,12 +334,12 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="stat-item">
-            <Target size={20} />
+            <Clock size={20} />
             <div>
               <span className="stat-number">
-                {learningSessions.filter(s => s.completed).length}
+                {userLearningData?.currentStreak || 0}
               </span>
-              <span className="stat-label">Completed</span>
+              <span className="stat-label">Day Streak</span>
             </div>
           </div>
           <div className="stat-item">
@@ -302,13 +361,6 @@ const Dashboard = () => {
             <Settings size={18} />
             Profile Settings
           </button>
-          <button
-            onClick={handleLogout}
-            className="sidebar-btn logout-btn"
-          >
-            <LogOut size={18} />
-            Sign Out
-          </button>
         </div>
       </div>
 
@@ -321,11 +373,11 @@ const Dashboard = () => {
           </div>
           <div className="header-actions">
             {/* Daily Summary Bell */}
-            <button
-              onClick={generateDailySummary}
-              className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
-              title="View yesterday's learning summary"
-            >
+              <button
+                onClick={generateDailySummary}
+                className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
+                title="View yesterday's learning summary"
+              >
               <Bell size={20} />
               {bellNotificationCount > 0 && (
                 <span className="notification-badge">{bellNotificationCount}</span>
@@ -341,43 +393,77 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Main Dashboard Content */}
-        <div className="dashboard-content">
-          <div className="welcome-section">
-            <div className="welcome-card">
-              <div className="welcome-header">
-                <Brain size={48} className="welcome-icon" />
+      {/* Main Dashboard Content */}
+      <div className="dashboard-content">
+        <div className="welcome-section">
+          <div className="welcome-card">
+          <div className="welcome-header">
+            <Brain size={48} className="welcome-icon" />
+            <div>
+              <h2>{getTechPun().text}</h2>
+              <p>{getTechPun().subtitle}</p>
+            </div>
+          </div>
+            
+            <div className="quick-actions">
+              <button
+                onClick={() => setShowNewSession(true)}
+                className="quick-action-btn primary"
+              >
+                <Sparkles size={24} />
                 <div>
-                  <h2>Ready to Melt Some Minds? 🧠</h2>
-                  <p>Start a new learning session or check your daily progress summary</p>
+                  <h4>Start Learning</h4>
+                  <p>Begin a new CS topic session</p>
+                </div>
+              </button>
+              
+              <button
+                onClick={generateDailySummary}
+                className="quick-action-btn secondary"
+              >
+                <Trophy size={24} />
+                <div>
+                  <h4>Yesterday's Summary</h4>
+                  <p>See what you accomplished</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Last Session Display */}
+        {learningSessions.length > 0 && (
+          <div className="last-session-section">
+            <h3>Continue Your Journey</h3>
+            <div className="last-session-card">
+              <div className="session-header">
+                <div className="session-icon">
+                  <BookOpen size={24} />
+                </div>
+                <div className="session-info">
+                  <h4>Last Session: {learningSessions[0].topicName}</h4>
+                  <p className="session-meta">
+                    {learningSessions[0].category} • {learningSessions[0].difficulty} • 
+                    {Math.round(learningSessions[0].progress || 0)}% complete
+                  </p>
+                  <span className="session-date">
+                    {new Date(learningSessions[0].updatedAt).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
-              
-              <div className="quick-actions">
+              <div className="session-actions">
                 <button
-                  onClick={() => setShowNewSession(true)}
-                  className="quick-action-btn primary"
+                  onClick={() => navigate('/learn', {
+                    state: { sessionId: learningSessions[0].id }
+                  })}
+                  className="btn btn-primary btn-sm"
                 >
-                  <Sparkles size={24} />
-                  <div>
-                    <h4>Start Learning</h4>
-                    <p>Begin a new CS topic session</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={generateDailySummary}
-                  className="quick-action-btn secondary"
-                >
-                  <Trophy size={24} />
-                  <div>
-                    <h4>Yesterday's Summary</h4>
-                    <p>See what you accomplished</p>
-                  </div>
+                  Continue Learning
                 </button>
               </div>
             </div>
           </div>
+        )}
 
           {/* Recent Activity Overview */}
           <div className="activity-overview">

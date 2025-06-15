@@ -10,13 +10,6 @@ const API_CONFIG = {
   top_k: 40
 };
 
-const HINT_CONFIG = {
-  temperature: 0.7,
-  topK: 30,
-  topP: 0.9,
-  maxOutputTokens: 200 // Shorter responses for hints
-};
-
 const QUALITY_THRESHOLDS = {
   excellent: 85,
   good: 70,
@@ -24,7 +17,6 @@ const QUALITY_THRESHOLDS = {
   poor: 40
 };
 
-// Error messages mapping
 const ERROR_MESSAGES = {
   API_KEY_MISSING: '🔑 AI API key not found. Please set your API key in MindMelt settings to start learning!',
   API_KEY_INVALID: '🔑 Invalid API key. Please check your AI API key in MindMelt settings.',
@@ -875,6 +867,111 @@ export async function getHintResponse(concept, conversationContext, learningPath
 }
 
 /**
+ * Generate personalized learning summary using AI for MindMelt dashboard
+ */
+export async function generateLearningSummary(learningData, apiKey) {
+  const finalApiKey = apiKey || getApiKey();
+  
+  if (!finalApiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  const {
+    completedSessions,
+    totalQuestions,
+    correctAnswers,
+    topicsStudied,
+    recentTopics,
+    strengths,
+    weaknesses,
+    timeSpent,
+    streak
+  } = learningData;
+
+  const accuracyRate = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+  const summaryPrompt = `You are MindMelt's encouraging AI learning coach. Generate a personalized, motivational summary of this student's CS learning progress.
+
+LEARNING STATISTICS:
+- Completed Sessions: ${completedSessions}
+- Total Questions Answered: ${totalQuestions}
+- Correct Answers: ${correctAnswers}
+- Accuracy Rate: ${accuracyRate}%
+- Topics Studied: ${topicsStudied.join(', ') || 'Getting started'}
+- Recent Focus Areas: ${recentTopics.join(', ') || 'Beginning journey'}
+- Strong Areas: ${strengths.join(', ') || 'Building foundation'}
+- Growth Areas: ${weaknesses.join(', ') || 'Exploring new concepts'}
+- Total Study Time: ${timeSpent} minutes
+- Current Streak: ${streak} days
+
+RESPONSE REQUIREMENTS:
+- Write 3-4 encouraging paragraphs (150-200 words total)
+- Start with celebration of their achievements
+- Highlight specific progress patterns and insights
+- Include motivational language about their CS learning journey
+- End with encouragement for continued learning
+- Use emojis sparingly but effectively
+- Sound personal and supportive, not generic
+- Focus on growth mindset and learning progress
+
+Write as if you're their personal CS learning coach who knows their journey intimately.`;
+
+  try {
+    console.log('📊 MindMelt: Generating learning summary...');
+    
+    const summaryText = await makeApiCall(summaryPrompt, finalApiKey, {
+      temperature: 0.7,
+      max_tokens: 300
+    });
+    
+    console.log('✅ MindMelt: Learning summary generated successfully');
+    return summaryText;
+    
+  } catch (error) {
+    console.error('❌ MindMelt: Learning summary generation failed:', error);
+    throw handleApiError(error);
+  }
+}
+
+/**
+ * Generate topic-specific insights for learning progress
+ */
+export async function generateTopicInsights(topicData, apiKey) {
+  const finalApiKey = apiKey || getApiKey();
+  
+  if (!finalApiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  const insightsPrompt = `As MindMelt's AI learning coach, provide encouraging insights about this student's performance across different CS topics:
+
+TOPIC PERFORMANCE DATA:
+${JSON.stringify(topicData, null, 2)}
+
+Generate a brief, encouraging analysis (2-3 sentences) that:
+- Celebrates their strongest areas
+- Provides gentle guidance on growth areas  
+- Suggests connections between topics they've studied
+- Maintains a positive, growth-focused tone
+
+Keep it personal and motivational, like a supportive CS mentor.`;
+
+  try {
+    const insightsText = await makeApiCall(insightsPrompt, finalApiKey, {
+      temperature: 0.6,
+      max_tokens: 200
+    });
+    
+    console.log('💡 MindMelt: Topic insights generated successfully');
+    return insightsText;
+    
+  } catch (error) {
+    console.error('❌ MindMelt: Topic insights generation failed:', error);
+    throw handleApiError(error);
+  }
+}
+
+/**
  * Create hint-specific prompt for the AI
  */
 function createHintPrompt(concept, conversationContext, learningPath, questioningStyle) {
@@ -986,6 +1083,8 @@ const aiServiceExports = {
   getApiSetupInstructions,
   parseAIResponse,
   formatResponseForDisplay,
+  generateLearningSummary,        // Add this line
+  generateTopicInsights,          // Add this line
   MINDMELT_AI_CONFIG
 };
 
