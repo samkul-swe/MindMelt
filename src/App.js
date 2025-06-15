@@ -1,5 +1,5 @@
 // ============================================================================
-// CLEAN APP.JS - Fixed all ESLint errors and warnings
+// UPDATED APP.JS - Removed Learning Track Changes + Improved Question Style
 // ============================================================================
 
 // App.js - MindMelt with React Router for separate pages
@@ -56,22 +56,22 @@ const learningPaths = {
 const questioningStyles = {
   socratic: { 
     name: "Socratic Method", 
-    description: "Guided discovery through strategic questions",
+    description: "Guided discovery through strategic questions that build understanding step by step",
     icon: "💭"
   },
   scenario: { 
     name: "Scenario-Based", 
-    description: "Real-world problem scenarios and use cases",
+    description: "Real-world problem scenarios and practical use cases to explore concepts",
     icon: "🌍"
   },
   puzzle: { 
     name: "Puzzle & Brain Teaser", 
-    description: "Challenge-based learning with problem solving",
+    description: "Challenge-based learning with creative problem solving and logic puzzles",
     icon: "🧩"
   },
   analogy: { 
     name: "Analogy & Metaphor", 
-    description: "Learn through comparisons and analogies",
+    description: "Learn through comparisons, analogies, and familiar everyday examples",
     icon: "🔗"
   }
 };
@@ -525,7 +525,7 @@ const SearchBar = React.memo(({
   performSearch,
   clearSearch,
   hideSuggestions,
-  showSuggestions // FIXED: Added missing prop
+  showSuggestions
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
@@ -902,7 +902,7 @@ const ApiSetupModal = ({ onSave, onCancel }) => {
   );
 };
 
-// Setup Page Component - FIXED: All dependencies and unused variables
+// Setup Page Component
 const SetupPage = React.memo(() => {
   const navigate = useNavigate();
   const [selectedTopic, setSelectedTopic] = useState(null);
@@ -1006,7 +1006,7 @@ const SetupPage = React.memo(() => {
             performSearch={topicSearch.performSearch}
             clearSearch={topicSearch.clearSearch}
             hideSuggestions={topicSearch.hideSuggestions}
-            showSuggestions={topicSearch.showSuggestions} // FIXED: Added missing prop
+            showSuggestions={topicSearch.showSuggestions}
           />
 
           <div className="search-help">
@@ -1085,7 +1085,7 @@ const SetupPage = React.memo(() => {
   );
 });
 
-// Learning Session Page Component - FIXED: Timer dependencies
+// UPDATED: Learning Session Page Component - Removed Learning Path Changes + Improved Question Style
 const LearningPage = () => {
   const navigate = useNavigate();
   const [sessionData, setSessionData] = useState(null);
@@ -1097,12 +1097,14 @@ const LearningPage = () => {
   const [showApiSetup, setShowApiSetup] = useState(false);
   const [currentQuestioningStyle, setCurrentQuestioningStyle] = useState('socratic');
   const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [showWelcomeInfo, setShowWelcomeInfo] = useState(false);
+  const [isLoadingFirstQuestion, setIsLoadingFirstQuestion] = useState(true);
   const messageEndRef = useRef(null);
 
   const timer = useTimer();
   const apiKeyManager = useApiKey();
 
-  // FIXED: Load session data with proper dependencies
+  // Load session and get first AI question
   useEffect(() => {
     const saved = SessionState.load();
     if (!saved || !SessionState.isValid(saved)) {
@@ -1113,18 +1115,121 @@ const LearningPage = () => {
     setSessionData(saved);
     setCurrentQuestioningStyle(saved.questioningStyle || 'socratic');
     
-    const welcome = `🧠 Welcome to MindMelt! You've selected ${saved.selectedTopicData.name} with ${learningPaths[saved.learningPath].name} approach using ${questioningStyles[saved.questioningStyle || 'socratic'].name} style.\n\n🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer well to refreeze it and gain more focus time.\n\nTopic Focus: ${saved.selectedTopicData.description}\n\nI'm your Socratic tutor - I'll guide you to discover the answer through thoughtful questions rather than giving direct answers. Let's begin exploring ${saved.selectedTopicData.name} before your ice cream melts!`;
-    
-    setMessages([createMessage(MESSAGE_TYPES.BOT, welcome, { isWelcome: true })]);
+    // Start timer
     timer.setTimerActive(true);
+    
+    // Get first AI question
+    getFirstQuestion(saved);
   }, [navigate, timer.setTimerActive]);
+
+  // Function to get the first AI question
+  const getFirstQuestion = useCallback(async (sessionData) => {
+    const apiKey = apiKeyManager.getCurrentApiKey();
+    if (!apiKey) {
+      setShowApiSetup(true);
+      setIsLoadingFirstQuestion(false);
+      return;
+    }
+
+    try {
+      setIsLoadingFirstQuestion(true);
+      
+      const topicName = sessionData.selectedTopicData.name;
+      const learningPathName = learningPaths[sessionData.learningPath].name;
+      
+      console.log(`🎯 Getting first question for: ${topicName} (${learningPathName})`);
+      
+      const firstQuestion = await getSocraticResponse(
+        topicName,
+        `I'm ready to learn about ${topicName} using the ${learningPathName} approach. Let's begin with my learning journey!`,
+        sessionData.learningPath,
+        sessionData.questioningStyle || 'socratic',
+        apiKey
+      );
+      
+      const firstMessage = createMessage(MESSAGE_TYPES.BOT, firstQuestion);
+      setMessages([firstMessage]);
+      
+      console.log('✅ First question loaded');
+    } catch (error) {
+      console.error('❌ Failed to get first question:', error);
+      // Fallback to a generic first question
+      const fallbackQuestion = `Welcome to learning ${sessionData.selectedTopicData.name}! 🧠 Let's start with this: What do you already know about ${sessionData.selectedTopicData.name}, and where have you encountered it before?`;
+      const fallbackMessage = createMessage(MESSAGE_TYPES.BOT, fallbackQuestion);
+      setMessages([fallbackMessage]);
+    } finally {
+      setIsLoadingFirstQuestion(false);
+    }
+  }, [apiKeyManager]);
+
+  // NEW: Function to restart session with new questioning style
+  const restartWithNewQuestioningStyle = useCallback(async (newQuestioningStyle) => {
+    if (!sessionData) return;
+    
+    console.log(`🔄 Restarting session with new questioning style: ${questioningStyles[newQuestioningStyle].name}`);
+    
+    // Update session data
+    const updatedSessionData = {
+      ...sessionData,
+      questioningStyle: newQuestioningStyle
+    };
+    
+    // Save updated session
+    SessionState.save(updatedSessionData);
+    setSessionData(updatedSessionData);
+    setCurrentQuestioningStyle(newQuestioningStyle);
+    
+    // Reset all progress
+    setMessages([]);
+    setProgress([]);
+    setCorrectStreak(0);
+    setUserInput('');
+    setIsThinking(false);
+    
+    // Reset timer to initial state
+    timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
+    timer.setTimerActive(true);
+    
+    // Add restart message
+    const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
+      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle].name}! Starting fresh with new questions tailored to this approach.`, 
+      { isBonus: true }
+    );
+    setMessages([restartMessage]);
+    
+    // Get new first question with new questioning style
+    setTimeout(() => {
+      getFirstQuestion(updatedSessionData);
+    }, 1000);
+    
+  }, [sessionData, timer, getFirstQuestion]);
+
+  // UPDATED: Info button click handler (auto-pause timer)
+  const handleInfoClick = useCallback(() => {
+    // Always pause timer when opening info
+    if (timer.timerActive && !timer.timerPaused) {
+      timer.togglePause();
+    }
+    
+    setShowWelcomeInfo(true);
+  }, [timer]);
+
+  // UPDATED: Info close handler (auto-resume timer)
+  const handleInfoClose = useCallback(() => {
+    setShowWelcomeInfo(false);
+    
+    // Always resume timer when closing info (if it was paused)
+    if (timer.timerActive && timer.timerPaused) {
+      timer.togglePause();
+    }
+  }, [timer]);
 
   // Auto-scroll messages
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // FIXED: Timer countdown with proper dependencies
+  // Timer countdown effect
   useEffect(() => {
     if (timer.timerActive && !timer.timerPaused && timer.timeRemaining > 0) {
       const interval = setInterval(() => {
@@ -1207,7 +1312,25 @@ const LearningPage = () => {
   const handleApiKeySave = useCallback((key) => {
     apiKeyManager.saveApiKey(key);
     setShowApiSetup(false);
-  }, [apiKeyManager]);
+    
+    // Retry getting first question with new API key
+    if (sessionData) {
+      getFirstQuestion(sessionData);
+    }
+  }, [apiKeyManager, sessionData, getFirstQuestion]);
+
+  // UPDATED: Simplified welcome info content (just basic information)
+  const getWelcomeInfo = useCallback(() => {
+    if (!sessionData) return '';
+    
+    return `🧠 Welcome to MindMelt! You're learning ${sessionData.selectedTopicData.name} with our AI-powered Socratic tutor.
+
+🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time. The better your responses, the more time you earn.
+
+🎯 How MindMelt Works: I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers. This helps you build deeper understanding and critical thinking skills.
+
+💡 Tips for Success: Take your time to think through each question, explain your reasoning, and don't be afraid to explore your thoughts out loud. The more you engage, the more you'll learn!`;
+  }, [sessionData]);
 
   if (!sessionData || !sessionData.selectedTopicData) {
     return (
@@ -1241,44 +1364,57 @@ const LearningPage = () => {
               MindMelt: {sessionData?.selectedTopicData?.name || 'Loading...'}
             </h2>
             <div className="session-meta">
-              <span className="path-badge">
+              {/* REMOVED: Learning Path Selector - Now just displays current path */}
+              <div className="path-badge">
                 {learningPaths[sessionData.learningPath].icon} {learningPaths[sessionData.learningPath].name}
-              </span>
+              </div>
+
+              {/* IMPROVED: Enhanced Questioning Style Selector */}
               <div className="style-selector-container">
                 <button 
-                  className="style-badge clickable"
+                  className="style-badge clickable enhanced"
                   onClick={() => setShowStyleSelector(!showStyleSelector)}
-                  title="Click to change questioning style"
+                  title="Click to change questioning style (restarts session)"
                 >
                   {questioningStyles[currentQuestioningStyle].icon} {questioningStyles[currentQuestioningStyle].name}
-                  <span className="dropdown-arrow">▼</span>
+                  <span className="dropdown-arrow">🔄</span>
                 </button>
                 
                 {showStyleSelector && (
-                  <div className="style-dropdown">
+                  <div className="style-dropdown enhanced">
+                    <div className="dropdown-header enhanced">
+                      <h4>💭 Change Questioning Style</h4>
+                      <p>⚠️ This will restart your session with fresh questions</p>
+                    </div>
                     {Object.entries(questioningStyles).map(([key, style]) => (
                       <button
                         key={key}
-                        className={`style-option ${currentQuestioningStyle === key ? 'active' : ''}`}
+                        className={`style-option concise ${currentQuestioningStyle === key ? 'active' : ''}`}
                         onClick={() => {
-                          setCurrentQuestioningStyle(key);
+                          if (key !== currentQuestioningStyle) {
+                            restartWithNewQuestioningStyle(key);
+                          }
                           setShowStyleSelector(false);
-                          setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
-                            `🎯 Questioning style changed to ${style.name}. ${style.description}`,
-                            { isBonus: true }
-                          )]);
                         }}
                       >
                         <span className="style-option-icon">{style.icon}</span>
-                        <div className="style-option-content">
-                          <div className="style-option-name">{style.name}</div>
-                          <div className="style-option-desc">{style.description}</div>
-                        </div>
+                        <span className="style-option-name">{style.name}</span>
+                        {currentQuestioningStyle === key && <span className="current-badge">Current</span>}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
+
+              {/* SIMPLIFIED: Info button (auto-pauses timer) */}
+              <button 
+                className="info-btn enhanced"
+                onClick={handleInfoClick}
+                title="Session Information (Auto-pauses timer)"
+              >
+                <span className="info-icon">ℹ️</span>
+                <span className="info-text">Info</span>
+              </button>
             </div>
           </div>
           
@@ -1295,6 +1431,7 @@ const LearningPage = () => {
                 </div>
                 <div className="timer-label">
                   Focus Time • Max: {Math.floor(timer.maxTime / 60)}min
+                  {showWelcomeInfo && <span className="paused-label"> • Paused</span>}
                 </div>
               </div>
             </div>
@@ -1319,26 +1456,35 @@ const LearningPage = () => {
         </div>
 
         <div className="messages-container">
-          {messages.map((message, index) => (
-            <Message key={index} message={message} index={index} />
-          ))}
-          
-          {isThinking && (
-            <div className="message bot">
-              <div className="message-avatar">
-                <Bot size={20} />
-              </div>
-              <div className="message-content">
-                <div className="thinking-bubble">
-                  <div className="thinking-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  Thinking...
-                </div>
-              </div>
+          {isLoadingFirstQuestion ? (
+            <div className="loading-first-question">
+              <div className="loading-spinner"></div>
+              <p>🧠 Preparing your {learningPaths[sessionData.learningPath].name.toLowerCase()} question...</p>
             </div>
+          ) : (
+            <>
+              {messages.map((message, index) => (
+                <Message key={index} message={message} index={index} />
+              ))}
+              
+              {isThinking && (
+                <div className="message bot">
+                  <div className="message-avatar">
+                    <Bot size={20} />
+                  </div>
+                  <div className="message-content">
+                    <div className="thinking-bubble">
+                      <div className="thinking-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                      Thinking...
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           
           <div ref={messageEndRef} />
@@ -1348,7 +1494,11 @@ const LearningPage = () => {
           <div className="input-container">
             <input
               className="message-input"
-              placeholder={timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : "Type your response..."}
+              placeholder={
+                isLoadingFirstQuestion ? "Loading your first question..." :
+                timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
+                "Type your response..."
+              }
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyDown={(e) => {
@@ -1357,12 +1507,12 @@ const LearningPage = () => {
                   handleSubmit();
                 }
               }}
-              disabled={timer.timeRemaining <= 0 || isThinking}
+              disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
             />
             <button 
               className="send-btn"
               onClick={handleSubmit}
-              disabled={timer.timeRemaining <= 0 || isThinking || !userInput.trim()}
+              disabled={timer.timeRemaining <= 0 || isThinking || !userInput.trim() || isLoadingFirstQuestion}
             >
               <MessageCircle size={20} />
             </button>
@@ -1389,6 +1539,88 @@ const LearningPage = () => {
           </div>
         </div>
       </div>
+
+      {/* SIMPLIFIED: Welcome Info Modal (basic information only) */}
+      {showWelcomeInfo && (
+        <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
+          <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header simplified">
+              <div className="modal-title">
+                <span className="modal-icon">🧠</span>
+                <div>
+                  <h2>MindMelt Session Info</h2>
+                  <div className="modal-badges">
+                    <span className="category-badge">{sessionData.selectedTopicData.category}</span>
+                    <span className="difficulty-badge">{sessionData.selectedTopicData.difficulty}</span>
+                    <span className="timer-badge">⏸️ Timer Paused</span>
+                  </div>
+                </div>
+              </div>
+              <button className="modal-close simplified" onClick={handleInfoClose}>
+                <span>✕</span>
+                <span className="close-hint">Resume</span>
+              </button>
+            </div>
+            
+            <div className="modal-body simplified">
+              <div className="info-content">
+                <div className="welcome-text">
+                  {getWelcomeInfo().split('\n\n').map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
+                
+                <div className="current-session-info">
+                  <h3>📚 Current Session</h3>
+                  <div className="session-summary">
+                    <div className="summary-item">
+                      <strong>Topic:</strong> {sessionData.selectedTopicData.name}
+                    </div>
+                    <div className="summary-item">
+                      <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath].name}
+                    </div>
+                    <div className="summary-item">
+                      <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
+                    </div>
+                    <div className="summary-item">
+                      <strong>Difficulty:</strong> {sessionData.selectedTopicData.difficulty}
+                    </div>
+                  </div>
+                </div>
+
+                {/* NEW: Question Styles Information Section */}
+                <div className="questioning-styles-info">
+                  <h3>💭 Available Questioning Styles</h3>
+                  <p className="styles-intro">You can change your questioning style anytime during the session. Each style offers a different approach to learning:</p>
+                  
+                  <div className="styles-info-list">
+                    {Object.entries(questioningStyles).map(([key, style]) => (
+                      <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
+                        <div className="style-info-header">
+                          <span className="style-info-icon">{style.icon}</span>
+                          <span className="style-info-name">{style.name}</span>
+                          {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
+                        </div>
+                        <p className="style-info-desc">{style.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="change-style-hint">
+                    💡 Click on the questioning style badge in the header to change approaches (this will restart your session with fresh questions)
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer simplified">
+              <button onClick={handleInfoClose} className="btn btn-primary">
+                <Play size={16} />
+                Resume Learning 🚀
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
