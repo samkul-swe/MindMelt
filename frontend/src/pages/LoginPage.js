@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/LoginPage.js - Enhanced Login Page Component
+// pages/LoginPage.js - Enhanced Login Page Component with Theme
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
@@ -61,9 +61,32 @@ const LoginPage = () => {
     if (formError) setFormError('');
   };
 
-  return (
-    <div className="auth-page-container">
+  const handleDemoLogin = async () => {
+    try {
+      await login(demoCredentials.email, demoCredentials.password);
+      navigate('/', { replace: true });
+    } catch (error) {
+      setFormError(error.message);
+    }
+  };
 
+  return (
+    <div className="auth-page-container login">
+      {/* Animated Background Elements - Achievement focused */}
+      <div className="auth-background">
+        <div className="floating-element element-1">
+          <Brain size={60} />
+        </div>
+        <div className="floating-element element-2">
+          <Trophy size={50} />
+        </div>
+        <div className="floating-element element-3">
+          <BookOpen size={55} />
+        </div>
+        <div className="floating-element element-4">
+          <Sparkles size={45} />
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="auth-content-wrapper">
@@ -111,14 +134,29 @@ const LoginPage = () => {
               </div>
             </div>
           </div>
+
+          <div className="brand-stats">
+            <div className="stat">
+              <span className="stat-number">5K+</span>
+              <span className="stat-label">Active Users</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">1M+</span>
+              <span className="stat-label">Questions Solved</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">98%</span>
+              <span className="stat-label">Success Rate</span>
+            </div>
+          </div>
         </div>
 
         {/* Right Side - Login Form */}
         <div className="auth-form-container">
           <div className={`auth-form-card ${isFormFocused ? 'focused' : ''}`}>
             <div className="form-header">
-              <h2>Ready to Melt Some Minds?</h2>
-              <p>Jump into Computer Science challenges before the ice cream melts!</p>
+              <h2>Welcome Back!</h2>
+              <p>Ready to continue your CS journey? Let's melt some minds!</p>
             </div>
 
             <form onSubmit={handleSubmit} className="enhanced-auth-form">
@@ -200,7 +238,7 @@ const LoginPage = () => {
                 ) : (
                   <>
                     <Brain size={20} />
-                    <span>Enter MindMelt</span>
+                    <span>Welcome Back to MindMelt</span>
                     <div className="btn-shine"></div>
                   </>
                 )}
@@ -212,7 +250,7 @@ const LoginPage = () => {
 
               <button
                 type="button"
-                onClick={fillDemoCredentials}
+                onClick={handleDemoLogin}
                 className="demo-btn"
                 disabled={loading}
               >
@@ -232,6 +270,22 @@ const LoginPage = () => {
                   Create your account
                 </button>
               </p>
+            </div>
+          </div>
+
+          {/* Demo credentials info */}
+          <div className="demo-info-card">
+            <div className="demo-header">
+              <Sparkles size={18} />
+              Demo Account
+            </div>
+            <div className="demo-details">
+              <div className="demo-credential">
+                <strong>Email:</strong> demo@mindmelt.com
+              </div>
+              <div className="demo-credential">
+                <strong>Password:</strong> demo123
+              </div>
             </div>
           </div>
         </div>
