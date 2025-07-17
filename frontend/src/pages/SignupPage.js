@@ -1,30 +1,26 @@
 // ============================================================================
-// pages/SignupPage.js - Enhanced Signup Page Component with Theme
+// pages/SignupPage.js - Progressive Signup Page
 // ============================================================================
 
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { Brain, Mail, Lock, Eye, EyeOff, User, Sparkles, BookOpen, Users, Rocket, Star } from 'lucide-react';
+import { Brain, Mail, User, Sparkles, ArrowRight, Zap, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/pages/auth.css';
 
 const SignupPage = () => {
   const navigate = useNavigate();
-  const { signup, loading, error, isAuthenticated } = useAuth();
+  const { signupWithEmail, loading, error, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    email: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const [isFormFocused, setIsFormFocused] = useState(false);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const handleInputChange = (e) => {
@@ -38,24 +34,12 @@ const SignupPage = () => {
   };
 
   const validateForm = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
-      return 'Please fill in all fields';
-    }
-    
-    if (formData.name.length < 2) {
-      return 'Name must be at least 2 characters long';
+    if (!formData.email) {
+      return 'Please enter your email address';
     }
     
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       return 'Please enter a valid email address';
-    }
-    
-    if (formData.password.length < 6) {
-      return 'Password must be at least 6 characters long';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      return 'Passwords do not match';
     }
     
     return null;
@@ -71,29 +55,23 @@ const SignupPage = () => {
     }
 
     try {
-      await signup(formData.email, formData.password, formData.name);
-      navigate('/', { replace: true });
+      await signupWithEmail(formData.email, formData.name);
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       setFormError(error.message);
     }
   };
 
+  const handleTryFirst = () => {
+    navigate('/start');
+  };
+
   return (
     <div className="auth-page-container signup">
-      {/* Animated Background Elements - New journey focused */}
-      <div className="auth-background">
-        <div className="floating-element element-1">
-          <Rocket size={60} />
-        </div>
-        <div className="floating-element element-2">
-          <Star size={50} />
-        </div>
-        <div className="floating-element element-3">
-          <Sparkles size={55} />
-        </div>
-        <div className="floating-element element-4">
-          <Users size={45} />
-        </div>
+      {/* Clean Background */}
+      <div className="auth-background-clean">
+        <div className="background-gradient"></div>
+        <div className="background-pattern"></div>
       </div>
 
       {/* Main Content */}
@@ -114,48 +92,60 @@ const SignupPage = () => {
           <div className="brand-features">
             <div className="feature-item">
               <div className="feature-icon">
-                <Rocket size={24} />
+                <Sparkles size={24} />
               </div>
               <div className="feature-content">
-                <h3>Launch Your CS Journey</h3>
-                <p>Start with challenging computer science problems tailored to your level</p>
+                <h3>Start Learning Instantly</h3>
+                <p>Jump right into AI-powered CS learning with no barriers</p>
               </div>
             </div>
             
             <div className="feature-item">
               <div className="feature-icon">
-                <BookOpen size={24} />
+                <Zap size={24} />
               </div>
               <div className="feature-content">
-                <h3>Comprehensive Learning</h3>
-                <p>From basics to advanced topics in algorithms, data structures, and more</p>
+                <h3>Save Your Progress</h3>
+                <p>Keep track of your learning journey and build your CS skills</p>
               </div>
             </div>
             
             <div className="feature-item">
               <div className="feature-icon">
-                <Users size={24} />
+                <Star size={24} />
               </div>
               <div className="feature-content">
-                <h3>Join the Community</h3>
-                <p>Connect with fellow CS learners and grow together</p>
+                <h3>Personalized Learning</h3>
+                <p>AI adapts to your pace and learning style for maximum growth</p>
               </div>
             </div>
           </div>
 
           <div className="brand-stats">
             <div className="stat">
-              <span className="stat-number">10K+</span>
-              <span className="stat-label">New Students</span>
+              <span className="stat-number">0</span>
+              <span className="stat-label">Setup Time</span>
             </div>
             <div className="stat">
-              <span className="stat-number">500+</span>
-              <span className="stat-label">CS Topics</span>
+              <span className="stat-number">∞</span>
+              <span className="stat-label">Learning Topics</span>
             </div>
             <div className="stat">
-              <span className="stat-number">95%</span>
-              <span className="stat-label">Learn Rate</span>
+              <span className="stat-number">AI</span>
+              <span className="stat-label">Powered</span>
             </div>
+          </div>
+
+          <div className="brand-cta">
+            <p>Want to try it first?</p>
+            <button
+              onClick={handleTryFirst}
+              className="instant-start-btn"
+            >
+              <Sparkles size={18} />
+              Try Learning First
+              <ArrowRight size={16} />
+            </button>
           </div>
         </div>
 
@@ -163,8 +153,8 @@ const SignupPage = () => {
         <div className="auth-form-container">
           <div className={`auth-form-card ${isFormFocused ? 'focused' : ''}`}>
             <div className="form-header">
-              <h2>Start Your CS Journey</h2>
-              <p>Create your account and begin melting minds with challenging CS problems!</p>
+              <h2>Save Your Progress</h2>
+              <p>Create an account to track your learning journey and unlock advanced features!</p>
             </div>
 
             <form onSubmit={handleSubmit} className="enhanced-auth-form">
@@ -180,7 +170,7 @@ const SignupPage = () => {
               <div className="enhanced-form-group">
                 <label htmlFor="name" className="enhanced-form-label">
                   <User size={18} />
-                  Full Name
+                  Your Name (optional)
                 </label>
                 <div className="enhanced-input-container">
                   <input
@@ -191,10 +181,9 @@ const SignupPage = () => {
                     onChange={handleInputChange}
                     onFocus={() => setIsFormFocused(true)}
                     onBlur={() => setIsFormFocused(false)}
-                    placeholder="Enter your full name"
+                    placeholder="What should we call you?"
                     className="enhanced-form-input"
                     disabled={loading}
-                    required
                   />
                   <div className="input-highlight"></div>
                 </div>
@@ -214,7 +203,7 @@ const SignupPage = () => {
                     onChange={handleInputChange}
                     onFocus={() => setIsFormFocused(true)}
                     onBlur={() => setIsFormFocused(false)}
-                    placeholder="Enter your email address"
+                    placeholder="Enter your email to save progress"
                     className="enhanced-form-input"
                     disabled={loading}
                     required
@@ -223,70 +212,14 @@ const SignupPage = () => {
                 </div>
               </div>
 
-              <div className="enhanced-form-group">
-                <label htmlFor="password" className="enhanced-form-label">
-                  <Lock size={18} />
-                  Password
-                </label>
-                <div className="enhanced-input-container">
-                  <div className="password-field">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      id="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      onFocus={() => setIsFormFocused(true)}
-                      onBlur={() => setIsFormFocused(false)}
-                      placeholder="Create a password (min 6 characters)"
-                      className="enhanced-form-input"
-                      disabled={loading}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="enhanced-password-toggle"
-                      disabled={loading}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <div className="input-highlight"></div>
-                </div>
-              </div>
-
-              <div className="enhanced-form-group">
-                <label htmlFor="confirmPassword" className="enhanced-form-label">
-                  <Lock size={18} />
-                  Confirm Password
-                </label>
-                <div className="enhanced-input-container">
-                  <div className="password-field">
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      onFocus={() => setIsFormFocused(true)}
-                      onBlur={() => setIsFormFocused(false)}
-                      placeholder="Confirm your password"
-                      className="enhanced-form-input"
-                      disabled={loading}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="enhanced-password-toggle"
-                      disabled={loading}
-                    >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <div className="input-highlight"></div>
-                </div>
+              <div className="signup-benefits">
+                <h4>What you'll get:</h4>
+                <ul>
+                  <li>✨ Progress tracking across all sessions</li>
+                  <li>📊 Detailed learning analytics</li>
+                  <li>🎯 Personalized learning paths</li>
+                  <li>🏆 Achievement badges and streaks</li>
+                </ul>
               </div>
 
               <button
@@ -297,12 +230,12 @@ const SignupPage = () => {
                 {loading ? (
                   <>
                     <div className="enhanced-spinner"></div>
-                    <span>Creating your journey...</span>
+                    <span>Creating your account...</span>
                   </>
                 ) : (
                   <>
-                    <Rocket size={20} />
-                    <span>Launch My CS Journey</span>
+                    <Sparkles size={20} />
+                    <span>Start Saving My Progress</span>
                     <div className="btn-shine"></div>
                   </>
                 )}
@@ -321,6 +254,15 @@ const SignupPage = () => {
                 </button>
               </p>
             </div>
+          </div>
+
+          {/* No Password Notice */}
+          <div className="no-password-notice">
+            <div className="notice-header">
+              <Zap size={18} />
+              <span>No Password Required</span>
+            </div>
+            <p>We'll send you a secure link to access your account. No passwords to remember!</p>
           </div>
         </div>
       </div>

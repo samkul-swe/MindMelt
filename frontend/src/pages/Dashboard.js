@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/Dashboard.js - Dashboard with Daily Summary Bell
+// pages/Dashboard.js - Progressive Auth Dashboard
 // ============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -21,7 +21,9 @@ import {
   Clock,
   CheckCircle,
   Star,
-  Zap
+  Zap,
+  Shield,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
@@ -78,23 +80,38 @@ const getTechPun = () => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { 
+    currentUser, 
+    isRegistered, 
+    isAnonymous, 
+    logout, 
+    signupWithEmail 
+  } = useAuth();
   const [learningSessions, setLearningSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewSession, setShowNewSession] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showDailySummary, setShowDailySummary] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [learningPath, setLearningPath] = useState('');
   const [dailySummary, setDailySummary] = useState(null);
   const [userLearningData, setUserLearningData] = useState(null);
   const [bellNotificationCount, setBellNotificationCount] = useState(0);
+  const [upgradeEmail, setUpgradeEmail] = useState('');
+  const [upgradeName, setUpgradeName] = useState('');
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   const apiKeyManager = useApiKey();
   const topicSearch = useTopicSearch(apiKeyManager);
 
-  // Fetch user's learning sessions
+  // Fetch user's learning sessions (only for registered users)
   const fetchLearningSessions = useCallback(async () => {
+    if (!isRegistered) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const sessions = await api.getLearningHistory();
@@ -134,14 +151,46 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isRegistered]);
 
   useEffect(() => {
     fetchLearningSessions();
   }, [fetchLearningSessions]);
 
+  // Show upgrade prompt for anonymous users after some time
+  useEffect(() => {
+    if (isAnonymous && !showUpgradePrompt) {
+      const timer = setTimeout(() => {
+        setShowUpgradePrompt(true);
+      }, 5000); // Show after 5 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAnonymous, showUpgradePrompt]);
+
+  const handleUpgradeAccount = async (e) => {
+    e.preventDefault();
+    if (!upgradeEmail.trim()) return;
+
+    setIsUpgrading(true);
+    try {
+      await signupWithEmail(upgradeEmail, upgradeName);
+      setShowUpgradePrompt(false);
+      // Page will refresh automatically due to auth state change
+    } catch (error) {
+      console.error('Failed to upgrade account:', error);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   // Generate daily summary when bell is clicked
   const generateDailySummary = useCallback(() => {
+    if (!isRegistered) {
+      setShowUpgradePrompt(true);
+      return;
+    }
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
@@ -206,7 +255,7 @@ const Dashboard = () => {
     setDailySummary(summary);
     setShowDailySummary(true);
     setBellNotificationCount(0); // Clear notification after viewing
-  }, [learningSessions]);
+  }, [learningSessions, isRegistered]);
 
   // Generate achievements based on yesterday's activity
   const generateAchievements = (sessions, completed) => {
@@ -250,7 +299,7 @@ const Dashboard = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      navigate('/login', { replace: true });
+      navigate('/start', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
     }
@@ -317,50 +366,86 @@ const Dashboard = () => {
             <User size={24} />
           </div>
           <div className="user-info">
-            <h3>{user?.name}</h3>
-            <p>{user?.email}</p>
+            <h3>{currentUser?.name}</h3>
+            <p>{currentUser?.email || 'Anonymous User'}</p>
             <span className="member-since">
-              Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+              {isRegistered ? (
+                `Member since ${currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'N/A'}`
+              ) : (
+                <span className="anonymous-badge">
+                  <Shield size={14} />
+                  Anonymous Session
+                </span>
+              )}
             </span>
           </div>
         </div>
 
-        <div className="sidebar-stats">
-          <div className="stat-item">
-            <BookOpen size={20} />
-            <div>
-              <span className="stat-number">{learningSessions.length}</span>
-              <span className="stat-label">Total Sessions</span>
+        {isRegistered ? (
+          <div className="sidebar-stats">
+            <div className="stat-item">
+              <BookOpen size={20} />
+              <div>
+                <span className="stat-number">{learningSessions.length}</span>
+                <span className="stat-label">Total Sessions</span>
+              </div>
+            </div>
+            <div className="stat-item">
+              <Clock size={20} />
+              <div>
+                <span className="stat-number">
+                  {userLearningData?.currentStreak || 0}
+                </span>
+                <span className="stat-label">Day Streak</span>
+              </div>
+            </div>
+            <div className="stat-item">
+              <TrendingUp size={20} />
+              <div>
+                <span className="stat-number">
+                  {Math.round(learningSessions.reduce((acc, s) => acc + (s.progress || 0), 0) / Math.max(learningSessions.length, 1))}%
+                </span>
+                <span className="stat-label">Avg Progress</span>
+              </div>
             </div>
           </div>
-          <div className="stat-item">
-            <Clock size={20} />
-            <div>
-              <span className="stat-number">
-                {userLearningData?.currentStreak || 0}
-              </span>
-              <span className="stat-label">Day Streak</span>
+        ) : (
+          <div className="anonymous-stats">
+            <div className="upgrade-prompt-mini">
+              <Shield size={20} />
+              <div>
+                <h4>Anonymous Mode</h4>
+                <p>Create an account to save your progress and unlock advanced features!</p>
+                <button 
+                  className="upgrade-btn-mini"
+                  onClick={() => setShowUpgradePrompt(true)}
+                >
+                  <Sparkles size={16} />
+                  Upgrade Now
+                </button>
+              </div>
             </div>
           </div>
-          <div className="stat-item">
-            <TrendingUp size={20} />
-            <div>
-              <span className="stat-number">
-                {Math.round(learningSessions.reduce((acc, s) => acc + (s.progress || 0), 0) / Math.max(learningSessions.length, 1))}%
-              </span>
-              <span className="stat-label">Avg Progress</span>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="sidebar-actions">
-          <button
-            onClick={() => setShowProfile(true)}
-            className="sidebar-btn"
-          >
-            <Settings size={18} />
-            Profile Settings
-          </button>
+          {isRegistered ? (
+            <button
+              onClick={() => setShowProfile(true)}
+              className="sidebar-btn"
+            >
+              <Settings size={18} />
+              Profile Settings
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowUpgradePrompt(true)}
+              className="sidebar-btn upgrade-btn"
+            >
+              <Sparkles size={18} />
+              Create Account
+            </button>
+          )}
         </div>
       </div>
 
@@ -368,16 +453,16 @@ const Dashboard = () => {
       <div className="dashboard-main">
         <div className="dashboard-header">
           <div className="header-content">
-            <h1>Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
+            <h1>Welcome back, {currentUser?.name?.split(' ')[0] || 'Learner'}! 👋</h1>
             <p>Ready to continue your learning journey?</p>
           </div>
           <div className="header-actions">
             {/* Daily Summary Bell */}
-              <button
-                onClick={generateDailySummary}
-                className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
-                title="View yesterday's learning summary"
-              >
+            <button
+              onClick={generateDailySummary}
+              className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
+              title={isRegistered ? "View yesterday's learning summary" : "Create account to unlock analytics"}
+            >
               <Bell size={20} />
               {bellNotificationCount > 0 && (
                 <span className="notification-badge">{bellNotificationCount}</span>
@@ -393,132 +478,250 @@ const Dashboard = () => {
           </div>
         </div>
 
-      {/* Main Dashboard Content */}
-      <div className="dashboard-content">
-        <div className="welcome-section">
-          <div className="welcome-card">
-          <div className="welcome-header">
-            <Brain size={48} className="welcome-icon" />
-            <div>
-              <h2>{getTechPun().text}</h2>
-              <p>{getTechPun().subtitle}</p>
-            </div>
-          </div>
-            
-            <div className="quick-actions">
-              <button
-                onClick={() => setShowNewSession(true)}
-                className="quick-action-btn primary"
-              >
-                <Sparkles size={24} />
+        {/* Main Dashboard Content */}
+        <div className="dashboard-content">
+          <div className="welcome-section">
+            <div className="welcome-card">
+              <div className="welcome-header">
+                <Brain size={48} className="welcome-icon" />
                 <div>
-                  <h4>Start Learning</h4>
-                  <p>Begin a new CS topic session</p>
-                </div>
-              </button>
-              
-              <button
-                onClick={generateDailySummary}
-                className="quick-action-btn secondary"
-              >
-                <Trophy size={24} />
-                <div>
-                  <h4>Yesterday's Summary</h4>
-                  <p>See what you accomplished</p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Session Display */}
-        {learningSessions.length > 0 && (
-          <div className="last-session-section">
-            <h3>Continue Your Journey</h3>
-            <div className="last-session-card">
-              <div className="session-header">
-                <div className="session-icon">
-                  <BookOpen size={24} />
-                </div>
-                <div className="session-info">
-                  <h4>Last Session: {learningSessions[0].topicName}</h4>
-                  <p className="session-meta">
-                    {learningSessions[0].category} • {learningSessions[0].difficulty} • 
-                    {Math.round(learningSessions[0].progress || 0)}% complete
-                  </p>
-                  <span className="session-date">
-                    {new Date(learningSessions[0].updatedAt).toLocaleDateString()}
-                  </span>
+                  <h2>{getTechPun().text}</h2>
+                  <p>{getTechPun().subtitle}</p>
                 </div>
               </div>
-              <div className="session-actions">
+              
+              <div className="quick-actions">
                 <button
-                  onClick={() => navigate('/learn', {
-                    state: { sessionId: learningSessions[0].id }
-                  })}
-                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowNewSession(true)}
+                  className="quick-action-btn primary"
                 >
-                  Continue Learning
+                  <Sparkles size={24} />
+                  <div>
+                    <h4>Start Learning</h4>
+                    <p>Begin a new CS topic session</p>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={generateDailySummary}
+                  className="quick-action-btn secondary"
+                >
+                  <Trophy size={24} />
+                  <div>
+                    <h4>Yesterday's Summary</h4>
+                    <p>{isRegistered ? "See what you accomplished" : "Create account to unlock"}</p>
+                  </div>
                 </button>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Last Session Display - Only for registered users */}
+          {isRegistered && learningSessions.length > 0 && (
+            <div className="last-session-section">
+              <h3>Continue Your Journey</h3>
+              <div className="last-session-card">
+                <div className="session-header">
+                  <div className="session-icon">
+                    <BookOpen size={24} />
+                  </div>
+                  <div className="session-info">
+                    <h4>Last Session: {learningSessions[0].topicName}</h4>
+                    <p className="session-meta">
+                      {learningSessions[0].category} • {learningSessions[0].difficulty} • 
+                      {Math.round(learningSessions[0].progress || 0)}% complete
+                    </p>
+                    <span className="session-date">
+                      {new Date(learningSessions[0].updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="session-actions">
+                  <button
+                    onClick={() => navigate('/learn', {
+                      state: { sessionId: learningSessions[0].id }
+                    })}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Continue Learning
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Recent Activity Overview */}
           <div className="activity-overview">
             <h3>Recent Learning Activity</h3>
-            <div className="activity-grid">
-              <div className="activity-stat">
-                <div className="stat-icon">
-                  <Calendar size={20} />
+            {isRegistered ? (
+              <div className="activity-grid">
+                <div className="activity-stat">
+                  <div className="stat-icon">
+                    <Calendar size={20} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">
+                      {learningSessions.filter(s => {
+                        const sessionDate = new Date(s.updatedAt);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return sessionDate >= today;
+                      }).length}
+                    </span>
+                    <span className="stat-label">Today's Sessions</span>
+                  </div>
                 </div>
-                <div className="stat-content">
-                  <span className="stat-number">
-                    {learningSessions.filter(s => {
-                      const sessionDate = new Date(s.updatedAt);
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      return sessionDate >= today;
-                    }).length}
-                  </span>
-                  <span className="stat-label">Today's Sessions</span>
+                
+                <div className="activity-stat">
+                  <div className="stat-icon">
+                    <Zap size={20} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">
+                      {learningSessions.filter(s => {
+                        const sessionDate = new Date(s.updatedAt);
+                        const weekAgo = new Date();
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return sessionDate >= weekAgo;
+                      }).length}
+                    </span>
+                    <span className="stat-label">This Week</span>
+                  </div>
+                </div>
+                
+                <div className="activity-stat">
+                  <div className="stat-icon">
+                    <CheckCircle size={20} />
+                  </div>
+                  <div className="stat-content">
+                    <span className="stat-number">
+                      {Math.round((learningSessions.filter(s => s.completed).length / Math.max(learningSessions.length, 1)) * 100)}%
+                    </span>
+                    <span className="stat-label">Completion Rate</span>
+                  </div>
                 </div>
               </div>
-              
-              <div className="activity-stat">
-                <div className="stat-icon">
-                  <Zap size={20} />
-                </div>
-                <div className="stat-content">
-                  <span className="stat-number">
-                    {learningSessions.filter(s => {
-                      const sessionDate = new Date(s.updatedAt);
-                      const weekAgo = new Date();
-                      weekAgo.setDate(weekAgo.getDate() - 7);
-                      return sessionDate >= weekAgo;
-                    }).length}
-                  </span>
-                  <span className="stat-label">This Week</span>
+            ) : (
+              <div className="anonymous-activity">
+                <div className="anonymous-message">
+                  <Shield size={48} className="anonymous-icon" />
+                  <h4>Anonymous Mode Active</h4>
+                  <p>Create an account to unlock detailed analytics, progress tracking, and learning insights!</p>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => setShowUpgradePrompt(true)}
+                  >
+                    <Sparkles size={16} />
+                    Create Account
+                  </button>
                 </div>
               </div>
-              
-              <div className="activity-stat">
-                <div className="stat-icon">
-                  <CheckCircle size={20} />
-                </div>
-                <div className="stat-content">
-                  <span className="stat-number">
-                    {Math.round((learningSessions.filter(s => s.completed).length / Math.max(learningSessions.length, 1)) * 100)}%
-                  </span>
-                  <span className="stat-label">Completion Rate</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Upgrade Account Modal */}
+      {showUpgradePrompt && (
+        <div className="modal-overlay" onClick={() => setShowUpgradePrompt(false)}>
+          <div className="modal-content upgrade-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <span className="modal-icon">✨</span>
+                <div>
+                  <h2>Unlock Your Full Learning Potential</h2>
+                  <p>Save your progress and access advanced features</p>
+                </div>
+              </div>
+              <button 
+                className="modal-close" 
+                onClick={() => setShowUpgradePrompt(false)}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="upgrade-benefits">
+                <h3>What you'll get:</h3>
+                <ul>
+                  <li>📊 Detailed learning analytics and progress tracking</li>
+                  <li>🎯 Personalized learning recommendations</li>
+                  <li>🏆 Achievement badges and learning streaks</li>
+                  <li>📱 Access your progress from any device</li>
+                  <li>💾 Automatic session saving and resume</li>
+                  <li>📈 Advanced learning insights and reports</li>
+                </ul>
+              </div>
+
+              <form onSubmit={handleUpgradeAccount} className="upgrade-form">
+                <div className="form-group">
+                  <label htmlFor="upgrade-name">
+                    <User size={16} />
+                    Your Name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    id="upgrade-name"
+                    value={upgradeName}
+                    onChange={(e) => setUpgradeName(e.target.value)}
+                    placeholder="What should we call you?"
+                    className="form-input"
+                    disabled={isUpgrading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="upgrade-email">
+                    <Mail size={16} />
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    id="upgrade-email"
+                    value={upgradeEmail}
+                    onChange={(e) => setUpgradeEmail(e.target.value)}
+                    placeholder="Enter your email to create account"
+                    className="form-input"
+                    disabled={isUpgrading}
+                    required
+                  />
+                </div>
+
+                <div className="upgrade-actions">
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradePrompt(false)}
+                    className="btn btn-secondary"
+                    disabled={isUpgrading}
+                  >
+                    Continue as Anonymous
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isUpgrading || !upgradeEmail.trim()}
+                  >
+                    {isUpgrading ? (
+                      <>
+                        <div className="spinner" />
+                        Creating Account...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Create My Account
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Keep all existing modals... */}
       {/* Daily Summary Modal */}
       {showDailySummary && dailySummary && (
         <div className="modal-overlay" onClick={() => setShowDailySummary(false)}>
@@ -651,7 +854,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* New Session Modal - Keep existing modal */}
+      {/* New Session Modal */}
       {showNewSession && (
         <div className="modal-overlay" onClick={() => setShowNewSession(false)}>
           <div className="modal-content new-session-modal" onClick={(e) => e.stopPropagation()}>
@@ -746,8 +949,8 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Profile Modal - Keep existing modal */}
-      {showProfile && (
+      {/* Profile Modal - Only for registered users */}
+      {showProfile && isRegistered && (
         <div className="modal-overlay" onClick={() => setShowProfile(false)}>
           <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -772,17 +975,17 @@ const Dashboard = () => {
                 <div className="profile-fields">
                   <div className="profile-field">
                     <label>Full Name</label>
-                    <input type="text" value={user?.name || ''} readOnly />
+                    <input type="text" value={currentUser?.name || ''} readOnly />
                   </div>
                   <div className="profile-field">
                     <label>Email Address</label>
-                    <input type="email" value={user?.email || ''} readOnly />
+                    <input type="email" value={currentUser?.email || ''} readOnly />
                   </div>
                   <div className="profile-field">
                     <label>Member Since</label>
                     <input 
                       type="text" 
-                      value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'} 
+                      value={currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'N/A'} 
                       readOnly 
                     />
                   </div>

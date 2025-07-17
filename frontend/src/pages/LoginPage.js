@@ -1,10 +1,6 @@
-// ============================================================================
-// pages/LoginPage.js - Enhanced Login Page Component with Theme
-// ============================================================================
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { Brain, Mail, Lock, Eye, EyeOff, Sparkles, BookOpen, Trophy } from 'lucide-react';
+import { Brain, Mail, Lock, Eye, EyeOff, Sparkles, BookOpen, Trophy, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/pages/auth.css';
 
@@ -72,20 +68,10 @@ const LoginPage = () => {
 
   return (
     <div className="auth-page-container login">
-      {/* Animated Background Elements - Achievement focused */}
-      <div className="auth-background">
-        <div className="floating-element element-1">
-          <Brain size={60} />
-        </div>
-        <div className="floating-element element-2">
-          <Trophy size={50} />
-        </div>
-        <div className="floating-element element-3">
-          <BookOpen size={55} />
-        </div>
-        <div className="floating-element element-4">
-          <Sparkles size={45} />
-        </div>
+      {/* Clean Background - No floating elements */}
+      <div className="auth-background-clean">
+        <div className="background-gradient"></div>
+        <div className="background-pattern"></div>
       </div>
 
       {/* Main Content */}
@@ -148,6 +134,19 @@ const LoginPage = () => {
               <span className="stat-number">98%</span>
               <span className="stat-label">Success Rate</span>
             </div>
+          </div>
+
+          {/* Call to action for instant start */}
+          <div className="brand-cta">
+            <p>Just want to try it out?</p>
+            <button
+              onClick={() => navigate('/start')}
+              className="instant-start-btn"
+            >
+              <Sparkles size={18} />
+              Start Learning Now
+              <ArrowRight size={16} />
+            </button>
           </div>
         </div>
 
@@ -287,6 +286,13 @@ const LoginPage = () => {
                 <strong>Password:</strong> demo123
               </div>
             </div>
+            <button
+              onClick={fillDemoCredentials}
+              className="fill-demo-btn"
+              disabled={loading}
+            >
+              Fill Demo Credentials
+            </button>
           </div>
         </div>
       </div>

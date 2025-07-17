@@ -1,5 +1,5 @@
 // ============================================================================
-// App.js - Main application with routing and authentication
+// App.js - Progressive Authentication Routing
 // ============================================================================
 
 import React from 'react';
@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import LearningSession from './pages/LearningSession';
+import InstantStart from './pages/InstantStart';
 import './styles/globals/index.css'
 
 function App() {
@@ -22,16 +23,27 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             
-            {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
+            {/* Instant start route - no auth required */}
+            <Route path="/start" element={<InstantStart />} />
+            
+            {/* Semi-protected routes - allow anonymous users */}
+            <Route path="/learn/:sessionId?" element={
+              <ProtectedRoute allowAnonymous={true}>
+                <LearningSession />
+              </ProtectedRoute>
+            } />
+            
+            {/* Fully protected routes - require registered users */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowAnonymous={false}>
                 <Dashboard />
               </ProtectedRoute>
             } />
             
-            <Route path="/learn/:sessionId?" element={
-              <ProtectedRoute>
-                <LearningSession />
+            {/* Root route logic */}
+            <Route path="/" element={
+              <ProtectedRoute allowAnonymous={false} redirectTo="/start">
+                <Dashboard />
               </ProtectedRoute>
             } />
             

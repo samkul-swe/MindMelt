@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/LearningSession.js - Enhanced with Hint System
+// pages/LearningSession.js - Progressive Auth Support
 // ============================================================================
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -19,7 +19,11 @@ import {
   Settings,
   Lightbulb,
   Coffee,
-  Code
+  Code,
+  Mail,
+  Sparkles,
+  Save,
+  X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
@@ -39,12 +43,33 @@ const TIMER_CONSTANTS = {
 const MESSAGE_TYPES = {
   USER: 'user',
   BOT: 'bot',
-  HINT: 'hint'
+  HINT: 'hint',
+  SYSTEM: 'system'
 };
 
 const HINT_CONSTANTS = {
   MAX_HINTS: 3,
   RESET_ON_NEW_TOPIC: true
+};
+
+// Anonymous user prompts - show after certain milestones
+const ANONYMOUS_PROMPTS = {
+  AFTER_EXCHANGES: [3, 8, 15], // Show after 3, 8, and 15 exchanges
+  SAVE_PROGRESS: {
+    title: "Save Your Progress? 💾",
+    message: "You're doing great! Want to save your learning progress and unlock advanced features?",
+    benefits: [
+      "📊 Track your learning analytics",
+      "🎯 Get personalized recommendations", 
+      "🏆 Earn achievement badges",
+      "📱 Access from any device"
+    ]
+  },
+  FINAL_REMINDER: {
+    title: "Don't Lose Your Progress! ⚠️",
+    message: "You've made excellent progress! Create an account to save everything you've learned.",
+    urgent: true
+  }
 };
 
 const learningPaths = {
@@ -348,12 +373,153 @@ const createMessage = (type, content, options = {}) => ({
   ...options
 });
 
+// Anonymous User Progress Prompt Component
+const AnonymousProgressPrompt = React.memo(({ 
+  prompt, 
+  onSaveProgress, 
+  onDismiss, 
+  exchangeCount,
+  isVisible,
+  isUrgent = false
+}) => {
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await onSaveProgress(email, name);
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="anonymous-progress-prompt">
+      <div className="prompt-overlay" onClick={onDismiss} />
+      <div className={`prompt-card ${isUrgent ? 'urgent' : ''}`}>
+        <div className="prompt-header">
+          <div className="prompt-title">
+            <Sparkles size={24} />
+            <h3>{prompt.title}</h3>
+          </div>
+          <button 
+            className="prompt-close"
+            onClick={onDismiss}
+            title="Continue without saving"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="prompt-body">
+          <div className="progress-stats">
+            <div className="stat">
+              <span className="stat-number">{exchangeCount}</span>
+              <span className="stat-label">Questions Answered</span>
+            </div>
+            <div className="stat">
+              <span className="stat-number">{Math.floor(exchangeCount * 1.5)}</span>
+              <span className="stat-label">Minutes Learning</span>
+            </div>
+          </div>
+
+          <p className="prompt-message">{prompt.message}</p>
+
+          {prompt.benefits && (
+            <div className="prompt-benefits">
+              <h4>What you'll unlock:</h4>
+              <ul>
+                {prompt.benefits.map((benefit, index) => (
+                  <li key={index}>{benefit}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="prompt-form">
+            <div className="form-group">
+              <label htmlFor="prompt-name">
+                <User size={16} />
+                Your Name (optional)
+              </label>
+              <input
+                type="text"
+                id="prompt-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="What should we call you?"
+                className="form-input"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="prompt-email">
+                <Mail size={16} />
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="prompt-email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email to save progress"
+                className="form-input"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <div className="prompt-actions">
+              <button
+                type="button"
+                onClick={onDismiss}
+                className="btn btn-secondary"
+                disabled={isSubmitting}
+              >
+                Continue Learning
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSubmitting || !email.trim()}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="spinner" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Save My Progress
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // Message Component
 const Message = React.memo(({ message }) => (
   <div className={`message ${message.type}`}>
     <div className="message-avatar">
       {message.type === MESSAGE_TYPES.USER ? <User size={20} /> : 
        message.type === MESSAGE_TYPES.HINT ? <Lightbulb size={20} /> :
+       message.type === MESSAGE_TYPES.SYSTEM ? <Brain size={20} /> :
        <Bot size={20} />}
     </div>
     <div className="message-content">
@@ -374,6 +540,7 @@ const getMessageBubbleClass = (message) => {
   if (message.isBonus) classes.push('bonus');
   if (message.isTimeUp) classes.push('time-up');
   if (message.type === MESSAGE_TYPES.HINT) classes.push('hint');
+  if (message.type === MESSAGE_TYPES.SYSTEM) classes.push('system');
   return classes.join(' ');
 };
 
@@ -439,7 +606,13 @@ const LearningSession = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const location = useLocation();
-  const { user } = useAuth();
+  const { 
+    currentUser, 
+    isRegistered, 
+    isAnonymous, 
+    signupWithEmail, 
+    updateAnonymousUser 
+  } = useAuth();
 
   // Session State
   const [sessionData, setSessionData] = useState(null);
@@ -453,6 +626,11 @@ const LearningSession = () => {
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [isLoadingFirstQuestion, setIsLoadingFirstQuestion] = useState(true);
   const [sessionStartTime] = useState(Date.now());
+
+  // Anonymous user progress tracking
+  const [showProgressPrompt, setShowProgressPrompt] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(false);
+  const [exchangeCount, setExchangeCount] = useState(0);
 
   const timer = useTimer();
   const hints = useHints();
@@ -483,6 +661,16 @@ const LearningSession = () => {
     };
   }, [showStyleSelector]);
 
+  // Check if we should show progress prompt for anonymous users
+  useEffect(() => {
+    if (isAnonymous && !promptDismissed && !showProgressPrompt) {
+      const shouldShowPrompt = ANONYMOUS_PROMPTS.AFTER_EXCHANGES.includes(exchangeCount);
+      if (shouldShowPrompt) {
+        setShowProgressPrompt(true);
+      }
+    }
+  }, [exchangeCount, isAnonymous, promptDismissed, showProgressPrompt]);
+
   // Initialize session
   useEffect(() => {
     initializeSession();
@@ -493,51 +681,61 @@ const LearningSession = () => {
       let sessionInfo = null;
 
       if (sessionId && sessionId !== 'new') {
-        // Load existing session
-        try {
-          sessionInfo = await api.getLearningSession(sessionId);
-          setMessages(sessionInfo.messages || []);
-          setProgress(sessionInfo.progress || []);
-          setCorrectStreak(sessionInfo.correctStreak || 0);
-          setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
-          
-          // Restore hint state
-          if (sessionInfo.hintsRemaining !== undefined) {
-            hints.setHintsRemaining(sessionInfo.hintsRemaining);
+        // Load existing session (only for registered users)
+        if (isRegistered) {
+          try {
+            sessionInfo = await api.getLearningSession(sessionId);
+            setMessages(sessionInfo.messages || []);
+            setProgress(sessionInfo.progress || []);
+            setCorrectStreak(sessionInfo.correctStreak || 0);
+            setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
+            setExchangeCount(sessionInfo.exchangeCount || 0);
+            
+            // Restore hint state
+            if (sessionInfo.hintsRemaining !== undefined) {
+              hints.setHintsRemaining(sessionInfo.hintsRemaining);
+            }
+            
+            // Restore timer state
+            if (sessionInfo.timerRemaining) {
+              timer.setTimeRemaining(sessionInfo.timerRemaining);
+            }
+          } catch (error) {
+            console.error('Failed to load session:', error);
+            navigate('/dashboard', { replace: true });
+            return;
           }
-          
-          // Restore timer state
-          if (sessionInfo.timerRemaining) {
-            timer.setTimeRemaining(sessionInfo.timerRemaining);
-          }
-        } catch (error) {
-          console.error('Failed to load session:', error);
-          navigate('/', { replace: true });
+        } else {
+          // Anonymous users can't load existing sessions
+          navigate('/start', { replace: true });
           return;
         }
       } else {
         // New session from location state
         sessionInfo = location.state;
         if (!sessionInfo?.isNewSession || !sessionInfo?.topicData) {
-          navigate('/', { replace: true });
+          navigate('/start', { replace: true });
           return;
         }
 
-        // Create new session in backend
-        try {
-          const newSession = await api.createLearningSession({
-            topicName: sessionInfo.topicData.name,
-            topicData: sessionInfo.topicData,
-            learningPath: sessionInfo.learningPath,
-            questioningStyle: sessionInfo.questioningStyle || 'socratic',
-            hintsRemaining: HINT_CONSTANTS.MAX_HINTS
-          });
-          
-          // Update URL with new session ID
-          navigate(`/learn/${newSession.id}`, { replace: true, state: null });
-        } catch (error) {
-          console.error('Failed to create session:', error);
-          // Continue with local session for now
+        // Create new session in backend only for registered users
+        if (isRegistered) {
+          try {
+            const newSession = await api.createLearningSession({
+              topicName: sessionInfo.topicData.name,
+              topicData: sessionInfo.topicData,
+              learningPath: sessionInfo.learningPath,
+              questioningStyle: sessionInfo.questioningStyle || 'socratic',
+              hintsRemaining: HINT_CONSTANTS.MAX_HINTS,
+              exchangeCount: 0
+            });
+            
+            // Update URL with new session ID
+            navigate(`/learn/${newSession.id}`, { replace: true, state: null });
+          } catch (error) {
+            console.error('Failed to create session:', error);
+            // Continue with local session
+          }
         }
       }
 
@@ -556,7 +754,7 @@ const LearningSession = () => {
 
     } catch (error) {
       console.error('Failed to initialize session:', error);
-      navigate('/', { replace: true });
+      navigate('/start', { replace: true });
     }
   };
 
@@ -584,6 +782,15 @@ const LearningSession = () => {
       const firstMessage = createMessage(MESSAGE_TYPES.BOT, firstQuestion);
       setMessages([firstMessage]);
       
+      // Add welcome message for anonymous users
+      if (isAnonymous) {
+        const welcomeMessage = createMessage(MESSAGE_TYPES.SYSTEM, 
+          `🎉 Welcome to MindMelt! You're learning as an anonymous user. Your progress will be saved locally, but you can create an account anytime to save it permanently.`,
+          { isWelcome: true }
+        );
+        setMessages(prev => [welcomeMessage, ...prev]);
+      }
+      
     } catch (error) {
       console.error('Failed to get first question:', error);
       const fallbackQuestion = `Welcome to learning ${sessionInfo.topicData?.name || 'this topic'}! 🧠 What would you like to explore first?`;
@@ -592,7 +799,42 @@ const LearningSession = () => {
     } finally {
       setIsLoadingFirstQuestion(false);
     }
-  }, [apiKeyManager]);
+  }, [apiKeyManager, isAnonymous]);
+
+  // Handle anonymous user progress saving
+  const handleSaveProgress = useCallback(async (email, name) => {
+    try {
+      await signupWithEmail(email, name);
+      
+      // Show success message
+      const successMessage = createMessage(MESSAGE_TYPES.SYSTEM,
+        `🎉 Account created successfully! Your progress is now saved. Welcome to MindMelt, ${name || 'learner'}!`,
+        { isBonus: true }
+      );
+      setMessages(prev => [...prev, successMessage]);
+      
+      setShowProgressPrompt(false);
+      setPromptDismissed(true);
+      
+      // Navigate to dashboard after a brief delay
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+      const errorMessage = createMessage(MESSAGE_TYPES.SYSTEM,
+        `❌ Failed to create account: ${error.message}`,
+        { isError: true }
+      );
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  }, [signupWithEmail, navigate]);
+
+  const handleDismissProgressPrompt = useCallback(() => {
+    setShowProgressPrompt(false);
+    setPromptDismissed(true);
+  }, []);
 
   // Request hint function
   const handleHintRequest = useCallback(async () => {
@@ -680,9 +922,9 @@ const LearningSession = () => {
     }
   }, [timer.timerActive, timer.timerPaused, timer.timeRemaining, timer.setTimeRemaining]);
 
-  // Save session periodically
+  // Save session periodically (only for registered users)
   useEffect(() => {
-    if (!sessionData || !sessionId || sessionId === 'new') return;
+    if (!sessionData || !sessionId || sessionId === 'new' || !isRegistered) return;
 
     const saveSession = async () => {
       try {
@@ -693,6 +935,7 @@ const LearningSession = () => {
           questioningStyle: currentQuestioningStyle,
           timerRemaining: timer.timeRemaining,
           hintsRemaining: hints.hintsRemaining,
+          exchangeCount,
           duration: Math.floor((Date.now() - sessionStartTime) / 1000),
           lastActivity: new Date().toISOString()
         });
@@ -703,7 +946,18 @@ const LearningSession = () => {
 
     const saveInterval = setInterval(saveSession, 30000); // Save every 30 seconds
     return () => clearInterval(saveInterval);
-  }, [sessionData, sessionId, messages, progress, correctStreak, currentQuestioningStyle, timer.timeRemaining, hints.hintsRemaining, sessionStartTime]);
+  }, [sessionData, sessionId, isRegistered, messages, progress, correctStreak, currentQuestioningStyle, timer.timeRemaining, hints.hintsRemaining, exchangeCount, sessionStartTime]);
+
+  // Update anonymous user progress in localStorage
+  useEffect(() => {
+    if (isAnonymous && currentUser) {
+      updateAnonymousUser({
+        sessionCount: exchangeCount,
+        lastActivity: new Date().toISOString(),
+        totalQuestions: exchangeCount
+      });
+    }
+  }, [exchangeCount, isAnonymous, currentUser, updateAnonymousUser]);
 
   const handleSubmit = useCallback(async () => {
     if (!userInput.trim() || isThinking || timer.timeRemaining <= 0 || !sessionData) return;
@@ -737,6 +991,9 @@ const LearningSession = () => {
         timestamp: new Date() 
       }]);
 
+      // Increment exchange count
+      setExchangeCount(prev => prev + 1);
+
       // Progress-based timer bonus
       if (userInput.length > 30 && progress.length % 3 === 2) {
         timer.increaseTimer();
@@ -760,8 +1017,12 @@ const LearningSession = () => {
   }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress, currentQuestioningStyle]);
 
   const handleBackToDashboard = useCallback(() => {
-    navigate('/', { replace: true });
-  }, [navigate]);
+    if (isRegistered) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      navigate('/start', { replace: true });
+    }
+  }, [navigate, isRegistered]);
 
   const handleInfoClick = useCallback(() => {
     if (timer.timerActive && !timer.timerPaused) {
@@ -790,6 +1051,7 @@ const LearningSession = () => {
     setMessages([]);
     setProgress([]);
     setCorrectStreak(0);
+    setExchangeCount(0);
     setUserInput('');
     setIsThinking(false);
     
@@ -827,7 +1089,7 @@ const LearningSession = () => {
                 <button
                   onClick={handleBackToDashboard}
                   className="back-btn"
-                  title="Back to Dashboard"
+                  title={isRegistered ? "Back to Dashboard" : "Back to Start"}
                 >
                   <Home size={20} />
                 </button>
@@ -1021,16 +1283,38 @@ const LearningSession = () => {
             <div className="session-controls">
               <div className="progress-info">
                 <CheckCircle size={16} className="progress-icon" />
-                <span>{progress.length} exchanges • Streak: {correctStreak} 🔥</span>
+                <span>{exchangeCount} exchanges • Streak: {correctStreak} 🔥</span>
+                {isAnonymous && (
+                  <>
+                    <span className="separator">•</span>
+                    <span className="anonymous-indicator">Anonymous Session</span>
+                  </>
+                )}
               </div>
               
               <button onClick={handleBackToDashboard} className="btn btn-secondary btn-sm">
                 <Home size={16} />
-                Dashboard
+                {isRegistered ? 'Dashboard' : 'Start Page'}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Anonymous Progress Prompt */}
+        {isAnonymous && (
+          <AnonymousProgressPrompt
+            prompt={
+              exchangeCount >= 15 
+                ? ANONYMOUS_PROMPTS.FINAL_REMINDER
+                : ANONYMOUS_PROMPTS.SAVE_PROGRESS
+            }
+            onSaveProgress={handleSaveProgress}
+            onDismiss={handleDismissProgressPrompt}
+            exchangeCount={exchangeCount}
+            isVisible={showProgressPrompt}
+            isUrgent={exchangeCount >= 15}
+          />
+        )}
 
         {/* Info Modal - keeping existing implementation */}
         {showInfo && (
@@ -1045,6 +1329,7 @@ const LearningSession = () => {
                       <span className="category-badge">{sessionData.topicData?.category || 'Computer Science'}</span>
                       <span className="difficulty-badge">{sessionData.topicData?.difficulty || 'Intermediate'}</span>
                       <span className="timer-badge">⏸️ Timer Paused</span>
+                      {isAnonymous && <span className="user-badge">👤 Anonymous</span>}
                     </div>
                   </div>
                 </div>
@@ -1062,6 +1347,9 @@ const LearningSession = () => {
                     <p>💡 Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
                     <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
                     <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
+                    {isAnonymous && (
+                      <p>👤 <strong>Anonymous Session:</strong> Your progress is saved locally. Create an account to save it permanently and unlock advanced features!</p>
+                    )}
                   </div>
                   
                   <div className="current-session-info">
@@ -1077,10 +1365,13 @@ const LearningSession = () => {
                         <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
                       </div>
                       <div className="summary-item">
-                        <strong>Progress:</strong> {progress.length} exchanges completed
+                        <strong>Progress:</strong> {exchangeCount} exchanges completed
                       </div>
                       <div className="summary-item">
                         <strong>Hints:</strong> {hints.hintsRemaining} remaining
+                      </div>
+                      <div className="summary-item">
+                        <strong>User Type:</strong> {isAnonymous ? 'Anonymous' : 'Registered'}
                       </div>
                     </div>
                   </div>

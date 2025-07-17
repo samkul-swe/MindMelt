@@ -1,5 +1,5 @@
 /* ============================================================================
-   Authentication Pages (Login/Signup) with Theme Variants
+   pages/auth.css - Fixed Authentication Page Styles (No Random Floating)
    ============================================================================ */
 
 .auth-page-container {
@@ -9,118 +9,99 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 2rem;
-  transition: background 0.5s ease;
 }
 
-/* Theme Variants */
-.auth-page-container.login {
-  background: linear-gradient(135deg, #FFE4B5 0%, #FFDAB9 25%, #FFE4E1 75%, #FFF0F5 100%);
-}
-
-.auth-page-container.signup {
-  background: linear-gradient(135deg, #FFE4E1 0%, #FFCCCB 25%, #FFB6C1 75%, #FFEFD5 100%);
-}
-
-/* Animated Background */
-.auth-background {
+/* Clean Background - No floating elements */
+.auth-background-clean {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
-.floating-element {
+.background-gradient {
   position: absolute;
-  animation: float 20s ease-in-out infinite;
-}
-
-/* Login Theme - Warm Orange Elements */
-.auth-page-container.login .floating-element {
-  color: rgba(255, 107, 53, 0.1);
-}
-
-/* Signup Theme - Coral Orange Elements */
-.auth-page-container.signup .floating-element {
-  color: rgba(255, 107, 107, 0.1);
-}
-
-.element-1 {
-  top: 10%;
-  left: 10%;
-  animation-delay: 0s;
-}
-
-.element-2 {
-  top: 20%;
-  right: 15%;
-  animation-delay: 5s;
-}
-
-.element-3 {
-  bottom: 30%;
-  left: 5%;
-  animation-delay: 10s;
-}
-
-.element-4 {
-  bottom: 15%;
-  right: 10%;
-  animation-delay: 15s;
-}
-
-/* Main Content Wrapper */
-.auth-content-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  max-width: 1200px;
+  top: 0;
+  left: 0;
   width: 100%;
-  z-index: 1;
+  height: 100%;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 50%, #fff5f3 100%);
+}
+
+.background-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(255, 107, 53, 0.08) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 60%, rgba(255, 107, 53, 0.06) 0%, transparent 50%);
+}
+
+/* Content Wrapper */
+.auth-content-wrapper {
+  display: flex;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 100vh;
   position: relative;
+  z-index: 1;
 }
 
 /* Left Side - Branding */
 .auth-branding {
+  flex: 1;
+  padding: 3rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding: 2rem;
-  padding-top: 3rem;
-  color: var(--gray-800);
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #ff6b35 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-branding::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  animation: subtle-rotate 20s linear infinite;
+}
+
+@keyframes subtle-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .brand-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 3rem;
-}
-
-.brand-icon-container {
-  position: relative;
-  display: inline-block;
-  margin-bottom: 1.5rem;
-}
-
-.brand-icon {
-  width: 4rem;
-  height: 4rem;
-  animation: pulse 3s ease-in-out infinite;
   position: relative;
   z-index: 2;
 }
 
-/* Login Theme - Orange Icon */
-.auth-page-container.login .brand-icon {
-  color: #FF6B35;
-  filter: drop-shadow(0 4px 8px rgba(255, 107, 53, 0.3));
+.brand-icon-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Signup Theme - Coral Orange Icon */
-.auth-page-container.signup .brand-icon {
-  color: #FF6B6B;
-  filter: drop-shadow(0 4px 8px rgba(255, 107, 107, 0.3));
+.brand-icon {
+  width: 60px;
+  height: 60px;
+  color: white;
+  position: relative;
+  z-index: 2;
 }
 
 .brand-glow {
@@ -128,72 +109,35 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 6rem;
-  height: 6rem;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
   border-radius: 50%;
-  animation: breathe 4s ease-in-out infinite;
+  animation: gentle-pulse 3s ease-in-out infinite;
 }
 
-/* Login Theme - Orange Glow */
-.auth-page-container.login .brand-glow {
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.2) 0%, transparent 70%);
-}
-
-/* Signup Theme - Coral Orange Glow */
-.auth-page-container.signup .brand-glow {
-  background: radial-gradient(circle, rgba(255, 107, 107, 0.2) 0%, transparent 70%);
+@keyframes gentle-pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
 }
 
 .brand-text h1 {
-  font-size: 3rem;
-  font-weight: 800;
-  margin: 0 0 0.5rem 0;
-  letter-spacing: -0.025em;
-  /* Fallback color first */
-  color: var(--gray-800);
-}
-
-/* Login Theme - Orange Gradient */
-.auth-page-container.login .brand-text h1 {
-  color: #FF6B35; /* Fallback color */
-  background: linear-gradient(135deg, #FF6B35, #FF8E53);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Signup Theme - Coral Orange Gradient */
-.auth-page-container.signup .brand-text h1 {
-  color: #FF6B6B; /* Fallback color */
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Fallback for browsers that don't support background-clip: text */
-@supports not (-webkit-background-clip: text) {
-  .auth-page-container.login .brand-text h1 {
-    color: #FF6B35;
-    background: none;
-  }
-  
-  .auth-page-container.signup .brand-text h1 {
-    color: #FF6B6B;
-    background: none;
-  }
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .brand-text p {
-  font-size: 1.25rem;
-  color: var(--gray-600);
-  font-weight: 500;
-  margin: 0;
+  font-size: 1.1rem;
+  margin: 0.5rem 0 0 0;
+  opacity: 0.9;
 }
 
-/* Features Section */
 .brand-features {
   margin-bottom: 3rem;
+  position: relative;
+  z-index: 2;
 }
 
 .feature-item {
@@ -201,182 +145,132 @@
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: var(--radius-2xl);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.feature-item:hover {
-  transform: translateY(-4px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-/* Login Theme - Orange Hover */
-.auth-page-container.login .feature-item:hover {
-  box-shadow: 0 15px 30px rgba(255, 107, 53, 0.15);
-}
-
-/* Signup Theme - Coral Orange Hover */
-.auth-page-container.signup .feature-item:hover {
-  box-shadow: 0 15px 30px rgba(255, 107, 107, 0.15);
 }
 
 .feature-icon {
-  color: var(--white);
-  padding: 0.75rem;
-  border-radius: var(--radius-xl);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-}
-
-/* Login Theme - Orange Feature Icons */
-.auth-page-container.login .feature-icon {
-  background: linear-gradient(135deg, #FF6B35, #FF8E53);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
-
-/* Signup Theme - Coral Orange Feature Icons */
-.auth-page-container.signup .feature-icon {
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .feature-content h3 {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--gray-800);
+  font-size: 1.25rem;
+  font-weight: 600;
   margin: 0 0 0.5rem 0;
 }
 
 .feature-content p {
-  color: var(--gray-600);
+  font-size: 0.95rem;
   margin: 0;
+  opacity: 0.9;
   line-height: 1.5;
 }
 
-/* Stats Section */
 .brand-stats {
   display: flex;
   gap: 2rem;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: var(--radius-2xl);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 2;
+  margin-bottom: 2rem;
 }
 
 .stat {
   text-align: center;
-  flex: 1;
 }
 
 .stat-number {
-  font-size: 2rem;
-  font-weight: 800;
-  margin-bottom: 0.25rem;
   display: block;
-}
-
-/* Login Theme - Orange Stats */
-.auth-page-container.login .stat-number {
-  color: #FF6B35;
-}
-
-/* Signup Theme - Coral Orange Stats */
-.auth-page-container.signup .stat-number {
-  color: #FF6B6B;
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .stat-label {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-  font-weight: 500;
+  font-size: 0.8rem;
+  opacity: 0.8;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.brand-cta {
+  position: relative;
+  z-index: 2;
+  margin-top: 2rem;
+}
+
+.brand-cta p {
+  font-size: 0.95rem;
+  margin: 0 0 1rem 0;
+  opacity: 0.9;
+}
+
+.instant-start-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.instant-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Right Side - Form */
 .auth-form-container {
+  flex: 1;
+  padding: 3rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2rem;
+  background: white;
+  position: relative;
 }
 
 .auth-form-card {
-  background: var(--white);
-  border-radius: var(--radius-3xl);
-  padding: 3rem;
-  box-shadow: var(--shadow-2xl);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+  transition: all 0.3s ease;
 }
 
-.auth-form-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-}
-
-/* Login Theme - Orange Top Border */
-.auth-page-container.login .auth-form-card::before {
-  background: linear-gradient(135deg, #FF6B35, #FF8E53);
-}
-
-/* Signup Theme - Coral Orange Top Border */
-.auth-page-container.signup .auth-form-card::before {
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-}
-
-.auth-form-card.focused::before {
-  transform: scaleX(1);
-}
-
-.auth-form-card:hover {
-  transform: translateY(-2px);
-}
-
-/* Login Theme - Orange Card Hover */
-.auth-page-container.login .auth-form-card:hover {
-  box-shadow: 0 25px 50px rgba(255, 107, 53, 0.2);
-  border-color: rgba(255, 107, 53, 0.3);
-}
-
-/* Signup Theme - Coral Orange Card Hover */
-.auth-page-container.signup .auth-form-card:hover {
-  box-shadow: 0 25px 50px rgba(255, 107, 107, 0.2);
-  border-color: rgba(255, 107, 107, 0.3);
+.auth-form-card.focused {
+  transform: translateY(-5px);
 }
 
 .form-header {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
 }
 
 .form-header h2 {
-  font-size: 2rem;
+  font-size: 1.8rem;
   font-weight: 700;
-  color: var(--gray-800);
+  color: var(--text-primary);
   margin: 0 0 0.5rem 0;
 }
 
 .form-header p {
-  color: var(--gray-600);
-  font-size: 1.125rem;
+  color: var(--text-secondary);
   margin: 0;
+  line-height: 1.5;
 }
 
-/* Enhanced Form Styles */
 .enhanced-auth-form {
   display: flex;
   flex-direction: column;
@@ -384,31 +278,33 @@
 }
 
 .enhanced-error-message {
-  background: linear-gradient(135deg, #FEE2E2, #FECACA);
-  border: 1px solid #F87171;
-  border-radius: var(--radius-xl);
-  padding: 1rem 1.25rem;
-  animation: slideIn 0.3s ease-out;
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .error-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  color: #d32f2f;
 }
 
 .error-icon {
-  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
 .error-text {
-  color: var(--error);
+  font-size: 0.9rem;
   font-weight: 500;
-  font-size: 0.95rem;
 }
 
 .enhanced-form-group {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .enhanced-form-label {
@@ -416,9 +312,8 @@
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-  color: var(--gray-700);
-  margin-bottom: 0.75rem;
-  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 .enhanced-input-container {
@@ -427,177 +322,108 @@
 
 .enhanced-form-input {
   width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px solid var(--gray-200);
-  border-radius: var(--radius-xl);
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 1rem;
-  background: var(--gray-50);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  z-index: 1;
+  transition: all 0.3s ease;
+  background: white;
 }
 
 .enhanced-form-input:focus {
   outline: none;
-  background: var(--white);
-  transform: translateY(-2px);
-}
-
-/* Login Theme - Orange Input Focus */
-.auth-page-container.login .enhanced-form-input:focus {
-  border-color: #FF6B35;
-  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.15);
-}
-
-/* Signup Theme - Coral Orange Input Focus */
-.auth-page-container.signup .enhanced-form-input:focus {
-  border-color: #FF6B6B;
-  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.15);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
 }
 
 .enhanced-form-input:disabled {
-  opacity: 0.6;
+  background: #f5f5f5;
+  color: #999;
   cursor: not-allowed;
 }
 
-.enhanced-form-input::placeholder {
-  color: var(--gray-400);
-  font-weight: 400;
-}
-
-.input-highlight {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-}
-
-/* Login Theme - Orange Input Highlight */
-.auth-page-container.login .input-highlight {
-  background: linear-gradient(135deg, #FF6B35, #FF8E53);
-}
-
-/* Signup Theme - Coral Orange Input Highlight */
-.auth-page-container.signup .input-highlight {
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-}
-
-.enhanced-form-input:focus + .input-highlight {
-  transform: scaleX(1);
-}
-
-/* Password Field */
 .password-field {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.password-field .enhanced-form-input {
-  padding-right: 3rem;
-}
-
 .enhanced-password-toggle {
   position: absolute;
-  right: 1rem;
+  right: 0.75rem;
   background: none;
   border: none;
-  color: var(--gray-500);
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: var(--radius-md);
-  transition: all 0.2s ease;
-  z-index: 2;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.3s ease;
 }
 
 .enhanced-password-toggle:hover {
-  background: rgba(255, 107, 53, 0.1);
-}
-
-/* Login Theme - Orange Password Toggle */
-.auth-page-container.login .enhanced-password-toggle:hover {
-  color: #FF6B35;
-  background: rgba(255, 107, 53, 0.1);
-}
-
-/* Signup Theme - Coral Orange Password Toggle */
-.auth-page-container.signup .enhanced-password-toggle:hover {
-  color: #FF6B6B;
-  background: rgba(255, 107, 107, 0.1);
+  color: var(--primary-color);
 }
 
 .enhanced-password-toggle:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-/* Submit Button */
-.enhanced-submit-btn {
+.input-highlight {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--primary-color);
+  transition: width 0.3s ease;
+}
+
+.enhanced-form-input:focus + .input-highlight {
   width: 100%;
-  padding: 1.25rem 2rem;
-  color: var(--white);
-  border: none;
-  border-radius: var(--radius-xl);
-  font-size: 1.125rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.enhanced-submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  margin-top: 1rem;
-}
-
-/* Login Theme - Orange Submit Button */
-.auth-page-container.login .enhanced-submit-btn {
-  background: linear-gradient(135deg, #FF6B35, #FF8E53);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
-
-.auth-page-container.login .enhanced-submit-btn:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
-}
-
-/* Signup Theme - Coral Orange Submit Button */
-.auth-page-container.signup .enhanced-submit-btn {
-  background: linear-gradient(135deg, #FF6B6B, #FF8A8A);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-}
-
-.auth-page-container.signup .enhanced-submit-btn:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
-}
-
-.enhanced-submit-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.enhanced-submit-btn:hover::before {
-  left: 100%;
 }
 
 .enhanced-submit-btn:hover:not(:disabled) {
-  transform: translateY(-3px);
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
 .enhanced-submit-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
   transform: none;
+}
+
+.enhanced-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .btn-shine {
@@ -607,260 +433,241 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.6s;
+  transition: left 0.5s ease;
 }
 
 .enhanced-submit-btn:hover .btn-shine {
   left: 100%;
 }
 
-.enhanced-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid var(--white);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-/* Form Divider */
 .form-divider {
-  position: relative;
-  text-align: center;
-  margin: 2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
 }
 
-.form-divider::before {
+.form-divider::before,
+.form-divider::after {
   content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
+  flex: 1;
   height: 1px;
-  background: var(--gray-200);
+  background: #e0e0e0;
 }
 
 .form-divider span {
-  background: var(--white);
-  padding: 0 1rem;
-  color: var(--gray-500);
-  font-size: 0.875rem;
-  font-weight: 500;
-  position: relative;
-  z-index: 1;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
-/* Demo Button */
 .demo-btn {
-  width: 100%;
-  padding: 1rem 2rem;
-  border: 2px solid;
-  border-radius: var(--radius-xl);
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  backdrop-filter: blur(10px);
-}
-
-/* Login Theme - Orange Demo Button */
-.auth-page-container.login .demo-btn {
-  background: rgba(255, 107, 53, 0.1);
-  color: #FF6B35;
-  border-color: rgba(255, 107, 53, 0.2);
-}
-
-.auth-page-container.login .demo-btn:hover:not(:disabled) {
-  background: rgba(255, 107, 53, 0.15);
-  border-color: rgba(255, 107, 53, 0.3);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
-}
-
-/* Signup Theme - Coral Orange Demo Button */
-.auth-page-container.signup .demo-btn {
-  background: rgba(255, 107, 107, 0.1);
-  color: #FF6B6B;
-  border-color: rgba(255, 107, 107, 0.2);
-}
-
-.auth-page-container.signup .demo-btn:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.15);
-  border-color: rgba(255, 107, 107, 0.3);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f5f5f5;
+  color: var(--text-primary);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .demo-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background: #e0e0e0;
+  transform: translateY(-1px);
 }
 
 .demo-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* Auth Footer */
 .auth-footer-enhanced {
   text-align: center;
   margin-top: 2rem;
   padding-top: 2rem;
-  border-top: 1px solid var(--gray-200);
+  border-top: 1px solid #e0e0e0;
 }
 
 .auth-footer-enhanced p {
-  color: var(--gray-600);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .auth-link-enhanced {
-  font-weight: 600;
   background: none;
   border: none;
+  color: var(--primary-color);
+  font-weight: 600;
   cursor: pointer;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-md);
+  transition: color 0.3s ease;
 }
 
-/* Login Theme - Orange Auth Link */
-.auth-page-container.login .auth-link-enhanced {
-  color: #FF6B35;
-}
-
-.auth-page-container.login .auth-link-enhanced:hover:not(:disabled) {
-  background: rgba(255, 107, 53, 0.1);
-  color: #E55A2B;
-}
-
-/* Signup Theme - Coral Orange Auth Link */
-.auth-page-container.signup .auth-link-enhanced {
-  color: #FF6B6B;
-}
-
-.auth-page-container.signup .auth-link-enhanced:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.1);
-  color: #E55A5A;
+.auth-link-enhanced:hover:not(:disabled) {
+  color: #e55a2b;
+  text-decoration: underline;
 }
 
 .auth-link-enhanced:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
 /* Demo Info Card */
 .demo-info-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-  border-radius: var(--radius-2xl);
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
   padding: 1.5rem;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px;
-}
-
-/* Login Theme - Orange Demo Card */
-.auth-page-container.login .demo-info-card {
-  border: 2px solid rgba(255, 107, 53, 0.2);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
-}
-
-.auth-page-container.login .demo-header {
-  color: #FF6B35;
-}
-
-/* Signup Theme - Coral Orange Demo Card */
-.auth-page-container.signup .demo-info-card {
-  border: 2px solid rgba(255, 107, 107, 0.2);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.1);
-}
-
-.auth-page-container.signup .demo-header {
-  color: #FF6B6B;
+  margin-top: 2rem;
+  text-align: center;
 }
 
 .demo-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  justify-content: center;
+  gap: 0.5rem;
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
 }
 
 .demo-details {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .demo-credential {
   font-size: 0.9rem;
-  color: var(--gray-700);
-  background: rgba(255, 255, 255, 0.8);
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
 }
 
-/* Login Theme - Orange Demo Credential */
-.auth-page-container.login .demo-credential {
-  border: 1px solid rgba(255, 107, 53, 0.1);
+.demo-credential strong {
+  color: var(--text-primary);
 }
 
-.auth-page-container.login .demo-credential strong {
-  color: #FF6B35;
+.fill-demo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0 auto;
 }
 
-/* Signup Theme - Coral Orange Demo Credential */
-.auth-page-container.signup .demo-credential {
-  border: 1px solid rgba(255, 107, 107, 0.1);
+.fill-demo-btn:hover:not(:disabled) {
+  background: #e55a2b;
+  transform: translateY(-1px);
 }
 
-.auth-page-container.signup .demo-credential strong {
-  color: #FF6B6B;
+.fill-demo-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-/* Animations */
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-20px) rotate(5deg); }
-  66% { transform: translateY(10px) rotate(-3deg); }
+/* No Password Notice */
+.no-password-notice {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px solid #0ea5e9;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  text-align: center;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+.notice-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 0.5rem;
 }
 
-@keyframes breathe {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.6; }
+.no-password-notice p {
+  font-size: 0.9rem;
+  color: #0c4a6e;
+  margin: 0;
+  line-height: 1.5;
 }
 
-@keyframes slideIn {
-  from { transform: translateY(-10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+/* Signup Benefits */
+.signup-benefits {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #22c55e;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.signup-benefits h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #15803d;
+  margin: 0 0 1rem 0;
+}
+
+.signup-benefits h4::before {
+  content: '✨';
+  font-size: 1.2rem;
+}
+
+.signup-benefits ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.signup-benefits li {
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.signup-benefits li::before {
+  content: attr(data-icon);
+  flex-shrink: 0;
 }
 
 /* Responsive Design */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .auth-content-wrapper {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    flex-direction: column;
+    min-height: auto;
   }
   
   .auth-branding {
-    order: 2;
-    padding: 1.5rem;
+    padding: 2rem;
+    text-align: center;
   }
   
-  .auth-form-container {
-    order: 1;
+  .brand-header {
+    justify-content: center;
+    margin-bottom: 2rem;
   }
   
   .brand-features {
@@ -868,92 +675,25 @@
   }
   
   .feature-item {
+    flex-direction: column;
+    text-align: center;
     margin-bottom: 1.5rem;
-    padding: 1.25rem;
   }
   
   .brand-stats {
-    gap: 1rem;
-    padding: 1.5rem;
+    justify-content: center;
+    margin-bottom: 2rem;
   }
   
-  .stat-number {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .auth-page-container {
-    padding: 1rem;
-  }
-  
-  .auth-content-wrapper {
-    gap: 1.5rem;
-  }
-  
-  .auth-form-card {
+  .auth-form-container {
     padding: 2rem;
   }
   
-  .form-header h2 {
-    font-size: 1.75rem;
-  }
-  
-  .form-header p {
-    font-size: 1rem;
-  }
-  
-  .brand-text h1 {
-    font-size: 2.5rem;
-  }
-  
-  .brand-text p {
-    font-size: 1.125rem;
-  }
-  
-  .brand-stats {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .stat {
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.6);
-    border-radius: var(--radius-lg);
-  }
-  
-  .floating-element {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
   .auth-form-card {
-    padding: 1.5rem;
+    max-width: 100%;
   }
   
-  .form-header h2 {
-    font-size: 1.5rem;
-  }
-  
-  .brand-text h1 {
-    font-size: 2rem;
-  }
-  
-  .feature-item {
-    padding: 1rem;
-  }
-  
-  .feature-content h3 {
-    font-size: 1rem;
-  }
-  
-  .enhanced-form-input {
-    padding: 0.875rem 1rem;
-  }
-  
-  .enhanced-submit-btn {
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
+  .demo-info-card {
+    margin-top: 1rem;
   }
 }
