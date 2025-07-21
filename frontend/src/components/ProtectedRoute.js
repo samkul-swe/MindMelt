@@ -1,8 +1,3 @@
-// ============================================================================
-// components/ProtectedRoute.js - Progressive Route Protection
-// ============================================================================
-
-import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
@@ -14,8 +9,7 @@ export const ProtectedRoute = ({
 }) => {
   const { 
     isAuthenticated, 
-    isRegistered, 
-    isAnonymous, 
+    isRegistered,
     loading 
   } = useAuth();
 
@@ -23,17 +17,14 @@ export const ProtectedRoute = ({
     return <LoadingSpinner message="Loading MindMelt..." />;
   }
 
-  // If no authentication required for anonymous users
   if (allowAnonymous && isAuthenticated) {
     return children;
   }
 
-  // If registered user required
   if (!allowAnonymous && !isRegistered) {
     return <Navigate to={redirectTo || "/login"} replace />;
   }
 
-  // If any authentication required but user is not authenticated
   if (!isAuthenticated) {
     return <Navigate to={redirectTo || "/login"} replace />;
   }

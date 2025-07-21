@@ -4,11 +4,17 @@
 
 :root {
   /* Enhanced Color Palette */
+  --primary-color: #FF6B35;
   --primary-gradient: linear-gradient(135deg, #FF8A56 0%, #FF6B35 50%, #FF4D6D 100%);
   --secondary-gradient: linear-gradient(135deg, #FFF4E6 0%, #FFE4B5 100%);
   --accent-color: #FF6B35;
   --accent-light: #FF8A56;
   --accent-dark: #E55A2B;
+  
+  /* Text Colors */
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --text-light: #9ca3af;
   
   /* Neutral Colors */
   --white: #FFFFFF;

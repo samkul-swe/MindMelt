@@ -1,7 +1,3 @@
-// ============================================================================
-// App.js - Progressive Authentication Routing
-// ============================================================================
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -33,22 +29,18 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Fully protected routes - require registered users */}
+            {/* Dashboard route - allow anonymous users */}
             <Route path="/dashboard" element={
-              <ProtectedRoute allowAnonymous={false}>
+              <ProtectedRoute allowAnonymous={true}>
                 <Dashboard />
               </ProtectedRoute>
             } />
             
-            {/* Root route logic */}
-            <Route path="/" element={
-              <ProtectedRoute allowAnonymous={false} redirectTo="/start">
-                <Dashboard />
-              </ProtectedRoute>
-            } />
+            {/* Root route redirects to start page */}
+            <Route path="/" element={<Navigate to="/start" replace />} />
             
             {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/start" replace />} />
           </Routes>
         </div>
       </Router>

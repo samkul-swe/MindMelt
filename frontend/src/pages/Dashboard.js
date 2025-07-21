@@ -23,7 +23,8 @@ import {
   Star,
   Zap,
   Shield,
-  Mail
+  Mail,
+  Save
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
@@ -78,14 +79,53 @@ const getTechPun = () => {
   return puns[Math.floor(Math.random() * puns.length)];
 };
 
+// Format member since date - handles Firestore timestamps
+const formatMemberSinceDate = (timestamp) => {
+  if (!timestamp) return 'N/A';
+  
+  try {
+    let date;
+    
+    // Handle Firestore timestamp objects
+    if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+      // Firestore Timestamp object
+      date = new Date(timestamp.seconds * 1000);
+    } else if (timestamp && typeof timestamp === 'object' && timestamp._seconds) {
+      // Alternative Firestore Timestamp format
+      date = new Date(timestamp._seconds * 1000);
+    } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+      // Regular date string or timestamp
+      date = new Date(timestamp);
+    } else {
+      return 'N/A';
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return 'N/A';
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting member since date:', error);
+    return 'N/A';
+  }
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { 
-    currentUser, 
-    isRegistered, 
-    isAnonymous, 
-    logout, 
-    signupWithEmail 
+  const {
+  currentUser, 
+  isRegistered, 
+  isAnonymous, 
+  logout, 
+  signupWithEmail,
+    updateUser,
+    getDisplayName
   } = useAuth();
   const [learningSessions, setLearningSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +141,10 @@ const Dashboard = () => {
   const [upgradeEmail, setUpgradeEmail] = useState('');
   const [upgradeName, setUpgradeName] = useState('');
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameUpdateSuccess, setUsernameUpdateSuccess] = useState(false);
 
   const apiKeyManager = useApiKey();
   const topicSearch = useTopicSearch(apiKeyManager);
@@ -153,6 +197,13 @@ const Dashboard = () => {
     }
   }, [isRegistered]);
 
+  // Clear username form when user updates
+  useEffect(() => {
+    if (usernameUpdateSuccess) {
+      setNewUsername('');
+    }
+  }, [usernameUpdateSuccess]);
+
   useEffect(() => {
     fetchLearningSessions();
   }, [fetchLearningSessions]);
@@ -181,6 +232,54 @@ const Dashboard = () => {
       console.error('Failed to upgrade account:', error);
     } finally {
       setIsUpgrading(false);
+    }
+  };
+
+  const handleSaveUsername = async (e) => {
+    e.preventDefault();
+    if (!newUsername.trim() || savingUsername) return;
+    
+    setSavingUsername(true);
+    try {
+      // Update in backend/Firestore
+      console.log('Updating display name to:', newUsername.trim());
+      const updatedUser = await api.updateProfile({ name: newUsername.trim() });
+      console.log('Backend response:', updatedUser);
+      
+      // Update in local auth context - use the returned user data
+      if (updateUser && updatedUser) {
+        updateUser(updatedUser);
+      }
+      
+      // Reset form state
+      setEditingUsername(false);
+      setNewUsername('');
+      
+      // Show success message
+      setUsernameUpdateSuccess(true);
+      setTimeout(() => setUsernameUpdateSuccess(false), 3000);
+      console.log('Display name updated successfully!');
+      
+    } catch (error) {
+      console.error('Failed to update display name:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        stack: error.stack
+      });
+      
+      let errorMessage = 'Failed to update display name. Please try again.';
+      if (error.message.includes('401')) {
+        errorMessage = 'Session expired. Please log in again.';
+      } else if (error.message.includes('403')) {
+        errorMessage = 'Permission denied. Please check your account status.';
+      } else if (error.message.includes('Network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setSavingUsername(false);
     }
   };
 
@@ -366,11 +465,11 @@ const Dashboard = () => {
             <User size={24} />
           </div>
           <div className="user-info">
-            <h3>{currentUser?.name}</h3>
+            <h3>{getDisplayName(currentUser)}</h3>
             <p>{currentUser?.email || 'Anonymous User'}</p>
             <span className="member-since">
               {isRegistered ? (
-                `Member since ${currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'N/A'}`
+                `Member since ${formatMemberSinceDate(currentUser?.createdAt)}`
               ) : (
                 <span className="anonymous-badge">
                   <Shield size={14} />
@@ -453,7 +552,7 @@ const Dashboard = () => {
       <div className="dashboard-main">
         <div className="dashboard-header">
           <div className="header-content">
-            <h1>Welcome back, {currentUser?.name?.split(' ')[0] || 'Learner'}! 👋</h1>
+            <h1>Welcome back, {getDisplayName(currentUser)?.split(' ')[0] || 'Learner'}! 👋</h1>
             <p>Ready to continue your learning journey?</p>
           </div>
           <div className="header-actions">
@@ -970,12 +1069,66 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
+              {/* Username Edit Section */}
+              {isRegistered && (
+                <div className="username-edit-section">
+                  <h4>
+                    <User size={16} />
+                    Update Your Display Name
+                  </h4>
+                  <p>Choose how you want to be addressed in MindMelt. This name will appear on your dashboard and learning sessions.</p>
+                  
+                  <form onSubmit={handleSaveUsername} className="username-edit-form">
+                    <div className="username-input-group">
+                      <label htmlFor="new-username">Display Name</label>
+                      <input
+                        type="text"
+                        id="new-username"
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        placeholder={currentUser?.name || currentUser?.username || 'Enter your name'}
+                        disabled={savingUsername}
+                        maxLength={50}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="username-save-btn"
+                      disabled={!newUsername.trim() || savingUsername}
+                    >
+                      {savingUsername ? (
+                        <>
+                          <div className="spinner" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={14} />
+                          Update
+                        </>
+                      )}
+                    </button>
+                  </form>
+                  
+                  {/* Success Message */}
+                  {usernameUpdateSuccess && (
+                    <div className="username-success-message">
+                      ✅ Display name updated successfully!
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="profile-section">
                 <h3>Account Information</h3>
                 <div className="profile-fields">
                   <div className="profile-field">
                     <label>Full Name</label>
-                    <input type="text" value={currentUser?.name || ''} readOnly />
+                    <input
+                      type="text"
+                      value={currentUser?.name || currentUser?.username || ''}
+                      readOnly
+                    />
                   </div>
                   <div className="profile-field">
                     <label>Email Address</label>
@@ -983,10 +1136,10 @@ const Dashboard = () => {
                   </div>
                   <div className="profile-field">
                     <label>Member Since</label>
-                    <input 
-                      type="text" 
-                      value={currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'N/A'} 
-                      readOnly 
+                    <input
+                      type="text"
+                      value={formatMemberSinceDate(currentUser?.createdAt) || 'N/A'}
+                      readOnly
                     />
                   </div>
                 </div>

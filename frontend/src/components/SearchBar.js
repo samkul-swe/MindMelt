@@ -1,7 +1,3 @@
-// ============================================================================
-// components/SearchBar.js - Reusable Search Bar Component
-// ============================================================================
-
 import React, { useState, useCallback } from 'react';
 
 const SearchBar = React.memo(({ 
@@ -9,7 +5,6 @@ const SearchBar = React.memo(({
   setSearchQuery, 
   searchResults, 
   onSelectTopic, 
-  selectedTopic,
   isSearching,
   searchError,
   hasSearched,

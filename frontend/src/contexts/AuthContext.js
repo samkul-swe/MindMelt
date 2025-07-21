@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/authAPI';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../services/authAPI';
 
 const AuthContext = createContext();
 
@@ -23,16 +23,13 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      // Check for registered user first
       const token = localStorage.getItem('mindmelt_token');
       const userData = localStorage.getItem('mindmelt_user');
       
       if (token && userData) {
-        // Verify token is still valid
-        await authAPI.refreshToken();
+        await api.refreshToken();
         setUser(JSON.parse(userData));
       } else {
-        // Check for anonymous user
         const anonymousData = localStorage.getItem('mindmelt_anonymous');
         if (anonymousData) {
           const anonymous = JSON.parse(anonymousData);
@@ -41,7 +38,6 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      // Clear invalid session
       localStorage.removeItem('mindmelt_token');
       localStorage.removeItem('mindmelt_user');
       setUser(null);
@@ -82,20 +78,27 @@ export const AuthProvider = ({ children }) => {
       setError('');
       setLoading(true);
       
-      const response = await authAPI.login(email, password);
+      console.log('AuthContext: Login attempt for:', email);
+      
+      const response = await api.login(email, password);
+      
+      console.log('AuthContext: Login response:', response);
       
       localStorage.setItem('mindmelt_token', response.token);
       localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
       
-      // If we had an anonymous user, trigger migration
       if (anonymousUser) {
+        console.log('AuthContext: Migrating anonymous progress');
         await migrateAnonymousProgress(response.user);
       }
       
       setUser(response.user);
       setAnonymousUser(null);
+      
+      console.log('AuthContext: Login successful');
       return response.user;
     } catch (error) {
+      console.error('AuthContext: Login error:', error);
       setError(error.message);
       throw error;
     } finally {
@@ -108,12 +111,11 @@ export const AuthProvider = ({ children }) => {
       setError('');
       setLoading(true);
       
-      const response = await authAPI.signup(email, password, name);
+      const response = await api.signup(email, password, name);
       
       localStorage.setItem('mindmelt_token', response.token);
       localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
-      
-      // If we had an anonymous user, trigger migration
+
       if (anonymousUser) {
         await migrateAnonymousProgress(response.user);
       }
@@ -129,20 +131,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signupWithEmail = async (email, name = null) => {
+  const signupWithEmail = async (username, email = null) => {
     try {
       setError('');
       setLoading(true);
-      
-      // For now, create a simple account with magic link concept
-      // In production, you'd send a magic link to email
-      const tempPassword = Math.random().toString(36).substr(2, 10);
-      const response = await authAPI.signup(email, tempPassword, name || email.split('@')[0]);
+
+      const response = await api.signupWithUsernameAndEmail(username, email);
       
       localStorage.setItem('mindmelt_token', response.token);
       localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
-      
-      // If we had an anonymous user, trigger migration
+
       if (anonymousUser) {
         await migrateAnonymousProgress(response.user);
       }
@@ -160,13 +158,10 @@ export const AuthProvider = ({ children }) => {
 
   const migrateAnonymousProgress = async (newUser) => {
     try {
-      // Get anonymous progress from localStorage
       const anonymousProgress = localStorage.getItem('mindmelt_anonymous_progress');
       const anonymousSessions = localStorage.getItem('mindmelt_anonymous_sessions');
       
       if (anonymousProgress || anonymousSessions) {
-        // Here you would typically call an API to migrate the data
-        // For now, we'll just merge the session counts
         const progressData = anonymousProgress ? JSON.parse(anonymousProgress) : {};
         const sessionsData = anonymousSessions ? JSON.parse(anonymousSessions) : [];
         
@@ -175,12 +170,10 @@ export const AuthProvider = ({ children }) => {
           progress: progressData
         });
         
-        // Clear anonymous data after migration
         localStorage.removeItem('mindmelt_anonymous_progress');
         localStorage.removeItem('mindmelt_anonymous_sessions');
       }
       
-      // Clear anonymous user data
       localStorage.removeItem('mindmelt_anonymous');
     } catch (error) {
       console.error('Progress migration failed:', error);
@@ -190,11 +183,13 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setLoading(true);
-      await authAPI.logout();
+      
+      await api.signOutFirebase();
+
+      await api.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear all stored data
       localStorage.removeItem('mindmelt_token');
       localStorage.removeItem('mindmelt_user');
       localStorage.removeItem('mindmelt_sessions');
@@ -206,6 +201,18 @@ export const AuthProvider = ({ children }) => {
       setAnonymousUser(null);
       setLoading(false);
     }
+  };
+
+  const updateUser = (updatedUserData) => {
+    if (user) {
+      const updatedUser = { ...user, ...updatedUserData };
+      localStorage.setItem('mindmelt_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+  };
+
+  const getDisplayName = (userData) => {
+    return userData?.name || userData?.username || 'User';
   };
 
   const getCurrentUser = () => {
@@ -221,10 +228,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const canAccessFeature = (feature) => {
-    // Anonymous users can access basic learning
     if (feature === 'learning') return true;
-    
-    // Only registered users can access advanced features
+
     if (feature === 'progress_tracking') return isRegistered();
     if (feature === 'learning_analytics') return isRegistered();
     if (feature === 'profile_settings') return isRegistered();
@@ -242,6 +247,8 @@ export const AuthProvider = ({ children }) => {
     signup,
     signupWithEmail,
     logout,
+    updateUser,
+    getDisplayName,
     createAnonymousUser,
     updateAnonymousUser,
     isAuthenticated: !!(user || anonymousUser),

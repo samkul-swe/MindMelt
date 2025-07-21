@@ -3,3 +3,4 @@ package-lock.json
 *.config.json
 build
 .env
+backend/mindmelt-cf760-firebase-adminsdk-fbsvc-967d6327f6.json

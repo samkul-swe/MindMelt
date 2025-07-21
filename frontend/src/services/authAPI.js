@@ -1,6 +1,8 @@
 // ============================================================================
-// services/authAPI.js - Authentication API Service (Corrected for Backend)
+// services/authAPI.js - Firestore-Only Authentication API Service
 // ============================================================================
+
+// No Firebase Auth imports needed - using Firestore only for data storage
 
 // FIXED: Changed from port 5000 to 3001 to match your backend
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
@@ -31,10 +33,12 @@ const apiRequest = async (endpoint, options = {}) => {
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+      // Create error object with response data for better error handling
+      const error = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+      error.response = { data };
+      throw error;
     }
     
-    // FIXED: Your backend returns data directly, not wrapped in a 'data' property
     return data;
   } catch (error) {
     console.error(`API Error [${endpoint}]:`, error);
@@ -43,7 +47,41 @@ const apiRequest = async (endpoint, options = {}) => {
 };
 
 export const authAPI = {
-  // FIXED: Updated endpoints to match your backend
+  // ============================================================================
+  // REMOVED FIREBASE AUTHENTICATION - Using Firestore only
+  // ============================================================================
+
+  // Removed Google Sign-In - using Firestore only authentication
+  async signInWithGoogle() {
+    throw new Error('Firebase authentication has been removed. Please use username/email signup.');
+  },
+
+  // Removed GitHub Sign-In - using Firestore only authentication  
+  async signInWithGithub() {
+    throw new Error('Firebase authentication has been removed. Please use username/email signup.');
+  },
+
+  // Username + Email signup (email optional) - Firestore only
+  async signupWithUsernameAndEmail(username, email = null) {
+    try {
+      const response = await apiRequest('/auth/signup-simple', {
+        method: 'POST',
+        body: JSON.stringify({ username, email }),
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw error;
+    }
+  },
+
+  // Removed Firebase logout - using Firestore only
+  async signOutFirebase() {
+    // No Firebase to sign out of, just resolve
+    return Promise.resolve({ success: true });
+  },
+  // Updated for email-only authentication
   async login(email, password) {
     return apiRequest('/auth/login', {
       method: 'POST',
@@ -233,9 +271,9 @@ export const mockAuthAPI = {
   }
 };
 
-// FIXED: Always use real API instead of mock in development
-// Comment out the next line if you want to use mock API for testing
+// Use real API to connect to Firestore backend
+// Switch to mockAuthAPI if backend is not available
 export const api = authAPI;
 
 // Uncomment the next line if you want to use mock API for testing
-// export const api = process.env.NODE_ENV === 'development' ? mockAuthAPI : authAPI;
+// export const api = mockAuthAPI;
