@@ -1,7 +1,3 @@
-/* ============================================================================
-   pages/auth.css - Fixed Authentication Page Styles (No Random Floating)
-   ============================================================================ */
-
 .auth-page-container {
   min-height: 100vh;
   display: flex;

@@ -1,5 +1,5 @@
 // ============================================================================
-// pages/InstantStart.js - Instant Learning Entry Point
+// pages/InstantStart.js - Simplified Start Page
 // ============================================================================
 
 import React, { useState } from 'react';
@@ -8,17 +8,11 @@ import {
   Brain, 
   Sparkles, 
   ArrowRight, 
-  Zap, 
-  BookOpen,
-  Target,
-  Users,
-  Star,
-  Play
+  Play,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useTopicSearch } from '../hooks/useTopicSearch';
-import { useApiKey } from '../hooks/useApiKey';
-import SearchBar from '../components/SearchBar';
 import '../styles/pages/instant-start.css';
 
 const InstantStart = () => {
@@ -27,10 +21,7 @@ const InstantStart = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [learningPath, setLearningPath] = useState('');
   const [userName, setUserName] = useState('');
-  const [showNameInput, setShowNameInput] = useState(false);
-
-  const apiKeyManager = useApiKey();
-  const topicSearch = useTopicSearch(apiKeyManager);
+  const [showQuickStart, setShowQuickStart] = useState(false);
 
   const startLearningSession = () => {
     if (!selectedTopic || !learningPath) return;
@@ -52,181 +43,169 @@ const InstantStart = () => {
     });
   };
 
-  const handleGetStarted = () => {
+  const handleStartLearning = () => {
     if (isRegistered) {
       navigate('/dashboard');
     } else {
-      setShowNameInput(true);
+      setShowQuickStart(true);
     }
   };
+
+  const predefinedTopics = [
+    {
+      id: 'algorithms',
+      name: 'Algorithms & Data Structures',
+      description: 'Core programming concepts and problem-solving',
+      icon: '⚙️',
+      category: 'Computer Science',
+      difficulty: 'Intermediate'
+    },
+    {
+      id: 'webdev',
+      name: 'Web Development',
+      description: 'Frontend, backend, and full-stack development',
+      icon: '🌐',
+      category: 'Programming',
+      difficulty: 'Beginner'
+    },
+    {
+      id: 'databases',
+      name: 'Database Systems',
+      description: 'SQL, NoSQL, and database design',
+      icon: '🗄️',
+      category: 'Data',
+      difficulty: 'Intermediate'
+    },
+    {
+      id: 'systems',
+      name: 'System Design',
+      description: 'Scalable architectures and distributed systems',
+      icon: '🖥️',
+      category: 'Architecture',
+      difficulty: 'Advanced'
+    }
+  ];
 
   const learningPaths = {
     conceptual: { 
       name: "Conceptual Track", 
       description: "Deep understanding of core concepts",
-      icon: "🧠",
-      time: "8-15 min"
+      icon: "🧠"
     },
     applied: { 
       name: "Applied Track", 
       description: "Practical implementation and examples",
-      icon: "⚡",
-      time: "10-20 min"
+      icon: "⚡"
     },
     comprehensive: { 
       name: "Comprehensive Track", 
       description: "Complete mastery with theory and practice",
-      icon: "🎯",
-      time: "15-25 min"
+      icon: "🎯"
     }
   };
 
-  const features = [
-    {
-      icon: <Brain size={24} />,
-      title: "AI-Powered Socratic Learning",
-      description: "Discover knowledge through intelligent questioning, not passive reading"
-    },
-    {
-      icon: <Zap size={24} />,
-      title: "Adaptive Timer System",
-      description: "Earn more learning time with correct answers - up to 25 minutes per session"
-    },
-    {
-      icon: <Target size={24} />,
-      title: "Personalized Progression",
-      description: "AI adapts to your understanding level and guides you to mastery"
-    },
-    {
-      icon: <BookOpen size={24} />,
-      title: "Comprehensive CS Curriculum",
-      description: "From algorithms to system design - all based on industry-proven learning paths"
-    }
-  ];
-
-  const testimonials = [
-    {
-      text: "Finally, a learning platform that actually makes me think!",
-      author: "Sarah Chen",
-      role: "CS Student"
-    },
-    {
-      text: "The Socratic method + AI is a game-changer for understanding complex topics.",
-      author: "Alex Rodriguez",
-      role: "Software Engineer"
-    },
-    {
-      text: "I love how it adapts to my pace and doesn't let me move on until I truly get it.",
-      author: "Jordan Kim",
-      role: "Bootcamp Graduate"
-    }
-  ];
-
   return (
     <div className="instant-start-container">
-      {/* Hero Section */}
+      {/* Main Hero Section */}
       <div className="hero-section">
+        {/* Left Side - Introduction & Buttons */}
         <div className="hero-content">
-          <div className="hero-header">
-            <div className="logo-container">
-              <Brain className="logo-icon" />
-              <h1>MindMelt</h1>
-            </div>
-            <div className="hero-badge">
-              <Sparkles size={16} />
-              <span>AI-Powered Learning</span>
-            </div>
+          {/* Logo */}
+          <div className="logo-container">
+            <Brain className="logo-icon" />
+            <h1>MindMelt</h1>
           </div>
 
+          {/* Main Message */}
           <div className="hero-main">
-            <h2>Learn Computer Science Through</h2>
-            <h2 className="hero-highlight">Intelligent Questioning</h2>
-            <p className="hero-description">
-              Experience the Socratic method powered by AI. No multiple choice, no passive reading - 
-              just deep, personalized learning that adapts to your understanding.
+            <h2>Stop Memorizing.</h2>
+            <h2 className="hero-highlight">Start Thinking.</h2>
+            
+            <div className="hero-description">
+              <p className="main-pitch">
+                MindMelt uses AI to ask you the right questions at the right time. 
+                No multiple choice. No passive reading. Just pure thinking.
+              </p>
+              
+              <div className="value-points">
+                <div className="value-point">
+                  <span className="point-icon">🤔</span>
+                  <span>Learn through questions, not answers</span>
+                </div>
+                <div className="value-point">
+                  <span className="point-icon">🧠</span>
+                  <span>AI adapts to how you think</span>
+                </div>
+                <div className="value-point">
+                  <span className="point-icon">💡</span>
+                  <span>Discover knowledge for yourself</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Call to Action */}
+          <div className="cta-section">
+            <h3>Ready to think differently?</h3>
+            
+            <div className="cta-buttons">
+              <button 
+                onClick={handleStartLearning}
+                className="btn btn-primary btn-large"
+              >
+                <Play size={20} />
+                Start Learning Now
+              </button>
+              
+              <div className="auth-buttons">
+                <button 
+                  onClick={() => navigate('/signup')}
+                  className="btn btn-secondary"
+                >
+                  <UserPlus size={18} />
+                  Sign Up
+                </button>
+                
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="btn btn-secondary"
+                >
+                  <LogIn size={18} />
+                  Login
+                </button>
+              </div>
+            </div>
+            
+            <p className="cta-note">
+              Try it instantly - no account required
             </p>
-            
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="stat-number">8-25</span>
-                <span className="stat-label">Min Sessions</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">19+</span>
-                <span className="stat-label">CS Topics</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">AI</span>
-                <span className="stat-label">Personalized</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-actions">
-            <button 
-              onClick={handleGetStarted}
-              className="btn btn-primary btn-large"
-            >
-              <Play size={20} />
-              Start Learning Now
-              <ArrowRight size={16} />
-            </button>
-            
-            <button 
-              onClick={() => navigate('/login')}
-              className="btn btn-secondary"
-            >
-              Already have an account?
-            </button>
           </div>
         </div>
 
+        {/* Right Side - Large Brain Visual */}
         <div className="hero-visual">
-          <div className="visual-container">
-            <div className="floating-elements">
-              <div className="floating-element">
-                <Brain size={32} />
-                <span>AI Tutor</span>
-              </div>
-              <div className="floating-element">
-                <Target size={32} />
-                <span>Adaptive</span>
-              </div>
-              <div className="floating-element">
-                <Zap size={32} />
-                <span>Dynamic</span>
-              </div>
+          <div className="brain-visual">
+            <div className="brain-half">
+              <Brain size={280} />
+            </div>
+            <div className="thinking-dots">
+              <div className="dot"></div>
+              <div className="dot"></div>
+              <div className="dot"></div>
+            </div>
+            <div className="brain-caption">
+              <p>Think. Question. Discover.</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Features Section */}
-      <div className="features-section">
-        <div className="section-header">
-          <h3>Why MindMelt Works</h3>
-          <p>Traditional learning platforms make you passive. We make you think.</p>
-        </div>
-
-        <div className="features-grid">
-          {features.map((feature, index) => (
-            <div key={index} className="feature-card">
-              <div className="feature-icon">
-                {feature.icon}
-              </div>
-              <h4>{feature.title}</h4>
-              <p>{feature.description}</p>
-            </div>
-          ))}
         </div>
       </div>
 
       {/* Quick Start Section */}
-      {showNameInput && (
+      {showQuickStart && (
         <div className="quick-start-section">
           <div className="section-header">
-            <h3>Ready to Start Learning?</h3>
-            <p>Choose a topic and learning style to begin your first session</p>
+            <h3>Choose Your Learning Path</h3>
+            <p>Pick a topic and approach to get started</p>
           </div>
 
           <div className="quick-start-form">
@@ -245,24 +224,24 @@ const InstantStart = () => {
 
             <div className="form-section">
               <label className="form-label">
-                <Brain size={18} />
-                Search for a Computer Science Topic
+                Choose a Computer Science Topic
               </label>
               
-              <SearchBar
-                searchQuery={topicSearch.searchQuery}
-                setSearchQuery={topicSearch.setSearchQuery}
-                searchResults={topicSearch.searchResults}
-                onSelectTopic={setSelectedTopic}
-                selectedTopic={selectedTopic}
-                isSearching={topicSearch.isSearching}
-                searchError={topicSearch.searchError}
-                hasSearched={topicSearch.hasSearched}
-                performSearch={topicSearch.performSearch}
-                clearSearch={topicSearch.clearSearch}
-                hideSuggestions={topicSearch.hideSuggestions}
-                showSuggestions={topicSearch.showSuggestions}
-              />
+              <div className="topic-grid">
+                {predefinedTopics.map((topic) => (
+                  <div
+                    key={topic.id}
+                    className={`topic-option ${selectedTopic?.id === topic.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedTopic(topic)}
+                  >
+                    <div className="topic-icon">{topic.icon}</div>
+                    <div className="topic-content">
+                      <h4>{topic.name}</h4>
+                      <p>{topic.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="form-section">
@@ -278,7 +257,6 @@ const InstantStart = () => {
                     <div className="path-content">
                       <h4>{path.name}</h4>
                       <p>{path.description}</p>
-                      <span className="path-time">{path.time}</span>
                     </div>
                   </div>
                 ))}
@@ -287,7 +265,7 @@ const InstantStart = () => {
 
             <div className="form-actions">
               <button
-                onClick={() => setShowNameInput(false)}
+                onClick={() => setShowQuickStart(false)}
                 className="btn btn-secondary"
               >
                 Back
@@ -298,49 +276,21 @@ const InstantStart = () => {
                 disabled={!selectedTopic || !learningPath}
               >
                 <Sparkles size={16} />
-                Start Learning Session
+                Start Thinking!
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Testimonials Section */}
-      <div className="testimonials-section">
-        <div className="section-header">
-          <h3>What Learners Say</h3>
-        </div>
-
-        <div className="testimonials-grid">
-          {testimonials.map((testimonial, index) => (
-            <div key={index} className="testimonial-card">
-              <div className="testimonial-content">
-                <Star size={16} className="testimonial-icon" />
-                <p>"{testimonial.text}"</p>
-              </div>
-              <div className="testimonial-author">
-                <strong>{testimonial.author}</strong>
-                <span>{testimonial.role}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Footer */}
+      {/* Simple Footer */}
       <div className="footer-section">
         <div className="footer-content">
           <div className="footer-logo">
-            <Brain size={24} />
+            <Brain size={20} />
             <span>MindMelt</span>
           </div>
-          <div className="footer-links">
-            <button onClick={() => navigate('/login')}>Login</button>
-            <button onClick={() => navigate('/signup')}>Sign Up</button>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>&copy; 2024 MindMelt. Transforming education through AI-powered Socratic learning.</p>
+          <p>&copy; 2024 MindMelt - Think, don't memorize.</p>
         </div>
       </div>
     </div>
