@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { searchCSTopics } from '../services/aiService';
+import { searchCSTopicsLocally, getSuggestedTopics } from '../data/csTopicsDatabase';
 
-export const useTopicSearch = (apiKeyManager) => {
+export const useTopicSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -23,15 +23,12 @@ export const useTopicSearch = (apiKeyManager) => {
     setShowSuggestions(false);
 
     try {
-      const apiKey = apiKeyManager?.getCurrentApiKey();
+      console.log('🔍 Local Search for:', searchQuery.trim());
       
-      if (!apiKey) {
-        throw new Error('🔑 AI API key not found. Please set your API key in MindMelt settings to search for topics!');
-      }
-
-      console.log('🔍 Manual AI Search for:', searchQuery.trim());
+      // Simulate a brief loading state for better UX
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      const results = await searchCSTopics(searchQuery.trim(), apiKey);
+      const results = searchCSTopicsLocally(searchQuery.trim());
       
       if (results && results.length > 0) {
         setSearchResults(results);
@@ -40,18 +37,40 @@ export const useTopicSearch = (apiKeyManager) => {
         console.log(`✅ Found ${results.length} topics for "${searchQuery.trim()}"`);
       } else {
         setSearchResults([]);
-        setSearchError(`No CS topics found for "${searchQuery.trim()}". Try terms like: React, Python, Machine Learning, etc.`);
+        setSearchError(`No CS topics found for "${searchQuery.trim()}". Try terms like: React, Python, Machine Learning, Data Structures, etc.`);
         setShowSuggestions(false);
       }
     } catch (error) {
       console.error('❌ Search failed:', error);
       setSearchResults([]);
-      setSearchError(error.message || 'Search failed. Please try again.');
+      setSearchError('Search failed. Please try again.');
       setShowSuggestions(false);
     } finally {
       setIsSearching(false);
     }
-  }, [searchQuery, apiKeyManager]);
+  }, [searchQuery]);
+
+  // Real-time search as user types (debounced)
+  const performLiveSearch = useCallback((query) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setShowSuggestions(false);
+      setHasSearched(false);
+      return;
+    }
+
+    const results = searchCSTopicsLocally(query.trim());
+    
+    if (results && results.length > 0) {
+      setSearchResults(results);
+      setShowSuggestions(true);
+      setSearchError('');
+    } else {
+      setSearchResults([]);
+      setShowSuggestions(false);
+    }
+    setHasSearched(true);
+  }, []);
 
   const clearSearch = useCallback(() => {
     setSearchQuery('');
@@ -65,6 +84,13 @@ export const useTopicSearch = (apiKeyManager) => {
     setShowSuggestions(false);
   }, []);
 
+  const showSuggestedTopics = useCallback(() => {
+    const suggestions = getSuggestedTopics(6);
+    setSearchResults(suggestions);
+    setShowSuggestions(true);
+    setHasSearched(false); // Don't show as searched since these are suggestions
+  }, []);
+
   return {
     searchQuery,
     setSearchQuery,
@@ -75,7 +101,9 @@ export const useTopicSearch = (apiKeyManager) => {
     searchError,
     hasSearched,
     performSearch,
+    performLiveSearch,
     clearSearch,
-    hideSuggestions
+    hideSuggestions,
+    showSuggestedTopics
   };
 };

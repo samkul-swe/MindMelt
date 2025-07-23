@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 const SearchBar = React.memo(({ 
   searchQuery, 
@@ -9,11 +9,31 @@ const SearchBar = React.memo(({
   searchError,
   hasSearched,
   performSearch,
+  performLiveSearch,
   clearSearch,
   hideSuggestions,
-  showSuggestions
+  showSuggestions,
+  setShowSuggestions,
+  showSuggestedTopics
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Debounced live search
+  useEffect(() => {
+    if (searchQuery && searchQuery.trim().length >= 2) {
+      const timeoutId = setTimeout(() => {
+        performLiveSearch(searchQuery);
+      }, 300); // 300ms debounce
+
+      return () => clearTimeout(timeoutId);
+    } else if (searchQuery.trim().length === 0) {
+      // Show suggested topics when search is empty and focused
+      if (isFocused) {
+        showSuggestedTopics();
+      }
+    }
+  }, [searchQuery, performLiveSearch, showSuggestedTopics, isFocused]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
@@ -22,7 +42,7 @@ const SearchBar = React.memo(({
         onSelectTopic(searchResults[selectedIndex]);
         hideSuggestions();
         setSelectedIndex(-1);
-      } else {
+      } else if (searchQuery.trim()) {
         performSearch();
       }
     } else if (e.key === 'ArrowDown') {
@@ -38,23 +58,44 @@ const SearchBar = React.memo(({
     } else if (e.key === 'Escape') {
       setSelectedIndex(-1);
       hideSuggestions();
+      setIsFocused(false);
     }
-  }, [selectedIndex, searchResults, onSelectTopic, performSearch, hideSuggestions]);
+  }, [selectedIndex, searchResults, onSelectTopic, performSearch, hideSuggestions, searchQuery]);
 
   const handleSearchClick = useCallback(() => {
-    performSearch();
-  }, [performSearch]);
+    if (searchQuery.trim()) {
+      performSearch();
+    }
+  }, [performSearch, searchQuery]);
 
   const handleTopicSelect = useCallback((topic) => {
     onSelectTopic(topic);
     hideSuggestions();
     setSelectedIndex(-1);
+    setIsFocused(false);
   }, [onSelectTopic, hideSuggestions]);
 
   const handleInputChange = useCallback((e) => {
     setSearchQuery(e.target.value);
     setSelectedIndex(-1);
   }, [setSearchQuery]);
+
+  const handleInputFocus = useCallback(() => {
+    setIsFocused(true);
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      showSuggestedTopics();
+    } else if (searchResults.length > 0) {
+      setShowSuggestions(true);
+    }
+  }, [searchQuery, showSuggestedTopics, searchResults.length, setShowSuggestions]);
+
+  const handleInputBlur = useCallback(() => {
+    // Delay hiding suggestions to allow for clicks
+    setTimeout(() => {
+      setIsFocused(false);
+      hideSuggestions();
+    }, 150);
+  }, [hideSuggestions]);
 
   return (
     <div className="search-container">
@@ -63,11 +104,14 @@ const SearchBar = React.memo(({
         <input
           type="text"
           className="search-input"
-          placeholder="Enter CS topic: React, Python, Machine Learning, Blockchain..."
+          placeholder="Search CS topics: React, Python, Machine Learning, Blockchain..."
           value={searchQuery}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
           disabled={isSearching}
+          autoComplete="off"
         />
         
         {isSearching && (
@@ -97,50 +141,62 @@ const SearchBar = React.memo(({
         )}
       </div>
 
-      {hasSearched && showSuggestions && (
+      {(showSuggestions && searchResults.length > 0) && (
         <div className="search-results-container">
-          {searchError ? (
-            <div className="search-error-message">
-              <div className="error-icon">⚠️</div>
-              <div className="error-text">{searchError}</div>
-              {!searchError.includes('API key') && (
-                <div className="error-suggestions">
-                  <strong>Try these CS topics:</strong> React, Python, Machine Learning, JavaScript, Docker, AWS, MongoDB, TypeScript, Flutter, Cybersecurity
-                </div>
+          <div className="search-results-section">
+            <div className="results-header">
+              {!hasSearched ? (
+                <>
+                  <h3>💡 Popular CS Topics</h3>
+                  <p>Here are some popular topics to get you started</p>
+                </>
+              ) : (
+                <>
+                  <h3>🎯 CS Topics for "{searchQuery}"</h3>
+                  <p>Found {searchResults.length} topics - Select one to start learning</p>
+                </>
               )}
             </div>
-          ) : searchResults.length > 0 ? (
-            <div className="search-results-section">
-              <div className="results-header">
-                <h3>🎯 CS Topics for "{searchQuery}"</h3>
-                <p>Found {searchResults.length} topics - Select one to start learning</p>
-              </div>
-              <div className="results-list">
-                {searchResults.map((topic, index) => (
-                  <div
-                    key={`${topic.name}-${index}`}
-                    className={`topic-result-card ${selectedIndex === index ? 'selected' : ''}`}
-                    onClick={() => handleTopicSelect(topic)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                  >
-                    <div className="topic-icon">{topic.icon}</div>
-                    <div className="topic-info">
-                      <div className="topic-name">{topic.name}</div>
-                      <div className="topic-description">{topic.description}</div>
-                      <div className="topic-tags">
-                        <span className="topic-category">{topic.category}</span>
-                        <span className="topic-difficulty">{topic.difficulty}</span>
-                      </div>
+            <div className="results-list">
+              {searchResults.map((topic, index) => (
+                <div
+                  key={`${topic.name}-${index}`}
+                  className={`topic-result-card ${selectedIndex === index ? 'selected' : ''}`}
+                  onClick={() => handleTopicSelect(topic)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                >
+                  <div className="topic-icon">{topic.icon}</div>
+                  <div className="topic-info">
+                    <div className="topic-name">{topic.name}</div>
+                    <div className="topic-description">{topic.description}</div>
+                    <div className="topic-tags">
+                      <span className="topic-category">{topic.category}</span>
+                      <span className={`topic-difficulty difficulty-${topic.difficulty.toLowerCase()}`}>
+                        {topic.difficulty}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ) : null}
+          </div>
         </div>
       )}
 
-      {!hasSearched && searchQuery.trim() && (
+      {searchError && (
+        <div className="search-results-container">
+          <div className="search-error-message">
+            <div className="error-icon">⚠️</div>
+            <div className="error-text">{searchError}</div>
+            <div className="error-suggestions">
+              <strong>Try these popular topics:</strong><br/>
+              React, Python, Machine Learning, JavaScript, Docker, AWS, Data Structures, Algorithms
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!hasSearched && !showSuggestions && searchQuery.trim() && (
         <div className="search-help">
           <p className="search-help-text">
             💡 Press <strong>Enter</strong> or click <strong>Search</strong> to find CS topics

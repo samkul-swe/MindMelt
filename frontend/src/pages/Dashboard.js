@@ -181,7 +181,7 @@ const Dashboard = () => {
   const [dailyPun, setDailyPun] = useState(null);
 
   const apiKeyManager = useApiKey();
-  const topicSearch = useTopicSearch(apiKeyManager);
+  const topicSearch = useTopicSearch();
 
   // Fetch user's learning sessions (only for registered users)
   const fetchLearningSessions = useCallback(async () => {
@@ -353,14 +353,28 @@ const Dashboard = () => {
   const startNewSession = () => {
     if (!selectedTopic || !learningPath) return;
     
-    navigate('/learn', {
-      state: {
-        isNewSession: true,
-        topicData: selectedTopic,
-        learningPath: learningPath,
-        questioningStyle: 'socratic'
-      }
-    });
+    // Check if this is a roadmap selection
+    if (selectedTopic.roadmapId) {
+      navigate('/learn', {
+        state: {
+          isNewSession: true,
+          roadmapId: selectedTopic.roadmapId,
+          topicData: selectedTopic,
+          learningPath: learningPath,
+          questioningStyle: 'socratic'
+        }
+      });
+    } else {
+      // Individual topic selection (fallback)
+      navigate('/learn', {
+        state: {
+          isNewSession: true,
+          topicData: selectedTopic,
+          learningPath: learningPath,
+          questioningStyle: 'socratic'
+        }
+      });
+    }
   };
 
   const formatDuration = (seconds) => {
@@ -490,59 +504,245 @@ const Dashboard = () => {
         {/* New User Guidance - Show for users with no sessions */}
         {(!isRegistered || (isRegistered && learningSessions.length === 0)) && (
           <div className="activity-overview">
-            <h3>🚀 Getting Started with MindMelt</h3>
+            <h3>🚀 Choose Your Learning Roadmap</h3>
             <div className="simple-activity">
               <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-                <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Here's what you can do:</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🔍</span>
-                    <div>
-                      <strong>Search & Learn:</strong> Type any computer science topic (like "binary trees" or "machine learning") and start an interactive learning session
+                <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Select a structured learning path based on GeeksforGeeks roadmaps:</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                  
+                  {/* DSA Fundamentals Roadmap */}
+                  <div 
+                    style={{ 
+                      padding: '1.5rem', 
+                      border: '2px solid var(--gray-200)', 
+                      borderRadius: '1rem', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      background: 'linear-gradient(135deg, #fff4e6 0%, #ffffff 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#FF6B35';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(255, 107, 53, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onClick={() => {
+                      setSelectedTopic({
+                        name: "Data Structures & Algorithms Fundamentals",
+                        icon: "🧮",
+                        description: "Master the core concepts of DSA from basics to advanced topics",
+                        category: "Programming Fundamentals",
+                        difficulty: "Beginner to Advanced",
+                        roadmapId: "dsa-fundamentals"
+                      });
+                      setShowNewSession(true);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '2rem' }}>🧮</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>DSA Fundamentals</h5>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>15 Topics • 8-12 weeks</span>
+                      </div>
                     </div>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Master core data structures and algorithms from basics to advanced topics</p>
+                    <div style={{ fontSize: '0.75rem', color: '#FF6B35', fontWeight: '600' }}>Beginner to Advanced</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🤖</span>
-                    <div>
-                      <strong>AI-Powered Questions:</strong> Our AI asks you personalized questions to help you understand concepts deeply, not just memorize
+
+                  {/* Web Development Roadmap */}
+                  <div 
+                    style={{ 
+                      padding: '1.5rem', 
+                      border: '2px solid var(--gray-200)', 
+                      borderRadius: '1rem', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      background: 'linear-gradient(135deg, #e6fffe 0%, #ffffff 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#4ECDC4';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(78, 205, 196, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onClick={() => {
+                      setSelectedTopic({
+                        name: "Complete Web Development",
+                        icon: "🌐",
+                        description: "From HTML basics to full-stack web applications",
+                        category: "Web Development",
+                        difficulty: "Beginner to Advanced",
+                        roadmapId: "web-development"
+                      });
+                      setShowNewSession(true);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '2rem' }}>🌐</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Web Development</h5>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>14 Topics • 12-16 weeks</span>
+                      </div>
                     </div>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Complete web development from HTML basics to full-stack applications</p>
+                    <div style={{ fontSize: '0.75rem', color: '#4ECDC4', fontWeight: '600' }}>Beginner to Advanced</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>📈</span>
-                    <div>
-                      <strong>Track Progress:</strong> {isRegistered ? "Your sessions are automatically saved and you can resume anytime" : "Create an account to save your progress and track learning over time"}
+
+                  {/* Machine Learning Roadmap */}
+                  <div 
+                    style={{ 
+                      padding: '1.5rem', 
+                      border: '2px solid var(--gray-200)', 
+                      borderRadius: '1rem', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      background: 'linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#9B59B6';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(155, 89, 182, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onClick={() => {
+                      setSelectedTopic({
+                        name: "Machine Learning Mastery",
+                        icon: "🤖",
+                        description: "Complete journey from ML basics to deep learning",
+                        category: "Artificial Intelligence",
+                        difficulty: "Intermediate to Advanced",
+                        roadmapId: "machine-learning"
+                      });
+                      setShowNewSession(true);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '2rem' }}>🤖</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Machine Learning</h5>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>12 Topics • 10-14 weeks</span>
+                      </div>
                     </div>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Complete journey from ML basics to deep learning and neural networks</p>
+                    <div style={{ fontSize: '0.75rem', color: '#9B59B6', fontWeight: '600' }}>Intermediate to Advanced</div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🎯</span>
-                    <div>
-                      <strong>Choose Your Path:</strong> Select from conceptual, applied, or comprehensive learning approaches based on your goals
+
+                  {/* System Design Roadmap */}
+                  <div 
+                    style={{ 
+                      padding: '1.5rem', 
+                      border: '2px solid var(--gray-200)', 
+                      borderRadius: '1rem', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      background: 'linear-gradient(135deg, #ffebee 0%, #ffffff 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#E74C3C';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onClick={() => {
+                      setSelectedTopic({
+                        name: "System Design Interview Prep",
+                        icon: "🏗️",
+                        description: "Master large-scale system design for tech interviews",
+                        category: "System Architecture",
+                        difficulty: "Advanced",
+                        roadmapId: "system-design"
+                      });
+                      setShowNewSession(true);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '2rem' }}>🏗️</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>System Design</h5>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>12 Topics • 8-10 weeks</span>
+                      </div>
                     </div>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Master large-scale system design for technical interviews</p>
+                    <div style={{ fontSize: '0.75rem', color: '#E74C3C', fontWeight: '600' }}>Advanced</div>
                   </div>
+
+                  {/* Android Development Roadmap */}
+                  <div 
+                    style={{ 
+                      padding: '1.5rem', 
+                      border: '2px solid var(--gray-200)', 
+                      borderRadius: '1rem', 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      background: 'linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#2ECC71';
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(46, 204, 113, 0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = 'var(--gray-200)';
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    onClick={() => {
+                      setSelectedTopic({
+                        name: "Android App Development",
+                        icon: "📱",
+                        description: "Build modern Android applications with Kotlin",
+                        category: "Mobile Development",
+                        difficulty: "Beginner to Advanced",
+                        roadmapId: "android-development"
+                      });
+                      setShowNewSession(true);
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <span style={{ fontSize: '2rem' }}>📱</span>
+                      <div>
+                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Android Development</h5>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>13 Topics • 10-12 weeks</span>
+                      </div>
+                    </div>
+                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Build modern Android applications with Kotlin and Android SDK</p>
+                    <div style={{ fontSize: '0.75rem', color: '#2ECC71', fontWeight: '600' }}>Beginner to Advanced</div>
+                  </div>
+                  
                 </div>
               </div>
               
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setShowNewSession(true)}
-                  style={{ minWidth: '180px' }}
-                >
-                  <Sparkles size={16} />
-                  Start Your First Session
-                </button>
-                
-                {!isRegistered && (
+              {!isRegistered && (
+                <div style={{ textAlign: 'center', padding: '1rem', background: 'linear-gradient(135deg, #FFF4E6 0%, #FFE4B5 100%)', borderRadius: '0.75rem', border: '2px solid var(--accent-light)' }}>
+                  <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--gray-700)' }}>
+                    💡 <strong>Pro tip:</strong> Create an account to save your progress and track your learning journey across topics!
+                  </p>
                   <button 
-                    className="btn btn-secondary"
+                    className="btn btn-primary"
                     onClick={() => setShowUpgradePrompt(true)}
                     style={{ minWidth: '180px' }}
                   >
                     <User size={16} />
                     Create Account
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -784,35 +984,40 @@ const Dashboard = () => {
             
             <div className="modal-body">
               <div className="form-section">
-                <label className="form-label">
-                  <Brain size={18} />
-                  Search for a Computer Science Topic
-                </label>
-                
-                <SearchBar
-                  searchQuery={topicSearch.searchQuery}
-                  setSearchQuery={topicSearch.setSearchQuery}
-                  searchResults={topicSearch.searchResults}
-                  onSelectTopic={setSelectedTopic}
-                  selectedTopic={selectedTopic}
-                  isSearching={topicSearch.isSearching}
-                  searchError={topicSearch.searchError}
-                  hasSearched={topicSearch.hasSearched}
-                  performSearch={topicSearch.performSearch}
-                  clearSearch={topicSearch.clearSearch}
-                  hideSuggestions={topicSearch.hideSuggestions}
-                  showSuggestions={topicSearch.showSuggestions}
-                />
-
-                {selectedTopic && (
+                {selectedTopic?.roadmapId ? (
                   <div className="selected-topic-preview">
                     <div className="topic-preview-header">
                       <span className="topic-icon">{selectedTopic.icon}</span>
                       <div className="topic-info">
                         <h4>{selectedTopic.name}</h4>
                         <p>{selectedTopic.description}</p>
+                        <div style={{ marginTop: '0.5rem' }}>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)', background: 'var(--gray-100)', padding: '0.25rem 0.5rem', borderRadius: '0.5rem', marginRight: '0.5rem' }}>
+                            {selectedTopic.category}
+                          </span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--accent-color)', background: 'linear-gradient(135deg, #FFF4E6 0%, #FFE4B5 100%)', padding: '0.25rem 0.5rem', borderRadius: '0.5rem' }}>
+                            {selectedTopic.difficulty}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '2px solid var(--gray-200)' }}>
+                      <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--gray-800)' }}>📚 Structured Learning Path</h5>
+                      <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--gray-600)' }}>
+                        This roadmap contains multiple topics that you'll learn step by step. Each session will focus on one topic, 
+                        and you can track your progress as you complete each one.
+                      </p>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--accent-color)', fontWeight: '600' }}>
+                        🎯 You'll start with the first topic and progress through the roadmap systematically
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <Brain size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                    <h4>Please select a roadmap from the dashboard</h4>
+                    <p>Choose one of the structured learning paths to get started with your journey.</p>
                   </div>
                 )}
               </div>
@@ -847,10 +1052,10 @@ const Dashboard = () => {
               <button
                 onClick={startNewSession}
                 className="btn btn-primary"
-                disabled={!selectedTopic || !learningPath}
+                disabled={!selectedTopic?.roadmapId || !learningPath}
               >
                 <Sparkles size={16} />
-                Start Learning Session
+                Start Roadmap Journey
               </button>
             </div>
           </div>
