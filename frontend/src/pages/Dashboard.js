@@ -70,6 +70,52 @@ const getTechPun = () => {
   return puns[Math.floor(Math.random() * puns.length)];
 };
 
+// Enhanced getTechPun with daily persistence
+const getTechPunPersistent = () => {
+  const puns = [
+    { text: "Time to Debug Your Potential! 🐛", subtitle: "Let's squash some knowledge gaps together" },
+    { text: "Ready to Compile Some Brilliance? ⚡", subtitle: "Your brain is the best IDE for learning" },
+    { text: "Let's Cache Some Knowledge! 💾", subtitle: "Store these concepts in your long-term memory" },
+    { text: "Time to Push Your Limits! 🚀", subtitle: "Git ready for an amazing learning session" },
+    { text: "Ready to Parse Some Wisdom? 📚", subtitle: "Breaking down complex topics into digestible bits" },
+    { text: "Let's Refactor Your Understanding! 🔧", subtitle: "Clean code, clean mind, clean learning" },
+    { text: "Time to Optimize Your Brain! ⚡", subtitle: "Maximum learning efficiency loading..." },
+    { text: "Ready to Stack Some Skills! 📚", subtitle: "Building your knowledge data structure" },
+    { text: "Let's Initialize Your Growth! 🌱", subtitle: "constructor() { this.knowledge = new Map(); }" }
+  ];
+  
+  try {
+    // Check if we have a stored pun for today
+    const storedPunData = localStorage.getItem('mindmelt_daily_pun');
+    const today = new Date().toDateString(); // Get today's date as string
+    
+    if (storedPunData) {
+      const { pun, date } = JSON.parse(storedPunData);
+      
+      // If the stored pun is from today, return it
+      if (date === today) {
+        return pun;
+      }
+    }
+    
+    // Generate a new pun for today
+    const newPun = puns[Math.floor(Math.random() * puns.length)];
+    
+    // Store the new pun with today's date
+    localStorage.setItem('mindmelt_daily_pun', JSON.stringify({
+      pun: newPun,
+      date: today
+    }));
+    
+    return newPun;
+    
+  } catch (error) {
+    // Fallback if localStorage is not available
+    console.warn('localStorage not available, using random pun:', error);
+    return puns[Math.floor(Math.random() * puns.length)];
+  }
+};
+
 // Format member since date - handles Firestore timestamps
 const formatMemberSinceDate = (timestamp) => {
   if (!timestamp) return 'N/A';
@@ -132,6 +178,7 @@ const Dashboard = () => {
   const [newUsername, setNewUsername] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameUpdateSuccess, setUsernameUpdateSuccess] = useState(false);
+  const [dailyPun, setDailyPun] = useState(null);
 
   const apiKeyManager = useApiKey();
   const topicSearch = useTopicSearch(apiKeyManager);
@@ -193,6 +240,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchLearningSessions();
+    // Initialize daily pun
+    setDailyPun(getTechPunPersistent());
   }, [fetchLearningSessions]);
 
   // Show upgrade prompt for anonymous users after some time
@@ -408,8 +457,8 @@ const Dashboard = () => {
           <div className="welcome-header">
             <Brain size={48} className="welcome-icon" />
             <div>
-              <h2>{getTechPun().text}</h2>
-              <p>{getTechPun().subtitle}</p>
+              <h2>{dailyPun?.text || "Welcome to MindMelt!"}</h2>
+              <p>{dailyPun?.subtitle || "Your AI-powered learning companion"}</p>
             </div>
           </div>
           
@@ -421,7 +470,7 @@ const Dashboard = () => {
               <Sparkles size={24} />
               <div>
                 <h4>Start Learning</h4>
-                <p>Begin a new CS topic session</p>
+                <p>Search any CS topic and begin an AI-powered learning session with personalized questions</p>
               </div>
             </button>
             
@@ -432,11 +481,71 @@ const Dashboard = () => {
               <Calendar size={24} />
               <div>
                 <h4>Yesterday's Summary</h4>
-                <p>{isRegistered ? "See what you accomplished" : "Create account to unlock"}</p>
+                <p>{isRegistered ? "View your learning progress and achievements from yesterday" : "Create account to track daily progress and insights"}</p>
               </div>
             </button>
           </div>
         </div>
+
+        {/* New User Guidance - Show for users with no sessions */}
+        {(!isRegistered || (isRegistered && learningSessions.length === 0)) && (
+          <div className="activity-overview">
+            <h3>🚀 Getting Started with MindMelt</h3>
+            <div className="simple-activity">
+              <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Here's what you can do:</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🔍</span>
+                    <div>
+                      <strong>Search & Learn:</strong> Type any computer science topic (like "binary trees" or "machine learning") and start an interactive learning session
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🤖</span>
+                    <div>
+                      <strong>AI-Powered Questions:</strong> Our AI asks you personalized questions to help you understand concepts deeply, not just memorize
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>📈</span>
+                    <div>
+                      <strong>Track Progress:</strong> {isRegistered ? "Your sessions are automatically saved and you can resume anytime" : "Create an account to save your progress and track learning over time"}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.2rem', minWidth: '1.5rem' }}>🎯</span>
+                    <div>
+                      <strong>Choose Your Path:</strong> Select from conceptual, applied, or comprehensive learning approaches based on your goals
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setShowNewSession(true)}
+                  style={{ minWidth: '180px' }}
+                >
+                  <Sparkles size={16} />
+                  Start Your First Session
+                </button>
+                
+                {!isRegistered && (
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => setShowUpgradePrompt(true)}
+                    style={{ minWidth: '180px' }}
+                  >
+                    <User size={16} />
+                    Create Account
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Last Session Display - Only for registered users */}
         {isRegistered && learningSessions.length > 0 && (
@@ -472,10 +581,10 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Activity Overview */}
-        <div className="activity-overview">
-          <h3>Recent Learning Activity</h3>
-          {isRegistered ? (
+        {/* Activity Overview - Only show if user is registered and has sessions */}
+        {isRegistered && learningSessions.length > 0 && (
+          <div className="activity-overview">
+            <h3>Recent Learning Activity</h3>
             <div className="simple-activity">
               <p>
                 You've completed {learningSessions.filter(s => s.completed).length} out of {learningSessions.length} sessions
@@ -489,23 +598,8 @@ const Dashboard = () => {
                 Start New Session
               </button>
             </div>
-          ) : (
-            <div className="anonymous-activity">
-              <div className="anonymous-message">
-                <Shield size={48} className="anonymous-icon" />
-                <h4>Anonymous Mode Active</h4>
-                <p>Create an account to unlock detailed analytics, progress tracking, and learning insights!</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => setShowUpgradePrompt(true)}
-                >
-                  <Sparkles size={16} />
-                  Create Account
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Upgrade Account Modal */}
