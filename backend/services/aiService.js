@@ -223,6 +223,63 @@ async function testApiKey(apiKey) {
   }
 }
 
+async function generateDailySummary(sessionsData, apiKey) {
+  if (!apiKey) {
+    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
+  }
+
+  const summaryPrompt = createDailySummaryPrompt(sessionsData);
+
+  try {
+    const summaryText = await makeApiCall(summaryPrompt, apiKey, {
+      temperature: 0.7,
+      max_tokens: 300
+    });
+    
+    console.log('✅ MindMelt Backend: Daily summary generated successfully');
+    return summaryText;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+}
+
+function createDailySummaryPrompt(sessionsData) {
+  const { 
+    totalSessions, 
+    completedSessions, 
+    totalDuration, 
+    totalQuestions, 
+    topicsStudied, 
+    averageProgress,
+    date 
+  } = sessionsData;
+
+  return `You are an encouraging AI learning coach for MindMelt, a computer science learning platform. Generate a personalized, motivational daily summary for a student based on their learning activity.
+
+Learning Activity Summary for ${date}:
+- Sessions started: ${totalSessions}
+- Sessions completed: ${completedSessions}
+- Time spent learning: ${Math.round(totalDuration / 60)} minutes
+- Questions answered: ${totalQuestions}
+- Topics studied: ${topicsStudied.join(', ') || 'None'}
+- Average progress: ${averageProgress}%
+
+GENERATE A MOTIVATIONAL SUMMARY (150-200 words):
+- Start with an encouraging greeting that acknowledges their effort
+- Highlight their specific achievements from yesterday
+- Use positive, energetic language with relevant CS/tech metaphors
+- If they had low activity, focus on getting back on track with enthusiasm
+- If they had good activity, celebrate their momentum and encourage continuation
+- End with motivation for tomorrow's learning
+- Use emojis sparingly but effectively
+- Keep it personal and encouraging, like a supportive mentor
+
+Tone: Enthusiastic, supportive, knowledgeable about CS, motivational
+Style: Conversational but professional, like a friendly coding mentor
+
+Daily Summary:`;
+}
+
 function parseAIResponse(rawResponse) {
   const parsed = {
     level: null,
@@ -760,6 +817,7 @@ module.exports = {
   assessUnderstandingQuality,
   searchCSTopics,
   getTopicDetails,
+  generateDailySummary,
   testApiKey,
   validateApiKey
 };

@@ -1,13 +1,5 @@
-// ============================================================================
-// services/authAPI.js - Firestore-Only Authentication API Service
-// ============================================================================
-
-// No Firebase Auth imports needed - using Firestore only for data storage
-
-// FIXED: Changed from port 5000 to 3001 to match your backend
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
-// Helper function to make API requests
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   const token = localStorage.getItem('mindmelt_token');
@@ -23,8 +15,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    
-    // Handle non-JSON responses
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error(`Server error: ${response.status}`);
@@ -33,7 +24,6 @@ const apiRequest = async (endpoint, options = {}) => {
     const data = await response.json();
     
     if (!response.ok) {
-      // Create error object with response data for better error handling
       const error = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
       error.response = { data };
       throw error;
@@ -47,21 +37,14 @@ const apiRequest = async (endpoint, options = {}) => {
 };
 
 export const authAPI = {
-  // ============================================================================
-  // REMOVED FIREBASE AUTHENTICATION - Using Firestore only
-  // ============================================================================
-
-  // Removed Google Sign-In - using Firestore only authentication
   async signInWithGoogle() {
     throw new Error('Firebase authentication has been removed. Please use username/email signup.');
   },
 
-  // Removed GitHub Sign-In - using Firestore only authentication  
   async signInWithGithub() {
     throw new Error('Firebase authentication has been removed. Please use username/email signup.');
   },
 
-  // Username + Email signup (email optional) - Firestore only
   async signupWithUsernameAndEmail(username, email = null) {
     try {
       const response = await apiRequest('/auth/signup-simple', {
@@ -76,43 +59,40 @@ export const authAPI = {
     }
   },
 
-  // Removed Firebase logout - using Firestore only
   async signOutFirebase() {
-    // No Firebase to sign out of, just resolve
     return Promise.resolve({ success: true });
   },
-  // Updated for email-only authentication
-  async login(email, password) {
+  async login(emailOrUsername, password) {
     return apiRequest('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ emailOrUsername, password }),
     });
   },
 
-  // FIXED: Changed from '/auth/signup' to '/auth/register' to match backend
-  async signup(email, password, name) {
-    return apiRequest('/auth/register', {
+  async signup(email, password, _unused) {
+    const username = email.split('@')[0];
+    return apiRequest('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ email, username, password }),
     });
   },
 
   async logout() {
-    // Your backend doesn't have a logout endpoint, so just resolve
     return Promise.resolve({ success: true });
   },
 
-  // FIXED: Changed from '/auth/me' to '/auth/verify' to match backend
-  async refreshToken() {
-    return apiRequest('/auth/verify');
+  async checkUsernameAvailability(username) {
+    return apiRequest(`/auth/check-username/${encodeURIComponent(username)}`);
   },
 
-  // FIXED: Changed from '/auth/me' to '/user/profile' to match backend
+  async refreshToken() {
+    return apiRequest('/user/profile');
+  },
+
   async getProfile() {
     return apiRequest('/user/profile');
   },
 
-  // FIXED: Changed from '/auth/profile' to '/user/profile' to match backend
   async updateProfile(profileData) {
     return apiRequest('/user/profile', {
       method: 'PUT',
@@ -120,7 +100,6 @@ export const authAPI = {
     });
   },
 
-  // FIXED: Updated session endpoints to match backend structure
   async getLearningHistory() {
     return apiRequest('/sessions');
   },
@@ -149,17 +128,36 @@ export const authAPI = {
     return apiRequest(`/sessions/${sessionId}`);
   },
 
-  // Additional methods to match your backend capabilities
   async getAllTopics() {
     return apiRequest('/topics');
   },
 
-  async searchTopics(query) {
-    return apiRequest(`/topics/search?q=${encodeURIComponent(query)}`);
+  async searchTopics(query, apiKey) {
+    return apiRequest('/ai/search-topics', {
+      method: 'POST',
+      body: JSON.stringify({ query, apiKey }),
+    });
   },
 
-  async getTopicDetails(topicId) {
-    return apiRequest(`/topics/${topicId}`);
+  async getTopicDetails(topicName, apiKey) {
+    return apiRequest('/ai/topic-details', {
+      method: 'POST',
+      body: JSON.stringify({ topicName, apiKey }),
+    });
+  },
+
+  async getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey) {
+    return apiRequest('/ai/socratic', {
+      method: 'POST',
+      body: JSON.stringify({ concept, userResponse, learningPath, questioningStyle, apiKey }),
+    });
+  },
+
+  async generateDailySummary(sessionsData, apiKey) {
+    return apiRequest('/ai/daily-summary', {
+      method: 'POST',
+      body: JSON.stringify({ sessionsData, apiKey }),
+    });
   },
 
   async generateQuestion(topicId, difficulty = 'intermediate', style = 'socratic', context = null) {
@@ -181,7 +179,6 @@ export const authAPI = {
   }
 };
 
-// Mock API for development - remove this when you have a real backend
 export const mockAuthAPI = {
   async login(email, password) {
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -271,9 +268,4 @@ export const mockAuthAPI = {
   }
 };
 
-// Use real API to connect to Firestore backend
-// Switch to mockAuthAPI if backend is not available
 export const api = authAPI;
-
-// Uncomment the next line if you want to use mock API for testing
-// export const api = mockAuthAPI;

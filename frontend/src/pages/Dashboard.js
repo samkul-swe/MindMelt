@@ -1,7 +1,3 @@
-// ============================================================================
-// pages/Dashboard.js - Progressive Auth Dashboard
-// ============================================================================
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -15,13 +11,8 @@ import {
   TrendingUp,
   Target,
   BookOpen,
-  Settings,
-  ChevronRight,
-  Trophy,
   Clock,
   CheckCircle,
-  Star,
-  Zap,
   Shield,
   Mail,
   Save
@@ -88,19 +79,15 @@ const formatMemberSinceDate = (timestamp) => {
     
     // Handle Firestore timestamp objects
     if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
-      // Firestore Timestamp object
       date = new Date(timestamp.seconds * 1000);
     } else if (timestamp && typeof timestamp === 'object' && timestamp._seconds) {
-      // Alternative Firestore Timestamp format
       date = new Date(timestamp._seconds * 1000);
     } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
-      // Regular date string or timestamp
       date = new Date(timestamp);
     } else {
       return 'N/A';
     }
     
-    // Check if date is valid
     if (isNaN(date.getTime())) {
       return 'N/A';
     }
@@ -119,14 +106,15 @@ const formatMemberSinceDate = (timestamp) => {
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
-  currentUser, 
-  isRegistered, 
-  isAnonymous, 
-  logout, 
-  signupWithEmail,
+    currentUser, 
+    isRegistered, 
+    isAnonymous, 
+    logout, 
+    signupWithEmail,
     updateUser,
     getDisplayName
   } = useAuth();
+  
   const [learningSessions, setLearningSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewSession, setShowNewSession] = useState(false);
@@ -141,7 +129,6 @@ const Dashboard = () => {
   const [upgradeEmail, setUpgradeEmail] = useState('');
   const [upgradeName, setUpgradeName] = useState('');
   const [isUpgrading, setIsUpgrading] = useState(false);
-  const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameUpdateSuccess, setUsernameUpdateSuccess] = useState(false);
@@ -213,7 +200,7 @@ const Dashboard = () => {
     if (isAnonymous && !showUpgradePrompt) {
       const timer = setTimeout(() => {
         setShowUpgradePrompt(true);
-      }, 5000); // Show after 5 seconds
+      }, 5000);
       
       return () => clearTimeout(timer);
     }
@@ -227,7 +214,6 @@ const Dashboard = () => {
     try {
       await signupWithEmail(upgradeEmail, upgradeName);
       setShowUpgradePrompt(false);
-      // Page will refresh automatically due to auth state change
     } catch (error) {
       console.error('Failed to upgrade account:', error);
     } finally {
@@ -241,43 +227,19 @@ const Dashboard = () => {
     
     setSavingUsername(true);
     try {
-      // Update in backend/Firestore
-      console.log('Updating display name to:', newUsername.trim());
       const updatedUser = await api.updateProfile({ name: newUsername.trim() });
-      console.log('Backend response:', updatedUser);
       
-      // Update in local auth context - use the returned user data
       if (updateUser && updatedUser) {
         updateUser(updatedUser);
       }
       
-      // Reset form state
-      setEditingUsername(false);
       setNewUsername('');
-      
-      // Show success message
       setUsernameUpdateSuccess(true);
       setTimeout(() => setUsernameUpdateSuccess(false), 3000);
-      console.log('Display name updated successfully!');
       
     } catch (error) {
       console.error('Failed to update display name:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response,
-        stack: error.stack
-      });
-      
-      let errorMessage = 'Failed to update display name. Please try again.';
-      if (error.message.includes('401')) {
-        errorMessage = 'Session expired. Please log in again.';
-      } else if (error.message.includes('403')) {
-        errorMessage = 'Permission denied. Please check your account status.';
-      } else if (error.message.includes('Network')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-      
-      alert(errorMessage);
+      alert('Failed to update display name. Please try again.');
     } finally {
       setSavingUsername(false);
     }
@@ -297,13 +259,11 @@ const Dashboard = () => {
     const tomorrowYesterday = new Date(yesterday);
     tomorrowYesterday.setDate(tomorrowYesterday.getDate() + 1);
     
-    // Filter sessions from yesterday
     const yesterdaysSessions = learningSessions.filter(session => {
       const sessionDate = new Date(session.updatedAt);
       return sessionDate >= yesterday && sessionDate < tomorrowYesterday;
     });
     
-    // Calculate summary stats
     const completedSessions = yesterdaysSessions.filter(s => s.completed);
     const totalSessions = yesterdaysSessions.length;
     const totalDuration = yesterdaysSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
@@ -311,28 +271,6 @@ const Dashboard = () => {
     const avgProgress = totalSessions > 0 
       ? Math.round(yesterdaysSessions.reduce((acc, s) => acc + (s.progress || 0), 0) / totalSessions)
       : 0;
-    
-    // Group by topics
-    const topicStats = {};
-    yesterdaysSessions.forEach(session => {
-      if (!topicStats[session.topicName]) {
-        topicStats[session.topicName] = {
-          count: 0,
-          duration: 0,
-          avgProgress: 0,
-          category: session.category,
-          difficulty: session.difficulty
-        };
-      }
-      topicStats[session.topicName].count++;
-      topicStats[session.topicName].duration += session.duration || 0;
-      topicStats[session.topicName].avgProgress += session.progress || 0;
-    });
-    
-    // Calculate averages for topics
-    Object.keys(topicStats).forEach(topic => {
-      topicStats[topic].avgProgress = Math.round(topicStats[topic].avgProgress / topicStats[topic].count);
-    });
     
     const summary = {
       date: yesterday.toLocaleDateString('en-US', { 
@@ -346,54 +284,13 @@ const Dashboard = () => {
       totalDuration,
       totalQuestions,
       avgProgress,
-      topicStats,
-      sessions: yesterdaysSessions,
-      achievements: generateAchievements(yesterdaysSessions, completedSessions.length)
+      sessions: yesterdaysSessions
     };
     
     setDailySummary(summary);
     setShowDailySummary(true);
-    setBellNotificationCount(0); // Clear notification after viewing
+    setBellNotificationCount(0);
   }, [learningSessions, isRegistered]);
-
-  // Generate achievements based on yesterday's activity
-  const generateAchievements = (sessions, completed) => {
-    const achievements = [];
-    
-    if (completed >= 3) {
-      achievements.push({
-        icon: '🔥',
-        title: 'On Fire!',
-        description: `Completed ${completed} learning sessions`
-      });
-    } else if (completed >= 1) {
-      achievements.push({
-        icon: '⭐',
-        title: 'Consistent Learner',
-        description: `Completed ${completed} session${completed > 1 ? 's' : ''}`
-      });
-    }
-    
-    const totalDuration = sessions.reduce((acc, s) => acc + (s.duration || 0), 0);
-    if (totalDuration >= 1800) { // 30+ minutes
-      achievements.push({
-        icon: '⏰',
-        title: 'Time Master',
-        description: `Spent ${Math.round(totalDuration / 60)} minutes learning`
-      });
-    }
-    
-    const uniqueTopics = [...new Set(sessions.map(s => s.topicName))];
-    if (uniqueTopics.length >= 3) {
-      achievements.push({
-        icon: '🌟',
-        title: 'Topic Explorer',
-        description: `Explored ${uniqueTopics.length} different topics`
-      });
-    }
-    
-    return achievements;
-  };
 
   const handleLogout = async () => {
     try {
@@ -450,273 +347,164 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="dashboard-container">
-      {/* Left Sidebar - User Profile & Navigation */}
-      <div className="dashboard-sidebar">
-        <div className="sidebar-header">
+    <div className="dashboard-container-no-sidebar">
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-left">
           <div className="logo-container">
             <Brain className="logo-icon" />
-            <h2>MindMelt</h2>
+            <h1>MindMelt</h1>
+          </div>
+        </div>
+        
+        <div className="header-right">
+          <div className="user-profile-compact">
+            <div className="user-avatar-small">
+              <User size={18} />
+            </div>
+            <div className="user-info-compact">
+              <div className="user-name">{getDisplayName(currentUser)}</div>
+              <div className={isRegistered ? "member-status" : "anonymous-status"}>
+                {isRegistered ? (
+                  `Member since ${formatMemberSinceDate(currentUser?.createdAt)}`
+                ) : (
+                  <>
+                    <Shield size={12} />
+                    Anonymous Session
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="header-actions">
+            {isRegistered && (
+              <button
+                onClick={() => setShowProfile(true)}
+                className="profile-btn-header"
+                title="Profile Settings"
+              >
+                <User size={18} />
+              </button>
+            )}
+            
+            {!isRegistered && (
+              <button
+                onClick={() => setShowUpgradePrompt(true)}
+                className="upgrade-btn-header"
+              >
+                <Sparkles size={16} />
+                Create Account
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="dashboard-main-content">
+        {/* Welcome Card */}
+        <div className="welcome-card">
+          <div className="welcome-header">
+            <Brain size={48} className="welcome-icon" />
+            <div>
+              <h2>{getTechPun().text}</h2>
+              <p>{getTechPun().subtitle}</p>
+            </div>
+          </div>
+          
+          <div className="quick-actions">
+            <button
+              onClick={() => setShowNewSession(true)}
+              className="quick-action-btn primary"
+            >
+              <Sparkles size={24} />
+              <div>
+                <h4>Start Learning</h4>
+                <p>Begin a new CS topic session</p>
+              </div>
+            </button>
+            
+            <button
+              onClick={generateDailySummary}
+              className="quick-action-btn secondary"
+            >
+              <Calendar size={24} />
+              <div>
+                <h4>Yesterday's Summary</h4>
+                <p>{isRegistered ? "See what you accomplished" : "Create account to unlock"}</p>
+              </div>
+            </button>
           </div>
         </div>
 
-        <div className="user-profile-section">
-          <div className="user-avatar">
-            <User size={24} />
-          </div>
-          <div className="user-info">
-            <h3>{getDisplayName(currentUser)}</h3>
-            <p>{currentUser?.email || 'Anonymous User'}</p>
-            <span className="member-since">
-              {isRegistered ? (
-                `Member since ${formatMemberSinceDate(currentUser?.createdAt)}`
-              ) : (
-                <span className="anonymous-badge">
-                  <Shield size={14} />
-                  Anonymous Session
-                </span>
-              )}
-            </span>
-          </div>
-        </div>
-
-        {isRegistered ? (
-          <div className="sidebar-stats">
-            <div className="stat-item">
-              <BookOpen size={20} />
-              <div>
-                <span className="stat-number">{learningSessions.length}</span>
-                <span className="stat-label">Total Sessions</span>
+        {/* Last Session Display - Only for registered users */}
+        {isRegistered && learningSessions.length > 0 && (
+          <div className="last-session-section">
+            <h3>Continue Your Journey</h3>
+            <div className="last-session-card">
+              <div className="session-header">
+                <div className="session-icon">
+                  <BookOpen size={24} />
+                </div>
+                <div className="session-info">
+                  <h4>Last Session: {learningSessions[0].topicName}</h4>
+                  <div className="session-meta">
+                    {learningSessions[0].category} • {learningSessions[0].difficulty} • 
+                    {Math.round(learningSessions[0].progress || 0)}% complete
+                  </div>
+                  <span className="session-date">
+                    {new Date(learningSessions[0].updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="stat-item">
-              <Clock size={20} />
-              <div>
-                <span className="stat-number">
-                  {userLearningData?.currentStreak || 0}
-                </span>
-                <span className="stat-label">Day Streak</span>
-              </div>
-            </div>
-            <div className="stat-item">
-              <TrendingUp size={20} />
-              <div>
-                <span className="stat-number">
-                  {Math.round(learningSessions.reduce((acc, s) => acc + (s.progress || 0), 0) / Math.max(learningSessions.length, 1))}%
-                </span>
-                <span className="stat-label">Avg Progress</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="anonymous-stats">
-            <div className="upgrade-prompt-mini">
-              <Shield size={20} />
-              <div>
-                <h4>Anonymous Mode</h4>
-                <p>Create an account to save your progress and unlock advanced features!</p>
-                <button 
-                  className="upgrade-btn-mini"
-                  onClick={() => setShowUpgradePrompt(true)}
+              <div className="session-actions">
+                <button
+                  onClick={() => navigate('/learn', {
+                    state: { sessionId: learningSessions[0].id }
+                  })}
+                  className="btn btn-primary btn-sm"
                 >
-                  <Sparkles size={16} />
-                  Upgrade Now
+                  Continue Learning
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="sidebar-actions">
+        {/* Activity Overview */}
+        <div className="activity-overview">
+          <h3>Recent Learning Activity</h3>
           {isRegistered ? (
-            <button
-              onClick={() => setShowProfile(true)}
-              className="sidebar-btn"
-            >
-              <Settings size={18} />
-              Profile Settings
-            </button>
+            <div className="simple-activity">
+              <p>
+                You've completed {learningSessions.filter(s => s.completed).length} out of {learningSessions.length} sessions
+                with an average completion rate of {Math.round((learningSessions.filter(s => s.completed).length / Math.max(learningSessions.length, 1)) * 100)}%.
+              </p>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowNewSession(true)}
+              >
+                <Plus size={16} />
+                Start New Session
+              </button>
+            </div>
           ) : (
-            <button
-              onClick={() => setShowUpgradePrompt(true)}
-              className="sidebar-btn upgrade-btn"
-            >
-              <Sparkles size={18} />
-              Create Account
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="dashboard-main">
-        <div className="dashboard-header">
-          <div className="header-content">
-            <h1>Welcome back, {getDisplayName(currentUser)?.split(' ')[0] || 'Learner'}! 👋</h1>
-            <p>Ready to continue your learning journey?</p>
-          </div>
-          <div className="header-actions">
-            {/* Daily Summary Bell */}
-            <button
-              onClick={generateDailySummary}
-              className={`bell-button ${bellNotificationCount > 0 ? 'has-notification' : ''}`}
-              title={isRegistered ? "View yesterday's learning summary" : "Create account to unlock analytics"}
-            >
-              <Bell size={20} />
-              {bellNotificationCount > 0 && (
-                <span className="notification-badge">{bellNotificationCount}</span>
-              )}
-            </button>
-            <button
-              onClick={() => setShowNewSession(true)}
-              className="btn btn-primary"
-            >
-              <Plus size={20} />
-              Start New Session
-            </button>
-          </div>
-        </div>
-
-        {/* Main Dashboard Content */}
-        <div className="dashboard-content">
-          <div className="welcome-section">
-            <div className="welcome-card">
-              <div className="welcome-header">
-                <Brain size={48} className="welcome-icon" />
-                <div>
-                  <h2>{getTechPun().text}</h2>
-                  <p>{getTechPun().subtitle}</p>
-                </div>
-              </div>
-              
-              <div className="quick-actions">
-                <button
-                  onClick={() => setShowNewSession(true)}
-                  className="quick-action-btn primary"
+            <div className="anonymous-activity">
+              <div className="anonymous-message">
+                <Shield size={48} className="anonymous-icon" />
+                <h4>Anonymous Mode Active</h4>
+                <p>Create an account to unlock detailed analytics, progress tracking, and learning insights!</p>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setShowUpgradePrompt(true)}
                 >
-                  <Sparkles size={24} />
-                  <div>
-                    <h4>Start Learning</h4>
-                    <p>Begin a new CS topic session</p>
-                  </div>
-                </button>
-                
-                <button
-                  onClick={generateDailySummary}
-                  className="quick-action-btn secondary"
-                >
-                  <Trophy size={24} />
-                  <div>
-                    <h4>Yesterday's Summary</h4>
-                    <p>{isRegistered ? "See what you accomplished" : "Create account to unlock"}</p>
-                  </div>
+                  <Sparkles size={16} />
+                  Create Account
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Last Session Display - Only for registered users */}
-          {isRegistered && learningSessions.length > 0 && (
-            <div className="last-session-section">
-              <h3>Continue Your Journey</h3>
-              <div className="last-session-card">
-                <div className="session-header">
-                  <div className="session-icon">
-                    <BookOpen size={24} />
-                  </div>
-                  <div className="session-info">
-                    <h4>Last Session: {learningSessions[0].topicName}</h4>
-                    <p className="session-meta">
-                      {learningSessions[0].category} • {learningSessions[0].difficulty} • 
-                      {Math.round(learningSessions[0].progress || 0)}% complete
-                    </p>
-                    <span className="session-date">
-                      {new Date(learningSessions[0].updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                <div className="session-actions">
-                  <button
-                    onClick={() => navigate('/learn', {
-                      state: { sessionId: learningSessions[0].id }
-                    })}
-                    className="btn btn-primary btn-sm"
-                  >
-                    Continue Learning
-                  </button>
-                </div>
-              </div>
-            </div>
           )}
-
-          {/* Recent Activity Overview */}
-          <div className="activity-overview">
-            <h3>Recent Learning Activity</h3>
-            {isRegistered ? (
-              <div className="activity-grid">
-                <div className="activity-stat">
-                  <div className="stat-icon">
-                    <Calendar size={20} />
-                  </div>
-                  <div className="stat-content">
-                    <span className="stat-number">
-                      {learningSessions.filter(s => {
-                        const sessionDate = new Date(s.updatedAt);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        return sessionDate >= today;
-                      }).length}
-                    </span>
-                    <span className="stat-label">Today's Sessions</span>
-                  </div>
-                </div>
-                
-                <div className="activity-stat">
-                  <div className="stat-icon">
-                    <Zap size={20} />
-                  </div>
-                  <div className="stat-content">
-                    <span className="stat-number">
-                      {learningSessions.filter(s => {
-                        const sessionDate = new Date(s.updatedAt);
-                        const weekAgo = new Date();
-                        weekAgo.setDate(weekAgo.getDate() - 7);
-                        return sessionDate >= weekAgo;
-                      }).length}
-                    </span>
-                    <span className="stat-label">This Week</span>
-                  </div>
-                </div>
-                
-                <div className="activity-stat">
-                  <div className="stat-icon">
-                    <CheckCircle size={20} />
-                  </div>
-                  <div className="stat-content">
-                    <span className="stat-number">
-                      {Math.round((learningSessions.filter(s => s.completed).length / Math.max(learningSessions.length, 1)) * 100)}%
-                    </span>
-                    <span className="stat-label">Completion Rate</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="anonymous-activity">
-                <div className="anonymous-message">
-                  <Shield size={48} className="anonymous-icon" />
-                  <h4>Anonymous Mode Active</h4>
-                  <p>Create an account to unlock detailed analytics, progress tracking, and learning insights!</p>
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => setShowUpgradePrompt(true)}
-                  >
-                    <Sparkles size={16} />
-                    Create Account
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -820,7 +608,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Keep all existing modals... */}
       {/* Daily Summary Modal */}
       {showDailySummary && dailySummary && (
         <div className="modal-overlay" onClick={() => setShowDailySummary(false)}>
@@ -829,7 +616,7 @@ const Dashboard = () => {
               <div className="modal-title">
                 <span className="modal-icon">📊</span>
                 <div>
-                  <h2>Daily Learning Summary</h2>
+                  <h2>Your Daily Learning Summary</h2>
                   <p>{dailySummary.date}</p>
                 </div>
               </div>
@@ -842,91 +629,19 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              <div className="summary-stats">
-                <div className="summary-stat">
-                  <div className="stat-icon">
-                    <BookOpen size={24} />
-                  </div>
-                  <div>
-                    <span className="stat-number">{dailySummary.totalSessions}</span>
-                    <span className="stat-label">Sessions Started</span>
+              {dailySummary.totalSessions > 0 ? (
+                <div className="ai-summary-content">
+                  <div className="summary-text">
+                    <p><strong>Sessions:</strong> {dailySummary.totalSessions} started, {dailySummary.completedSessions} completed</p>
+                    <p><strong>Time Spent:</strong> {formatDuration(dailySummary.totalDuration)}</p>
+                    <p><strong>Average Progress:</strong> {dailySummary.avgProgress}%</p>
                   </div>
                 </div>
-                
-                <div className="summary-stat">
-                  <div className="stat-icon">
-                    <CheckCircle size={24} />
+              ) : (
+                <div className="ai-summary-content">
+                  <div className="summary-text">
+                    <p>No learning sessions yesterday. Ready to start today?</p>
                   </div>
-                  <div>
-                    <span className="stat-number">{dailySummary.completedSessions}</span>
-                    <span className="stat-label">Completed</span>
-                  </div>
-                </div>
-                
-                <div className="summary-stat">
-                  <div className="stat-icon">
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <span className="stat-number">{formatDuration(dailySummary.totalDuration)}</span>
-                    <span className="stat-label">Time Spent</span>
-                  </div>
-                </div>
-                
-                <div className="summary-stat">
-                  <div className="stat-icon">
-                    <TrendingUp size={24} />
-                  </div>
-                  <div>
-                    <span className="stat-number">{dailySummary.avgProgress}%</span>
-                    <span className="stat-label">Avg Progress</span>
-                  </div>
-                </div>
-              </div>
-
-              {dailySummary.achievements.length > 0 && (
-                <div className="achievements-section">
-                  <h3>🏆 Achievements Unlocked</h3>
-                  <div className="achievements-grid">
-                    {dailySummary.achievements.map((achievement, index) => (
-                      <div key={index} className="achievement-card">
-                        <span className="achievement-icon">{achievement.icon}</span>
-                        <div>
-                          <h4>{achievement.title}</h4>
-                          <p>{achievement.description}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {Object.keys(dailySummary.topicStats).length > 0 && (
-                <div className="topics-section">
-                  <h3>📚 Topics Covered</h3>
-                  <div className="topics-list">
-                    {Object.entries(dailySummary.topicStats).map(([topic, stats]) => (
-                      <div key={topic} className="topic-summary">
-                        <div className="topic-info">
-                          <h4>{topic}</h4>
-                          <span className="topic-category">{stats.category}</span>
-                        </div>
-                        <div className="topic-stats">
-                          <span>{stats.count} session{stats.count > 1 ? 's' : ''}</span>
-                          <span>{formatDuration(stats.duration)}</span>
-                          <span>{stats.avgProgress}% progress</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {dailySummary.totalSessions === 0 && (
-                <div className="empty-summary">
-                  <Bell size={48} className="empty-icon" />
-                  <h3>No Activity Yesterday</h3>
-                  <p>You didn't have any learning sessions yesterday. Ready to start today?</p>
                 </div>
               )}
             </div>
@@ -1069,55 +784,51 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              {/* Username Edit Section */}
-              {isRegistered && (
-                <div className="username-edit-section">
-                  <h4>
-                    <User size={16} />
-                    Update Your Display Name
-                  </h4>
-                  <p>Choose how you want to be addressed in MindMelt. This name will appear on your dashboard and learning sessions.</p>
-                  
-                  <form onSubmit={handleSaveUsername} className="username-edit-form">
-                    <div className="username-input-group">
-                      <label htmlFor="new-username">Display Name</label>
-                      <input
-                        type="text"
-                        id="new-username"
-                        value={newUsername}
-                        onChange={(e) => setNewUsername(e.target.value)}
-                        placeholder={currentUser?.name || currentUser?.username || 'Enter your name'}
-                        disabled={savingUsername}
-                        maxLength={50}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="username-save-btn"
-                      disabled={!newUsername.trim() || savingUsername}
-                    >
-                      {savingUsername ? (
-                        <>
-                          <div className="spinner" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save size={14} />
-                          Update
-                        </>
-                      )}
-                    </button>
-                  </form>
-                  
-                  {/* Success Message */}
-                  {usernameUpdateSuccess && (
-                    <div className="username-success-message">
-                      ✅ Display name updated successfully!
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="username-edit-section">
+                <h4>
+                  <User size={16} />
+                  Update Your Username
+                </h4>
+                <p>Choose how you want to be addressed in MindMelt. This username will appear on your dashboard and learning sessions.</p>
+                
+                <form onSubmit={handleSaveUsername} className="username-edit-form">
+                  <div className="username-input-group">
+                    <label htmlFor="new-username">Username</label>
+                    <input
+                      type="text"
+                      id="new-username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder={currentUser?.username || 'Enter your username'}
+                      disabled={savingUsername}
+                      maxLength={50}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="username-save-btn"
+                    disabled={!newUsername.trim() || savingUsername}
+                  >
+                    {savingUsername ? (
+                      <>
+                        <div className="spinner" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={14} />
+                        Update
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {usernameUpdateSuccess && (
+                  <div className="username-success-message">
+                    ✅ Username updated successfully!
+                  </div>
+                )}
+              </div>
               
               <div className="profile-section">
                 <h3>Account Information</h3>

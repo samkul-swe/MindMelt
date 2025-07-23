@@ -88,24 +88,29 @@ const userStorage = {
 
   async update(id, updates) {
     try {
-      console.log('Firestore updating user:', id, 'with:', updates);
-      
-      await db.collection('users').doc(id).update({
+      const updateData = {
         ...updates,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-      
+      };
+
+      await db.collection('users').doc(id).update(updateData);
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const doc = await db.collection('users').doc(id).get();
       if (!doc.exists) {
-        throw new Error('User not found');
+        throw new Error('User not found after update');
       }
       
       const userData = { id: doc.id, ...doc.data() };
-      console.log('Firestore updated user data:', userData);
       
       return userData;
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user:', {
+        userId: id,
+        updates: updates,
+        error: error.message
+      });
       throw error;
     }
   }

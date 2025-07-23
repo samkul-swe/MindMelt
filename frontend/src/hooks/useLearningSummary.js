@@ -1,5 +1,3 @@
-// src/hooks/useLearningSummary.js - Custom hook for managing learning summary
-
 import { useState, useEffect, useCallback } from 'react';
 import aiService from '../services/aiService';
 import { useApiKey } from './useApiKey';
@@ -11,10 +9,7 @@ export const useLearningSummary = (userLearningData) => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const { apiKey } = useApiKey();
 
-  // Function to aggregate learning data
   const aggregateUserData = useCallback((rawData) => {
-    // Assuming rawData comes from your backend/storage
-    // Adjust this based on your actual data structure
     return {
       completedSessions: rawData.sessions?.length || 0,
       totalQuestions: rawData.questions?.length || 0,
@@ -28,7 +23,6 @@ export const useLearningSummary = (userLearningData) => {
     };
   }, []);
 
-  // Function to generate learning summary
   const generateSummary = useCallback(async () => {
     if (!userLearningData || !apiKey) return;
 
@@ -38,8 +32,7 @@ export const useLearningSummary = (userLearningData) => {
     try {
       aiService.setApiKey(apiKey);
       const aggregatedData = aggregateUserData(userLearningData);
-      
-      // Only generate summary if there's meaningful data
+
       if (aggregatedData.totalQuestions === 0) {
         setSummary('Welcome to your learning journey! Start answering questions to see your personalized progress summary here.');
         setLastUpdated(new Date());
@@ -58,12 +51,10 @@ export const useLearningSummary = (userLearningData) => {
     }
   }, [userLearningData, apiKey, aggregateUserData]);
 
-  // Auto-generate summary when data changes
   useEffect(() => {
     generateSummary();
   }, [generateSummary]);
 
-  // Function to manually refresh summary
   const refreshSummary = useCallback(() => {
     generateSummary();
   }, [generateSummary]);

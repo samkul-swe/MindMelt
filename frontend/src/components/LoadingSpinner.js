@@ -1,8 +1,3 @@
-// ============================================================================
-// components/LoadingSpinner.js - Reusable Loading Component
-// ============================================================================
-
-import React from 'react';
 import { Brain } from 'lucide-react';
 
 const LoadingSpinner = ({ message = "Loading...", size = "large" }) => {

@@ -1,4 +1,3 @@
-// aiService.js - Cleaned version with no unused functions
 const AI_API_URL = 'https://api.gmi-serving.com/v1/chat/completions';
 
 const API_CONFIG = {
@@ -28,18 +27,12 @@ const ERROR_MESSAGES = {
   EMPTY_RESPONSE: '📝 MindMelt: Empty text response - please try again'
 };
 
-/**
- * Get API key from multiple sources with priority order
- */
 export function getApiKey() {
   return process.env.REACT_APP_AI_API_KEY || 
          localStorage.getItem('mindmelt_ai_key') || 
          null;
 }
 
-/**
- * Validate API key format
- */
 export function validateApiKey(apiKey) {
   if (!apiKey) {
     return { valid: false, message: 'API key is required for MindMelt to work' };
@@ -56,9 +49,6 @@ export function validateApiKey(apiKey) {
   return { valid: true, message: 'API key format looks correct! 🎉' };
 }
 
-/**
- * Create standardized request body for AI API calls
- */
 function createRequestBody(prompt, config = {}) {
   const finalConfig = { ...API_CONFIG, ...config };
  
@@ -77,11 +67,6 @@ function createRequestBody(prompt, config = {}) {
   };
 }
 
-
-/**
- * Handle API response and extract text
- */
-
 async function handleApiResponse(response) {
   let data;
  
@@ -97,16 +82,13 @@ async function handleApiResponse(response) {
     throw new Error(getErrorMessage(response.status, data));
   }
 
-
-  // GMI API response format validation
   if (!data.choices || data.choices.length === 0) {
     throw new Error(ERROR_MESSAGES.NO_RESPONSE);
   }
 
 
   const choice = data.choices[0];
- 
-  // Handle different GMI API finish reasons
+
   if (choice.finish_reason === 'content_filter') {
     throw new Error(ERROR_MESSAGES.CONTENT_FILTERED);
   }
@@ -123,9 +105,6 @@ async function handleApiResponse(response) {
   return choice.message.content.trim();
 }
 
-/**
- * Get appropriate error message based on status code and response data
- */
 function getErrorMessage(status, errorData) {
   const baseMessage = errorData.error?.message || 'Unknown error occurred';
   
@@ -141,9 +120,6 @@ function getErrorMessage(status, errorData) {
   }
 }
 
-/**
- * Handle API call errors and return appropriate error messages
- */
 function handleApiError(error) {
   console.error('💥 MindMelt: Error calling AI API:', error);
   
@@ -170,9 +146,6 @@ function handleApiError(error) {
   return new Error(`🤖 MindMelt AI Error: ${error.message}`);
 }
 
-/**
- * Make API call with error handling and logging
- */
 async function makeApiCall(prompt, apiKey, config = {}) {
   console.log(apiKey);
   console.log('🧠 MindMelt: Making API call to AI...');
@@ -194,9 +167,6 @@ async function makeApiCall(prompt, apiKey, config = {}) {
   return await handleApiResponse(response);
 }
 
-/**
- * Generate Socratic response using AI API for MindMelt
- */
 export async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, returnParsed = false) {
   const finalApiKey = apiKey || getApiKey();
  
@@ -218,14 +188,11 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
     try {
     const rawResponse = await makeApiCall(fullPrompt, finalApiKey);
     console.log('✅ MindMelt: GMI API Response received successfully');
-   
-    // Parse the response
+
     const parsedResponse = parseAIResponse(rawResponse);
     console.log('📋 MindMelt: Parsed response:', parsedResponse);
-   
-    // Return based on returnParsed parameter
+
     if (returnParsed) {
-      // Return full parsed data for components that need it
       return {
         displayText: formatResponseForDisplay(parsedResponse),
         parsed: parsedResponse,
@@ -239,7 +206,6 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
         }
       };
     } else {
-      // Return just the display text for backward compatibility
       return formatResponseForDisplay(parsedResponse);
     }
   } catch (error) {
@@ -247,10 +213,6 @@ export async function getSocraticResponse(concept, userResponse, learningPath, q
   }
 }
 
-
-/**
- * Test API key by making a simple MindMelt request
- */
 export async function testApiKey(apiKey) {
   const testPrompt = "Hello! I'm testing MindMelt's connection to AI. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else.";
   
@@ -272,9 +234,7 @@ export async function testApiKey(apiKey) {
   }
 }
 
-//parseAIResponse method
 function parseAIResponse(rawResponse) {
-  // Default structure
   const parsed = {
     level: null,
     levelEmoji: null,
@@ -287,7 +247,6 @@ function parseAIResponse(rawResponse) {
 
 
   try {
-    // Extract level information
     const levelMatch = rawResponse.match(/###\s*Level\s*(\d+)\s*-\s*([^📝💡🔧🔍⚖️🚀]+)\s*(📝|💡|🔧|🔍|⚖️|🚀)?/i);
     if (levelMatch) {
       parsed.level = parseInt(levelMatch[1]);
@@ -295,42 +254,30 @@ function parseAIResponse(rawResponse) {
       parsed.levelEmoji = levelMatch[3] || '';
     }
 
-
-    // Extract pun
     const punMatch = rawResponse.match(/\*\*Pun:\*\*\s*"?([^"\n]+)"?/i);
     if (punMatch) {
       parsed.pun = punMatch[1].trim();
     }
 
-
-    // Extract question
     const questionMatch = rawResponse.match(/\*\*Question:\*\*\s*"?([^"\n]+)"?/i);
     if (questionMatch) {
       parsed.question = questionMatch[1].trim();
     }
 
-
-    // If we couldn't parse structured format, try to extract content more flexibly
     if (!parsed.pun && !parsed.question) {
-      // Split by explanation section to remove it
       const beforeExplanation = rawResponse.split(/\*\*Explanation of Approach:\*\*/i)[0];
-     
-      // Look for any pun-like content (usually the first engaging sentence)
+
       const lines = beforeExplanation.split('\n').filter(line => line.trim());
-     
-      // Find pun and question in a more flexible way
+
       for (const line of lines) {
         const cleanLine = line.replace(/\*\*/g, '').trim();
-       
-        // Skip level headers
+
         if (cleanLine.match(/^###\s*Level/i)) continue;
-       
-        // Look for pun indicators
+
         if (cleanLine.toLowerCase().includes('pun:') ||
             (cleanLine.includes('!') && !parsed.pun && !cleanLine.endsWith('?'))) {
           parsed.pun = cleanLine.replace(/^(Pun:\s*)/i, '').replace(/["']/g, '').trim();
         }
-        // Look for question indicators
         else if (cleanLine.toLowerCase().includes('question:') ||
                  (cleanLine.endsWith('?') && !parsed.question)) {
           parsed.question = cleanLine.replace(/^(Question:\s*)/i, '').replace(/["']/g, '').trim();
@@ -338,14 +285,11 @@ function parseAIResponse(rawResponse) {
       }
     }
 
-
-    // Create clean full response
     if (parsed.pun && parsed.question) {
       parsed.fullResponse = `${parsed.pun}\n\n${parsed.question}`;
     } else if (parsed.question) {
       parsed.fullResponse = parsed.question;
     } else {
-      // Fallback: remove explanation section and clean up
       const cleanContent = rawResponse
         .split(/\*\*Explanation of Approach:\*\*/i)[0]
         .replace(/###\s*Level\s*\d+[^📝💡🔧🔍⚖️🚀\n]*[📝💡🔧🔍⚖️🚀]?\s*/gi, '')
@@ -359,34 +303,24 @@ function parseAIResponse(rawResponse) {
 
   } catch (error) {
     console.error('Error parsing AI response:', error);
-    // Fallback to raw response without explanation
     parsed.fullResponse = rawResponse.split(/\*\*Explanation of Approach:\*\*/i)[0].trim();
   }
 
   return parsed;
 }
 
-//formatResponseForDisplay method
 function formatResponseForDisplay(parsedResponse) {
-  // If we have both pun and question, format them nicely
   if (parsedResponse.pun && parsedResponse.question) {
     return `${parsedResponse.pun}\n\n${parsedResponse.question}`;
   }
- 
-  // Otherwise return the full response
+
   return parsedResponse.fullResponse || parsedResponse.raw;
 }
 
-
-//getSocraticResponseWithMetadata method
 export async function getSocraticResponseWithMetadata(concept, userResponse, learningPath, questioningStyle, apiKey) {
   return getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, true);
 }
 
-
-/**
- * Assess user understanding quality for ice cream timer bonus
- */
 export async function assessUnderstandingQuality(concept, userResponse, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -429,9 +363,6 @@ Keep the assessment to one line only.`;
   }
 }
 
-/**
- * Fast search for computer science topics using AI - Returns exactly 5 results
- */
 export async function searchCSTopics(query, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -475,7 +406,6 @@ JSON (exactly 5):`;
 
     console.log('🤖 AI Response received');
 
-    // Clean and extract JSON
     let cleanResponse = responseText.trim();
     cleanResponse = cleanResponse.replace(/```json\s*|\s*```/g, '');
     
@@ -493,12 +423,10 @@ JSON (exactly 5):`;
       throw new Error('Invalid response format');
     }
 
-    // Validate and return exactly 5 topics
     const validTopics = topics.filter(topic => 
       topic && topic.name && topic.description && topic.category
     ).slice(0, 5);
 
-    // If we don't have 5 topics, pad with generated ones
     while (validTopics.length < 5) {
       validTopics.push({
         name: `${query.trim()} Topic ${validTopics.length + 1}`,
@@ -519,9 +447,6 @@ JSON (exactly 5):`;
   }
 }
 
-/**
- * Get detailed information about a CS topic using AI
- */
 export async function getTopicDetails(topicName, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -553,8 +478,7 @@ Response (JSON only):`;
 
     try {
       const details = JSON.parse(responseText);
-      
-      // Validate required fields
+
       const requiredFields = ['concept', 'whyImportant', 'buildingBlocks', 'realWorldConnection', 'nextSteps'];
       const hasAllFields = requiredFields.every(field => 
         details[field] && 
@@ -579,9 +503,6 @@ Response (JSON only):`;
   }
 }
 
-/**
- * Get default topic details when AI call fails
- */
 function getDefaultTopicDetails(topicName) {
   return {
     concept: `${topicName} is an important computer science concept that involves understanding fundamental principles and practical applications.`,
@@ -599,29 +520,22 @@ function getDefaultTopicDetails(topicName) {
   };
 }
 
-/**
- * Basic quality assessment without API (fallback)
- */
 function assessBasicQuality(userResponse) {
   const response = userResponse.toLowerCase();
   let score = 30; // Base score
-  
-  // Length indicates effort
+
   if (response.length > 100) score += 20;
   else if (response.length > 50) score += 10;
-  
-  // CS terminology usage
+
   const csTerms = ['algorithm', 'data structure', 'complexity', 'memory', 'cpu', 'network', 'database', 
                    'function', 'variable', 'array', 'loop', 'condition', 'binary', 'queue', 'stack'];
   const termsUsed = csTerms.filter(term => response.includes(term)).length;
   score += Math.min(25, termsUsed * 5);
-  
-  // Question words indicate thinking
+
   const thinkingWords = ['because', 'since', 'therefore', 'however', 'although', 'why', 'how', 'what if'];
   const thinkingUsed = thinkingWords.filter(word => response.includes(word)).length;
   score += Math.min(15, thinkingUsed * 3);
-  
-  // Examples or specifics
+
   if (response.includes('example') || response.includes('like') || response.includes('such as')) {
     score += 10;
   }
@@ -634,9 +548,6 @@ function assessBasicQuality(userResponse) {
   };
 }
 
-/**
- * Create MindMelt-specific system prompt for CS learning
- */
 function createMindMeltPrompt(concept, learningPath, questioningStyle) {
   const basePrompt = `You are helping a student learn "${concept}" through Socratic questioning and Bloom's taxonomy progression.
 
@@ -779,9 +690,6 @@ Remember: Pun + focused question = effective learning. Build understanding throu
          `${styleInstructions}`;
 }
 
-/**
- * Get learning path specific instructions
- */
 function getPathInstructions(learningPath) {
   const pathInstructions = {
     conceptual: `CONCEPTUAL TRACK FOCUS: Help them build solid theoretical foundations. Ask questions about:
@@ -809,9 +717,6 @@ Build complete, integrated understanding of the CS topic.`
   return pathInstructions[learningPath] || pathInstructions.conceptual;
 }
 
-/**
- * Get questioning style specific instructions
- */
 function getStyleInstructions(questioningStyle) {
   const styleInstructions = {
     socratic: `SOCRATIC QUESTIONING STYLE: Use classic Socratic method for CS learning:
@@ -842,9 +747,6 @@ function getStyleInstructions(questioningStyle) {
   return styleInstructions[questioningStyle] || styleInstructions.socratic;
 }
 
-/**
- * Generate helpful hint for the current learning context
- */
 export async function getHintResponse(concept, conversationContext, learningPath, questioningStyle, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -866,9 +768,6 @@ export async function getHintResponse(concept, conversationContext, learningPath
   }
 }
 
-/**
- * Generate personalized learning summary using AI for MindMelt dashboard
- */
 export async function generateLearningSummary(learningData, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -933,9 +832,6 @@ Write as if you're their personal CS learning coach who knows their journey inti
   }
 }
 
-/**
- * Generate topic-specific insights for learning progress
- */
 export async function generateTopicInsights(topicData, apiKey) {
   const finalApiKey = apiKey || getApiKey();
   
@@ -971,9 +867,6 @@ Keep it personal and motivational, like a supportive CS mentor.`;
   }
 }
 
-/**
- * Create hint-specific prompt for the AI
- */
 function createHintPrompt(concept, conversationContext, learningPath, questioningStyle) {
   const pathContext = getPathInstructions(learningPath);
   const styleContext = getStyleInstructions(questioningStyle);
@@ -1005,9 +898,6 @@ Examples of good hints:
 Your hint for "${concept}":`;
 }
 
-/**
- * Get MindMelt API setup instructions
- */
 export function getApiSetupInstructions() {
   return {
     title: "🔑 Get Your GMI API Key for MindMelt",

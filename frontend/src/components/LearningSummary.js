@@ -1,6 +1,3 @@
-// src/components/LearningSummary.js - Component to display AI-generated learning summary
-
-import React from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import '../styles/components/learning-summary.css';
 

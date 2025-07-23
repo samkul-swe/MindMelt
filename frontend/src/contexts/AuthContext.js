@@ -203,20 +203,29 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = (updatedUserData) => {
-    if (user) {
-      const updatedUser = { ...user, ...updatedUserData };
+  const updateUser = async (profileUpdates) => {
+    if (!user) return;
+    
+    try {
+      const response = await api.updateProfile(profileUpdates);
+
+      if (response.token) {
+        localStorage.setItem('mindmelt_token', response.token);
+      }
+
+      const updatedUser = response.user;
       localStorage.setItem('mindmelt_user', JSON.stringify(updatedUser));
       setUser(updatedUser);
+      
+      return updatedUser;
+    } catch (error) {
+      console.error('AuthContext: Profile update failed:', error);
+      throw error;
     }
   };
 
   const getDisplayName = (userData) => {
-    return userData?.name || userData?.username || 'User';
-  };
-
-  const getCurrentUser = () => {
-    return user || anonymousUser;
+    return userData?.username || 'User';
   };
 
   const isRegistered = () => {
@@ -237,10 +246,12 @@ export const AuthProvider = ({ children }) => {
     return false;
   };
 
+  const currentUser = user || anonymousUser;
+
   const value = {
     user,
     anonymousUser,
-    currentUser: getCurrentUser(),
+    currentUser,
     loading,
     error,
     login,
