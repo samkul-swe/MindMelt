@@ -13,65 +13,60 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [anonymousUser, setAnonymousUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    checkAuthStatus();
+    // Listen to Firebase auth state changes
+    const unsubscribe = api.onAuthStateChange((user) => {
+      if (user) {
+        if (user.isAnonymous) {
+          // Handle anonymous user
+          setAnonymousUser(user);
+          setCurrentUser(user);
+        } else {
+          // Handle authenticated user
+          setCurrentUser(user);
+          setAnonymousUser(null);
+          dataService.setUser(user.id);
+        }
+      } else {
+        // User is signed out
+        setCurrentUser(null);
+        setAnonymousUser(null);
+      }
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
-  const checkAuthStatus = async () => {
+  const createAnonymousUser = async () => {
     try {
-      const token = localStorage.getItem('mindmelt_token');
-      const userData = localStorage.getItem('mindmelt_user');
-      
-      if (token && userData) {
-        await api.refreshToken();
-        setUser(JSON.parse(userData));
-      } else {
-        const anonymousData = localStorage.getItem('mindmelt_anonymous');
-        if (anonymousData) {
-          const anonymous = JSON.parse(anonymousData);
-          setAnonymousUser(anonymous);
-        }
-      }
+      setLoading(true);
+      const user = await api.signInAnonymously();
+      return user;
     } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('mindmelt_token');
-      localStorage.removeItem('mindmelt_user');
-      setUser(null);
+      console.error('Error creating anonymous user:', error);
+      setError(error.message);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const createAnonymousUser = (name = null) => {
-    const anonymousId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    const anonymousData = {
-      id: anonymousId,
-      name: name || 'Anonymous Learner',
-      email: null,
-      isAnonymous: true,
-      createdAt: new Date().toISOString(),
-      sessionsCompleted: 0,
-      totalQuestions: 0,
-      averageScore: 0,
-      sessionCount: 0
-    };
+  const updateAnonymousUser = async (updates) => {
+    if (!currentUser || !currentUser.isAnonymous) return;
     
-    localStorage.setItem('mindmelt_anonymous', JSON.stringify(anonymousData));
-    setAnonymousUser(anonymousData);
-    return anonymousData;
-  };
-
-  const updateAnonymousUser = (updates) => {
-    if (!anonymousUser) return;
-    
-    const updatedUser = { ...anonymousUser, ...updates };
-    localStorage.setItem('mindmelt_anonymous', JSON.stringify(updatedUser));
-    setAnonymousUser(updatedUser);
+    try {
+      const updatedUser = await api.updateProfile(updates);
+      return updatedUser;
+    } catch (error) {
+      console.error('Error updating anonymous user:', error);
+      throw error;
+    }
   };
 
   const login = async (email, password) => {
@@ -81,35 +76,15 @@ export const AuthProvider = ({ children }) => {
       
       console.log('AuthContext: Login attempt for:', email);
       
-      const response = await api.login(email, password);
+      const user = await api.signIn(email, password);
       
-      console.log('AuthContext: Login response:', response);
-      
-      localStorage.setItem('mindmelt_token', response.token);
-      localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
-      
-      // Initialize Firebase user profile
-      try {
-        await dataService.createUserProfile(response.user.id, {
-          username: response.user.username || response.user.name,
-          email: response.user.email,
-          isAnonymous: false
-        });
-        dataService.setUser(response.user.id);
-      } catch (error) {
-        console.error('Error creating Firebase user profile:', error);
-      }
-      
+      // Handle anonymous data migration if needed
       if (anonymousUser) {
-        console.log('AuthContext: Migrating anonymous progress');
-        await migrateAnonymousProgress(response.user);
+        await migrateAnonymousProgress(user);
       }
-      
-      setUser(response.user);
-      setAnonymousUser(null);
       
       console.log('AuthContext: Login successful');
-      return response.user;
+      return user;
     } catch (error) {
       console.error('AuthContext: Login error:', error);
       setError(error.message);
@@ -119,36 +94,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (email, password, name) => {
+  const signup = async (email, password, username = null) => {
     try {
       setError('');
       setLoading(true);
       
-      const response = await api.signup(email, password, name);
-      
-      localStorage.setItem('mindmelt_token', response.token);
-      localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
+      const user = await api.signUp(email, password, username);
 
-      // Initialize Firebase user profile
-      try {
-        await dataService.createUserProfile(response.user.id, {
-          username: response.user.username || response.user.name || name,
-          email: response.user.email,
-          isAnonymous: false
-        });
-        dataService.setUser(response.user.id);
-      } catch (error) {
-        console.error('Error creating Firebase user profile:', error);
-      }
-
+      // Handle anonymous data migration if needed
       if (anonymousUser) {
-        await migrateAnonymousProgress(response.user);
+        await migrateAnonymousProgress(user);
       }
       
-      setUser(response.user);
-      setAnonymousUser(null);
-      return response.user;
+      console.log('AuthContext: Signup successful');
+      return user;
     } catch (error) {
+      console.error('AuthContext: Signup error:', error);
       setError(error.message);
       throw error;
     } finally {
@@ -156,55 +117,46 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signupWithEmail = async (username, email = null) => {
-    try {
-      setError('');
-      setLoading(true);
-
-      const response = await api.signupWithUsernameAndEmail(username, email);
-      
-      localStorage.setItem('mindmelt_token', response.token);
-      localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
-
-      if (anonymousUser) {
-        await migrateAnonymousProgress(response.user);
-      }
-      
-      setUser(response.user);
-      setAnonymousUser(null);
-      return response.user;
-    } catch (error) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+  const signupWithEmail = async (email, username = null) => {
+    // For backward compatibility - generate a temporary password
+    const tempPassword = 'temp_' + Math.random().toString(36).substr(2, 12) + '!A1';
+    return await signup(email, tempPassword, username);
   };
 
   const migrateAnonymousProgress = async (newUser) => {
     try {
-      const anonymousProgress = localStorage.getItem('mindmelt_anonymous_progress');
-      const anonymousSessions = localStorage.getItem('mindmelt_anonymous_sessions');
-      
-      if (anonymousProgress || anonymousSessions) {
-        const progressData = anonymousProgress ? JSON.parse(anonymousProgress) : {};
-        const sessionsData = anonymousSessions ? JSON.parse(anonymousSessions) : [];
+      if (anonymousUser) {
+        console.log('Migrating anonymous progress to authenticated user');
         
-        console.log('Migrating anonymous progress:', {
-          sessions: sessionsData.length,
-          progress: progressData
-        });
+        // Get any stored anonymous data
+        const anonymousProgress = localStorage.getItem('mindmelt_anonymous_progress');
+        const anonymousSessions = localStorage.getItem('mindmelt_anonymous_sessions');
         
-        // Migrate to Firebase
-        if (anonymousUser) {
-          await dataService.migrateAnonymousUserData(newUser.id, anonymousUser);
+        if (anonymousProgress || anonymousSessions) {
+          const progressData = anonymousProgress ? JSON.parse(anonymousProgress) : {};
+          const sessionsData = anonymousSessions ? JSON.parse(anonymousSessions) : [];
+          
+          console.log('Migrating anonymous progress:', {
+            sessions: sessionsData.length,
+            progress: progressData
+          });
+          
+          // Record the migration as a learning session
+          await api.recordLearningSession({
+            migratedData: {
+              sessions: sessionsData,
+              progress: progressData,
+              anonymousUser: anonymousUser
+            },
+            createRecord: true,
+            duration: 0
+          });
         }
         
+        // Clean up anonymous data
         localStorage.removeItem('mindmelt_anonymous_progress');
         localStorage.removeItem('mindmelt_anonymous_sessions');
       }
-      
-      localStorage.removeItem('mindmelt_anonymous');
     } catch (error) {
       console.error('Progress migration failed:', error);
     }
@@ -213,40 +165,30 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setLoading(true);
+      await api.signOut();
       
-      await api.signOutFirebase();
-
-      await api.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem('mindmelt_token');
-      localStorage.removeItem('mindmelt_user');
-      localStorage.removeItem('mindmelt_sessions');
-      localStorage.removeItem('mindmelt_anonymous');
+      // Clean up local storage
       localStorage.removeItem('mindmelt_anonymous_progress');
       localStorage.removeItem('mindmelt_anonymous_sessions');
       
-      setUser(null);
+      setCurrentUser(null);
       setAnonymousUser(null);
+      
+      console.log('AuthContext: Logout successful');
+    } catch (error) {
+      console.error('AuthContext: Logout error:', error);
+      setError(error.message);
+      throw error;
+    } finally {
       setLoading(false);
     }
   };
 
   const updateUser = async (profileUpdates) => {
-    if (!user) return;
+    if (!currentUser) return;
     
     try {
-      const response = await api.updateProfile(profileUpdates);
-
-      if (response.token) {
-        localStorage.setItem('mindmelt_token', response.token);
-      }
-
-      const updatedUser = response.user;
-      localStorage.setItem('mindmelt_user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      
+      const updatedUser = await api.updateProfile(profileUpdates);
       return updatedUser;
     } catch (error) {
       console.error('AuthContext: Profile update failed:', error);
@@ -254,33 +196,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const getDisplayName = (userData) => {
-    return userData?.username || 'User';
+  const getDisplayName = (userData = currentUser) => {
+    if (!userData) return 'Guest';
+    return userData.username || userData.name || userData.email?.split('@')[0] || 'User';
   };
 
   const isRegistered = () => {
-    return !!user;
+    return !!(currentUser && !currentUser.isAnonymous);
   };
 
   const isAnonymous = () => {
-    return !!anonymousUser && !user;
+    return !!(currentUser && currentUser.isAnonymous);
   };
 
   const canAccessFeature = (feature) => {
     if (feature === 'learning') return true;
-
     if (feature === 'progress_tracking') return isRegistered();
     if (feature === 'learning_analytics') return isRegistered();
     if (feature === 'profile_settings') return isRegistered();
-    
     return false;
   };
 
-  const currentUser = user || anonymousUser;
-
   const value = {
-    user,
-    anonymousUser,
+    user: isRegistered() ? currentUser : null,
+    anonymousUser: isAnonymous() ? currentUser : null,
     currentUser,
     loading,
     error,
@@ -292,11 +231,10 @@ export const AuthProvider = ({ children }) => {
     getDisplayName,
     createAnonymousUser,
     updateAnonymousUser,
-    isAuthenticated: !!(user || anonymousUser),
+    isAuthenticated: !!currentUser,
     isRegistered: isRegistered(),
     isAnonymous: isAnonymous(),
     canAccessFeature,
-    checkAuthStatus,
     migrateAnonymousProgress
   };
 

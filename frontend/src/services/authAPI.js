@@ -1,271 +1,393 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+import { 
+  auth, 
+  db,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  signInAnonymously,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+  increment
+} from './firebase/firebaseService';
 
-const apiRequest = async (endpoint, options = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const token = localStorage.getItem('mindmelt_token');
-  
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
-    ...options,
-  };
+class AuthAPI {
+  constructor() {
+    this.currentUser = null;
+    this.isAuthenticated = false;
+    this.authStateChangeListeners = [];
+  }
 
-  try {
-    const response = await fetch(url, config);
+  // Listen to authentication state changes
+  onAuthStateChange(callback) {
+    this.authStateChangeListeners.push(callback);
+    
+    return onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Get user data from Firestore
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            this.currentUser = {
+              id: user.uid,
+              email: user.email,
+              isAnonymous: user.isAnonymous,
+              ...userDoc.data()
+            };
+          } else {
+            // If user document doesn't exist, create it
+            await this.createUserDocument(user);
+          }
+          this.isAuthenticated = true;
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          this.currentUser = {
+            id: user.uid,
+            email: user.email,
+            username: user.displayName || user.email?.split('@')[0] || 'User',
+            isAnonymous: user.isAnonymous
+          };
+          this.isAuthenticated = true;
+        }
+      } else {
+        this.currentUser = null;
+        this.isAuthenticated = false;
+      }
+      
+      // Notify all listeners
+      this.authStateChangeListeners.forEach(listener => listener(this.currentUser));
+      callback(this.currentUser);
+    });
+  }
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error(`Server error: ${response.status}`);
+  // Create user document in Firestore
+  async createUserDocument(user, additionalData = {}) {
+    if (!user) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      const { username, email } = additionalData;
+      
+      try {
+        const userData = {
+          username: username || user.displayName || user.email?.split('@')[0] || 'User',
+          email: user.email,
+          isAnonymous: user.isAnonymous || false,
+          joinedAt: serverTimestamp(),
+          currentProgress: {}, // Will store course progress
+          totalLearningTime: 0,
+          completedSessions: 0,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        await setDoc(userRef, userData);
+        
+        this.currentUser = {
+          id: user.uid,
+          email: user.email,
+          isAnonymous: user.isAnonymous,
+          ...userData
+        };
+
+        console.log('✅ User document created successfully');
+        return this.currentUser;
+      } catch (error) {
+        console.error('❌ Error creating user document:', error);
+        throw error;
+      }
     }
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      const error = new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
-      error.response = { data };
+  }
+
+  // Sign up with email and password
+  async signUp(email, password, username = null) {
+    try {
+      // Check if username is already taken
+      if (username) {
+        const isUsernameTaken = await this.checkUsernameExists(username);
+        if (isUsernameTaken) {
+          throw new Error('Username is already taken');
+        }
+      }
+
+      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update display name if username provided
+      if (username) {
+        await updateProfile(user, { displayName: username });
+      }
+
+      // Create user document
+      await this.createUserDocument(user, { username, email });
+      
+      return this.currentUser;
+    } catch (error) {
+      console.error('❌ Sign up error:', error);
       throw error;
     }
-    
-    return data;
-  } catch (error) {
-    console.error(`API Error [${endpoint}]:`, error);
-    throw error;
   }
-};
 
-export const authAPI = {
-  async signInWithGoogle() {
-    throw new Error('Firebase authentication has been removed. Please use username/email signup.');
-  },
-
-  async signInWithGithub() {
-    throw new Error('Firebase authentication has been removed. Please use username/email signup.');
-  },
-
-  async signupWithUsernameAndEmail(username, email = null) {
+  // Sign in with email and password
+  async signIn(email, password) {
     try {
-      const response = await apiRequest('/auth/signup-simple', {
-        method: 'POST',
-        body: JSON.stringify({ username, email }),
+      const { user } = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get user data from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        this.currentUser = {
+          id: user.uid,
+          email: user.email,
+          isAnonymous: user.isAnonymous,
+          ...userDoc.data()
+        };
+      }
+      
+      return this.currentUser;
+    } catch (error) {
+      console.error('❌ Sign in error:', error);
+      throw error;
+    }
+  }
+
+  // Sign in anonymously
+  async signInAnonymously() {
+    try {
+      const { user } = await signInAnonymously(auth);
+      
+      // Create anonymous user document
+      await this.createUserDocument(user, {
+        username: 'Anonymous Learner',
+        email: null
       });
       
-      return response;
+      return this.currentUser;
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('❌ Anonymous sign in error:', error);
       throw error;
     }
-  },
-
-  async signOutFirebase() {
-    return Promise.resolve({ success: true });
-  },
-  async login(emailOrUsername, password) {
-    return apiRequest('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ emailOrUsername, password }),
-    });
-  },
-
-  async signup(email, password, _unused) {
-    const username = email.split('@')[0];
-    return apiRequest('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, username, password }),
-    });
-  },
-
-  async logout() {
-    return Promise.resolve({ success: true });
-  },
-
-  async checkUsernameAvailability(username) {
-    return apiRequest(`/auth/check-username/${encodeURIComponent(username)}`);
-  },
-
-  async refreshToken() {
-    return apiRequest('/user/profile');
-  },
-
-  async getProfile() {
-    return apiRequest('/user/profile');
-  },
-
-  async updateProfile(profileData) {
-    return apiRequest('/user/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
-  },
-
-  async getLearningHistory() {
-    return apiRequest('/sessions');
-  },
-
-  async createLearningSession(sessionData) {
-    return apiRequest('/sessions', {
-      method: 'POST',
-      body: JSON.stringify(sessionData),
-    });
-  },
-
-  async updateLearningSession(sessionId, sessionData) {
-    return apiRequest(`/sessions/${sessionId}`, {
-      method: 'PUT',
-      body: JSON.stringify(sessionData),
-    });
-  },
-
-  async deleteLearningSession(sessionId) {
-    return apiRequest(`/sessions/${sessionId}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async getLearningSession(sessionId) {
-    return apiRequest(`/sessions/${sessionId}`);
-  },
-
-  async getAllTopics() {
-    return apiRequest('/topics');
-  },
-
-  async searchTopics(query, apiKey) {
-    return apiRequest('/ai/search-topics', {
-      method: 'POST',
-      body: JSON.stringify({ query, apiKey }),
-    });
-  },
-
-  async getTopicDetails(topicName, apiKey) {
-    return apiRequest('/ai/topic-details', {
-      method: 'POST',
-      body: JSON.stringify({ topicName, apiKey }),
-    });
-  },
-
-  async getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey) {
-    return apiRequest('/ai/socratic', {
-      method: 'POST',
-      body: JSON.stringify({ concept, userResponse, learningPath, questioningStyle, apiKey }),
-    });
-  },
-
-  async generateDailySummary(sessionsData, apiKey) {
-    return apiRequest('/ai/daily-summary', {
-      method: 'POST',
-      body: JSON.stringify({ sessionsData, apiKey }),
-    });
-  },
-
-  async generateQuestion(topicId, difficulty = 'intermediate', style = 'socratic', context = null) {
-    return apiRequest('/learning/question', {
-      method: 'POST',
-      body: JSON.stringify({ topicId, difficulty, style, context }),
-    });
-  },
-
-  async submitAnswer(questionId, answer, sessionId) {
-    return apiRequest('/learning/answer', {
-      method: 'POST',
-      body: JSON.stringify({ questionId, answer, sessionId }),
-    });
-  },
-
-  async healthCheck() {
-    return apiRequest('/health');
   }
-};
 
-export const mockAuthAPI = {
-  async login(email, password) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email === 'demo@mindmelt.com' && password === 'demo123') {
-      return {
-        user: {
-          id: 1,
-          email: 'demo@mindmelt.com',
-          name: 'Demo User',
-          createdAt: new Date('2024-01-01'),
-          sessionsCompleted: 12,
-          totalQuestions: 156,
-          averageScore: 78
-        },
-        token: 'mock-jwt-token-' + Date.now()
-      };
-    } else {
-      throw new Error('Invalid credentials');
+  // Sign out
+  async signOut() {
+    try {
+      await signOut(auth);
+      this.currentUser = null;
+      this.isAuthenticated = false;
+      return true;
+    } catch (error) {
+      console.error('❌ Sign out error:', error);
+      throw error;
     }
-  },
+  }
 
-  async signup(email, password, name) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email.includes('@')) {
-      return {
-        user: {
-          id: Math.random().toString(36).substr(2, 9),
-          email,
-          name,
-          createdAt: new Date().toISOString(),
-          sessionsCompleted: 0,
-          totalQuestions: 0,
-          averageScore: 0
-        },
-        token: 'mock-jwt-token-' + Date.now()
-      };
-    } else {
-      throw new Error('Invalid email format');
+  // Check if username exists
+  async checkUsernameExists(username) {
+    try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', username));
+      const querySnapshot = await getDocs(q);
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error('❌ Error checking username:', error);
+      return false;
     }
-  },
+  }
 
-  async logout() {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true };
-  },
-
-  async refreshToken() {
-    const token = localStorage.getItem('mindmelt_token');
-    if (token && token.startsWith('mock-jwt-token')) {
-      return { 
-        user: {
-          id: 1,
-          email: 'demo@mindmelt.com',
-          name: 'Demo User',
-          createdAt: new Date('2024-01-01'),
-          sessionsCompleted: 12,
-          totalQuestions: 156,
-          averageScore: 78
-        }
-      };
-    } else {
-      throw new Error('Invalid token');
+  // Update user profile
+  async updateProfile(updates) {
+    if (!this.currentUser) {
+      throw new Error('No authenticated user');
     }
-  },
 
-  async getLearningHistory() {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-      {
-        id: 1,
-        userId: 1,
-        topicId: 'algorithms',
-        topicName: 'Algorithms & Data Structures',
-        difficulty: 'Intermediate',
-        category: 'Computer Science',
-        questionsAsked: 8,
-        correctAnswers: 6,
-        duration: 15,
-        completed: true,
-        createdAt: new Date('2024-12-01'),
-        learningPath: 'structured'
+    try {
+      const userRef = doc(db, 'users', this.currentUser.id);
+      const updateData = {
+        ...updates,
+        updatedAt: serverTimestamp()
+      };
+
+      await updateDoc(userRef, updateData);
+      
+      // Update Firebase Auth profile if username changed
+      if (updates.username) {
+        await updateProfile(auth.currentUser, {
+          displayName: updates.username
+        });
       }
-    ];
-  }
-};
+      
+      // Update local user data
+      this.currentUser = {
+        ...this.currentUser,
+        ...updates
+      };
 
-export const api = authAPI;
+      return this.currentUser;
+    } catch (error) {
+      console.error('❌ Error updating profile:', error);
+      throw error;
+    }
+  }
+
+  // Update user progress for a specific course and topic
+  async updateUserProgress(courseId, topicId, percentage) {
+    if (!this.currentUser) {
+      throw new Error('No authenticated user');
+    }
+
+    try {
+      const userRef = doc(db, 'users', this.currentUser.id);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentProgress = userData.currentProgress || {};
+        
+        // Initialize course progress if it doesn't exist
+        if (!currentProgress[courseId]) {
+          currentProgress[courseId] = {
+            percentage: 0,
+            topics: {}
+          };
+        }
+
+        // Update topic progress
+        currentProgress[courseId].topics[topicId] = {
+          percentage: percentage,
+          completed: percentage >= 100,
+          lastUpdated: serverTimestamp()
+        };
+
+        // Calculate overall course progress
+        const topics = currentProgress[courseId].topics;
+        const topicKeys = Object.keys(topics);
+        const totalPercentage = topicKeys.reduce((sum, key) => sum + topics[key].percentage, 0);
+        currentProgress[courseId].percentage = topicKeys.length > 0 ? Math.round(totalPercentage / topicKeys.length) : 0;
+
+        // Update in Firestore
+        await updateDoc(userRef, {
+          currentProgress: currentProgress,
+          updatedAt: serverTimestamp()
+        });
+
+        // Update local user data
+        this.currentUser.currentProgress = currentProgress;
+        
+        return currentProgress;
+      }
+    } catch (error) {
+      console.error('❌ Error updating user progress:', error);
+      throw error;
+    }
+  }
+
+  // Get user progress for a specific course
+  getUserProgress(courseId) {
+    if (!this.currentUser || !this.currentUser.currentProgress) {
+      return null;
+    }
+    
+    return this.currentUser.currentProgress[courseId] || null;
+  }
+
+  // Get all courses progress
+  getAllProgress() {
+    if (!this.currentUser) {
+      return {};
+    }
+    
+    return this.currentUser.currentProgress || {};
+  }
+
+  // Record learning session completion
+  async recordLearningSession(sessionData) {
+    if (!this.currentUser) {
+      throw new Error('No authenticated user');
+    }
+
+    try {
+      const userRef = doc(db, 'users', this.currentUser.id);
+      
+      // Update user statistics
+      await updateDoc(userRef, {
+        totalLearningTime: increment(sessionData.duration || 0),
+        completedSessions: increment(1),
+        lastActiveAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // Update progress if course and topic provided
+      if (sessionData.courseId && sessionData.topicId && sessionData.progress !== undefined) {
+        await this.updateUserProgress(sessionData.courseId, sessionData.topicId, sessionData.progress);
+      }
+
+      // Create session record if requested
+      if (sessionData.createRecord) {
+        await addDoc(collection(db, 'sessions'), {
+          userId: this.currentUser.id,
+          ...sessionData,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error recording learning session:', error);
+      throw error;
+    }
+  }
+
+  // Get current user
+  getCurrentUser() {
+    return this.currentUser;
+  }
+
+  // Check if user is authenticated
+  isUserAuthenticated() {
+    return this.isAuthenticated && this.currentUser !== null;
+  }
+
+  // Legacy methods for backward compatibility
+  async getLearningHistory() {
+    if (!this.currentUser) return [];
+    
+    try {
+      const sessionsRef = collection(db, 'sessions');
+      const q = query(
+        sessionsRef, 
+        where('userId', '==', this.currentUser.id),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const sessions = [];
+      
+      querySnapshot.forEach((doc) => {
+        sessions.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return sessions;
+    } catch (error) {
+      console.error('❌ Error fetching learning history:', error);
+      return [];
+    }
+  }
+}
+
+// Create and export singleton instance
+const api = new AuthAPI();
+export { api };

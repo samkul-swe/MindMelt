@@ -1,424 +1,362 @@
-// Firebase-integrated data service
-import { LEARNING_ROADMAPS } from '../data/learningRoadmaps';
 import { 
-  userService, 
-  roadmapService, 
-  topicService, 
-  progressService, 
-  sessionService,
-  enrollmentService,
-  firebaseUtils 
+  db,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  increment
 } from './firebase/firebaseService';
 
 class DataService {
   constructor() {
-    this.initialized = false;
+    this.coursesCache = new Map();
+    this.topicsCache = new Map();
     this.currentUserId = null;
   }
 
-  // Initialize the service and set up default data
-  async initialize(userId = null) {
-    try {
-      this.currentUserId = userId;
-      
-      if (!this.initialized) {
-        console.log('🔄 Initializing Firebase data service...');
-        
-        // Initialize default roadmaps in Firebase
-        await firebaseUtils.initializeDefaultRoadmaps(LEARNING_ROADMAPS);
-        
-        this.initialized = true;
-        console.log('✅ Firebase data service initialized');
-      }
-    } catch (error) {
-      console.error('❌ Failed to initialize data service:', error);
-      throw error;
-    }
-  }
-
-  // Set current user
+  // Set current user (call this when user authenticates)
   setUser(userId) {
     this.currentUserId = userId;
   }
 
-  // ============================================================================
-  // USER OPERATIONS
-  // ============================================================================
-
-  async createUserProfile(userId, userData) {
+  // Get all courses
+  async getCourses() {
     try {
-      // Check if user already exists
-      const existingUser = await userService.getUser(userId);
-      if (existingUser) {
-        return existingUser;
+      if (this.coursesCache.size > 0) {
+        return Array.from(this.coursesCache.values());
       }
+
+      const coursesRef = collection(db, 'courses');
+      const snapshot = await getDocs(coursesRef);
       
-      return await userService.createUser(userId, userData);
+      const courses = [];
+      snapshot.forEach(doc => {
+        const course = { id: doc.id, ...doc.data() };
+        this.coursesCache.set(doc.id, course);
+        courses.push(course);
+      });
+
+      console.log(`✅ Retrieved ${courses.length} courses from Firestore`);
+      return courses;
     } catch (error) {
-      console.error('Error creating user profile:', error);
+      console.error('❌ Error fetching courses:', error);
       throw error;
     }
   }
 
-  async getUserProfile(userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) throw new Error('No user ID provided');
-    
-    return await userService.getUser(uid);
-  }
-
-  async updateUserProfile(updates, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) throw new Error('No user ID provided');
-    
-    return await userService.updateUser(uid, updates);
-  }
-
-  async updateUserStats(stats, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) throw new Error('No user ID provided');
-    
-    return await userService.updateUserStats(uid, stats);
-  }
-
-  // ============================================================================
-  // ROADMAP OPERATIONS
-  // ============================================================================
-
-  async getAllRoadmaps() {
+  // Get a specific course by ID
+  async getCourse(courseId) {
     try {
-      await this.initialize();
-      return await roadmapService.getAllRoadmaps();
-    } catch (error) {
-      console.error('Error getting roadmaps:', error);
-      // Fallback to local data
-      return Object.values(LEARNING_ROADMAPS);
-    }
-  }
+      if (this.coursesCache.has(courseId)) {
+        return this.coursesCache.get(courseId);
+      }
 
-  async getRoadmap(roadmapId) {
-    try {
-      await this.initialize();
-      const roadmap = await roadmapService.getRoadmap(roadmapId);
+      const courseRef = doc(db, 'courses', courseId);
+      const courseDoc = await getDoc(courseRef);
       
-      if (!roadmap) {
-        // Fallback to local data
-        return LEARNING_ROADMAPS[roadmapId] || null;
+      if (courseDoc.exists()) {
+        const course = { id: courseDoc.id, ...courseDoc.data() };
+        this.coursesCache.set(courseId, course);
+        return course;
       }
       
-      return roadmap;
+      return null;
     } catch (error) {
-      console.error('Error getting roadmap:', error);
-      return LEARNING_ROADMAPS[roadmapId] || null;
+      console.error(`❌ Error fetching course ${courseId}:`, error);
+      throw error;
     }
+  }
+
+  // Get all topics for a specific course
+  async getTopicsForCourse(courseId) {
+    try {
+      const cacheKey = `course_${courseId}`;
+      if (this.topicsCache.has(cacheKey)) {
+        return this.topicsCache.get(cacheKey);
+      }
+
+      const topicsRef = collection(db, 'topics');
+      const q = query(
+        topicsRef,
+        where('courseId', '==', courseId),
+        orderBy('order', 'asc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const topics = [];
+      
+      snapshot.forEach(doc => {
+        topics.push({ id: doc.id, ...doc.data() });
+      });
+
+      this.topicsCache.set(cacheKey, topics);
+      console.log(`✅ Retrieved ${topics.length} topics for course ${courseId}`);
+      return topics;
+    } catch (error) {
+      console.error(`❌ Error fetching topics for course ${courseId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get a specific topic by ID
+  async getTopic(topicId) {
+    try {
+      const topicRef = doc(db, 'topics', topicId);
+      const topicDoc = await getDoc(topicRef);
+      
+      if (topicDoc.exists()) {
+        return { id: topicDoc.id, ...topicDoc.data() };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`❌ Error fetching topic ${topicId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get user progress for a specific course
+  async getUserCourseProgress(userId, courseId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentProgress = userData.currentProgress || {};
+        return currentProgress[courseId] || {
+          percentage: 0,
+          topics: {}
+        };
+      }
+      
+      return { percentage: 0, topics: {} };
+    } catch (error) {
+      console.error(`❌ Error fetching user progress for course ${courseId}:`, error);
+      throw error;
+    }
+  }
+
+  // Get all user progress
+  async getAllUserProgress(userId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        return userData.currentProgress || {};
+      }
+      
+      return {};
+    } catch (error) {
+      console.error(`❌ Error fetching all user progress:`, error);
+      throw error;
+    }
+  }
+
+  // Update user progress for a topic
+  async updateTopicProgress(userId, courseId, topicId, percentage) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      let currentProgress = {};
+      if (userDoc.exists()) {
+        currentProgress = userDoc.data().currentProgress || {};
+      }
+
+      // Initialize course progress if it doesn't exist
+      if (!currentProgress[courseId]) {
+        currentProgress[courseId] = {
+          percentage: 0,
+          topics: {}
+        };
+      }
+
+      // Update topic progress
+      currentProgress[courseId].topics[topicId] = {
+        percentage: percentage,
+        completed: percentage >= 100,
+        lastUpdated: serverTimestamp()
+      };
+
+      // Calculate overall course progress
+      const topics = currentProgress[courseId].topics;
+      const topicKeys = Object.keys(topics);
+      const totalPercentage = topicKeys.reduce((sum, key) => sum + topics[key].percentage, 0);
+      currentProgress[courseId].percentage = topicKeys.length > 0 ? Math.round(totalPercentage / topicKeys.length) : 0;
+
+      // Update user document
+      await updateDoc(userRef, {
+        currentProgress: currentProgress,
+        updatedAt: serverTimestamp()
+      });
+
+      console.log(`✅ Updated progress for topic ${topicId} in course ${courseId}: ${percentage}%`);
+      return currentProgress[courseId];
+    } catch (error) {
+      console.error(`❌ Error updating topic progress:`, error);
+      throw error;
+    }
+  }
+
+  // Mark topic as completed
+  async markTopicCompleted(userId, courseId, topicId) {
+    return await this.updateTopicProgress(userId, courseId, topicId, 100);
+  }
+
+  // Get user statistics
+  async getUserStats(userId) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentProgress = userData.currentProgress || {};
+        
+        // Calculate statistics
+        const totalCourses = Object.keys(currentProgress).length;
+        const completedCourses = Object.values(currentProgress).filter(course => course.percentage === 100).length;
+        
+        let totalTopics = 0;
+        let completedTopics = 0;
+        
+        Object.values(currentProgress).forEach(courseProgress => {
+          const topics = courseProgress.topics || {};
+          totalTopics += Object.keys(topics).length;
+          completedTopics += Object.values(topics).filter(topic => topic.completed).length;
+        });
+
+        return {
+          totalLearningTime: userData.totalLearningTime || 0,
+          completedSessions: userData.completedSessions || 0,
+          totalCourses,
+          completedCourses,
+          totalTopics,
+          completedTopics,
+          joinedAt: userData.joinedAt,
+          lastActiveAt: userData.lastActiveAt
+        };
+      }
+      
+      return {
+        totalLearningTime: 0,
+        completedSessions: 0,
+        totalCourses: 0,
+        completedCourses: 0,
+        totalTopics: 0,
+        completedTopics: 0
+      };
+    } catch (error) {
+      console.error(`❌ Error fetching user stats:`, error);
+      throw error;
+    }
+  }
+
+  // Search courses by name or category
+  async searchCourses(searchTerm) {
+    try {
+      const courses = await this.getCourses();
+      const searchLower = searchTerm.toLowerCase();
+      
+      return courses.filter(course => 
+        course.name.toLowerCase().includes(searchLower) ||
+        course.description.toLowerCase().includes(searchLower) ||
+        course.category.toLowerCase().includes(searchLower)
+      );
+    } catch (error) {
+      console.error('❌ Error searching courses:', error);
+      throw error;
+    }
+  }
+
+  // Search topics by name
+  async searchTopics(searchTerm, courseId = null) {
+    try {
+      let topics = [];
+      
+      if (courseId) {
+        topics = await this.getTopicsForCourse(courseId);
+      } else {
+        // Get all topics (this might be expensive for large datasets)
+        const topicsRef = collection(db, 'topics');
+        const snapshot = await getDocs(topicsRef);
+        snapshot.forEach(doc => {
+          topics.push({ id: doc.id, ...doc.data() });
+        });
+      }
+      
+      const searchLower = searchTerm.toLowerCase();
+      return topics.filter(topic => 
+        topic.name.toLowerCase().includes(searchLower) ||
+        topic.description.toLowerCase().includes(searchLower)
+      );
+    } catch (error) {
+      console.error('❌ Error searching topics:', error);
+      throw error;
+    }
+  }
+
+  // Clear cache (call this when data might have changed)
+  clearCache() {
+    this.coursesCache.clear();
+    this.topicsCache.clear();
+  }
+
+  // Legacy methods for backward compatibility with existing code
+  async getRoadmap(roadmapId) {
+    return await this.getCourse(roadmapId);
   }
 
   async getRoadmapTopics(roadmapId) {
-    try {
-      await this.initialize();
-      const topics = await topicService.getTopicsForRoadmap(roadmapId);
-      
-      if (!topics || topics.length === 0) {
-        // Fallback to local data
-        const localRoadmap = LEARNING_ROADMAPS[roadmapId];
-        return localRoadmap?.topics || [];
-      }
-      
-      return topics;
-    } catch (error) {
-      console.error('Error getting roadmap topics:', error);
-      const localRoadmap = LEARNING_ROADMAPS[roadmapId];
-      return localRoadmap?.topics || [];
-    }
+    return await this.getTopicsForCourse(roadmapId);
   }
 
-  // ============================================================================
-  // USER PROGRESS OPERATIONS
-  // ============================================================================
-
-  async getUserProgress(roadmapId, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) {
-      // Return mock progress for anonymous users
-      return this.getMockUserProgress(roadmapId);
+  async getUserProgress(roadmapId) {
+    if (!this.currentUserId) {
+      return { topics: {} };
     }
-
-    try {
-      await this.initialize();
-      return await progressService.getUserProgress(uid, roadmapId);
-    } catch (error) {
-      console.error('Error getting user progress:', error);
-      return this.getMockUserProgress(roadmapId);
-    }
-  }
-
-  async updateTopicProgress(roadmapId, topicId, progressData, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) {
-      console.log('Cannot save progress for anonymous user');
-      return;
-    }
-
-    try {
-      await this.initialize();
-      await progressService.updateTopicProgress(uid, roadmapId, topicId, progressData);
-      
-      // Update user stats
-      await this.updateUserStats({
-        totalQuestions: progressData.questionsAnswered || 0,
-        totalCorrectAnswers: progressData.correctAnswers || 0,
-        totalStudyTime: progressData.timeSpent || 0
-      }, uid);
-      
-    } catch (error) {
-      console.error('Error updating topic progress:', error);
-      throw error;
-    }
-  }
-
-  async getAllUserProgress(userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) return [];
-
-    try {
-      await this.initialize();
-      return await progressService.getAllUserProgress(uid);
-    } catch (error) {
-      console.error('Error getting all user progress:', error);
-      return [];
-    }
-  }
-
-  // ============================================================================
-  // ROADMAP ENROLLMENT
-  // ============================================================================
-
-  async enrollUserInRoadmap(roadmapId, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) {
-      console.log('Cannot enroll anonymous user in roadmap');
-      return null;
-    }
-
-    try {
-      await this.initialize();
-      
-      // Check if already enrolled
-      const existingEnrollment = await enrollmentService.getUserRoadmapEnrollment(uid, roadmapId);
-      if (existingEnrollment) {
-        return existingEnrollment;
-      }
-      
-      // Enroll user
-      const enrollment = await enrollmentService.enrollInRoadmap(uid, roadmapId);
-      
-      // Update user stats
-      await this.updateUserStats({ roadmapsStarted: 1 }, uid);
-      
-      return enrollment;
-    } catch (error) {
-      console.error('Error enrolling user in roadmap:', error);
-      throw error;
-    }
-  }
-
-  async getUserEnrollments(userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) return [];
-
-    try {
-      await this.initialize();
-      return await enrollmentService.getUserEnrollments(uid);
-    } catch (error) {
-      console.error('Error getting user enrollments:', error);
-      return [];
-    }
-  }
-
-  // ============================================================================
-  // LEARNING SESSIONS
-  // ============================================================================
-
-  async createLearningSession(sessionData, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) {
-      console.log('Cannot save session for anonymous user');
-      return { id: 'anonymous_' + Date.now(), ...sessionData };
-    }
-
-    try {
-      await this.initialize();
-      const session = await sessionService.createSession(uid, sessionData);
-      
-      // Update user stats
-      await this.updateUserStats({ totalSessions: 1 }, uid);
-      
-      return session;
-    } catch (error) {
-      console.error('Error creating learning session:', error);
-      throw error;
-    }
-  }
-
-  async updateLearningSession(sessionId, updates, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid || sessionId.startsWith('anonymous_')) {
-      console.log('Cannot update session for anonymous user');
-      return;
-    }
-
-    try {
-      await this.initialize();
-      await sessionService.updateSession(sessionId, updates);
-    } catch (error) {
-      console.error('Error updating learning session:', error);
-      throw error;
-    }
-  }
-
-  async getLearningSession(sessionId, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid || sessionId.startsWith('anonymous_')) {
-      return null;
-    }
-
-    try {
-      await this.initialize();
-      return await sessionService.getSession(sessionId);
-    } catch (error) {
-      console.error('Error getting learning session:', error);
-      return null;
-    }
-  }
-
-  async getUserSessions(userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) return [];
-
-    try {
-      await this.initialize();
-      return await sessionService.getUserSessions(uid);
-    } catch (error) {
-      console.error('Error getting user sessions:', error);
-      return [];
-    }
-  }
-
-  async deleteLearningSession(sessionId, userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid || sessionId.startsWith('anonymous_')) {
-      console.log('Cannot delete session for anonymous user');
-      return;
-    }
-
-    try {
-      await this.initialize();
-      await sessionService.deleteSession(sessionId);
-    } catch (error) {
-      console.error('Error deleting learning session:', error);
-      throw error;
-    }
-  }
-
-  // ============================================================================
-  // MIGRATION & UTILITIES
-  // ============================================================================
-
-  async migrateAnonymousUserData(userId, anonymousData) {
-    try {
-      await this.initialize();
-      await firebaseUtils.migrateAnonymousData(userId, anonymousData);
-      this.setUser(userId);
-    } catch (error) {
-      console.error('Error migrating anonymous data:', error);
-      throw error;
-    }
-  }
-
-  // ============================================================================
-  // FALLBACK METHODS (for anonymous users)
-  // ============================================================================
-
-  getMockUserProgress(roadmapId) {
-    // Return the same mock progress structure as before
-    const mockProgress = {
-      "dsa-fundamentals": {
-        1: { completed: false, progress: 75, unlocked: true, started: true, canAdvance: true },
-        2: { completed: false, progress: 35, unlocked: true, started: true, canAdvance: false },
-        3: { completed: false, progress: 0, unlocked: true, started: false, canAdvance: false },
-        4: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        5: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        6: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        7: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        8: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        9: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        10: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        11: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        12: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        13: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        14: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-        15: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false }
-      },
-      // Add other roadmaps...
-    };
     
-    return {
-      userId: 'anonymous',
-      roadmapId,
-      topics: mockProgress[roadmapId] || {},
-      overallProgress: 0,
-      startedAt: null,
-      completedAt: null,
-      totalTimeSpent: 0,
-      currentStreak: 0
-    };
+    const progress = await this.getUserCourseProgress(this.currentUserId, roadmapId);
+    return { topics: progress.topics || {} };
   }
 
-  // Get roadmap data with integrated Firebase topics
-  async getRoadmapWithTopics(roadmapId) {
-    try {
-      const [roadmap, topics] = await Promise.all([
-        this.getRoadmap(roadmapId),
-        this.getRoadmapTopics(roadmapId)
-      ]);
+  async enrollUserInRoadmap(roadmapId, userId) {
+    // Initialize empty progress for the roadmap
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      const currentProgress = userData.currentProgress || {};
       
-      if (!roadmap) return null;
-      
-      return {
-        ...roadmap,
-        topics: topics || []
-      };
-    } catch (error) {
-      console.error('Error getting roadmap with topics:', error);
-      return LEARNING_ROADMAPS[roadmapId] || null;
+      if (!currentProgress[roadmapId]) {
+        currentProgress[roadmapId] = {
+          percentage: 0,
+          topics: {}
+        };
+        
+        await updateDoc(userRef, {
+          currentProgress: currentProgress,
+          updatedAt: serverTimestamp()
+        });
+      }
     }
-  }
-
-  // Analytics methods
-  async getUserAnalytics(userId = null) {
-    const uid = userId || this.currentUserId;
-    if (!uid) return null;
-
-    try {
-      const [profile, progress, sessions] = await Promise.all([
-        this.getUserProfile(uid),
-        this.getAllUserProgress(uid),
-        this.getUserSessions(uid)
-      ]);
-
-      return {
-        profile: profile?.stats || {},
-        progress,
-        recentSessions: sessions.slice(0, 10),
-        totalSessions: sessions.length
-      };
-    } catch (error) {
-      console.error('Error getting user analytics:', error);
-      return null;
-    }
+    
+    return true;
   }
 }
 
-// Create and export a singleton instance
-export const dataService = new DataService();
+// Create and export singleton instance
+const dataService = new DataService();
 export default dataService;
