@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/authAPI';
+import dataService from '../services/dataService';
 
 const AuthContext = createContext();
 
@@ -87,6 +88,18 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('mindmelt_token', response.token);
       localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
       
+      // Initialize Firebase user profile
+      try {
+        await dataService.createUserProfile(response.user.id, {
+          username: response.user.username || response.user.name,
+          email: response.user.email,
+          isAnonymous: false
+        });
+        dataService.setUser(response.user.id);
+      } catch (error) {
+        console.error('Error creating Firebase user profile:', error);
+      }
+      
       if (anonymousUser) {
         console.log('AuthContext: Migrating anonymous progress');
         await migrateAnonymousProgress(response.user);
@@ -115,6 +128,18 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('mindmelt_token', response.token);
       localStorage.setItem('mindmelt_user', JSON.stringify(response.user));
+
+      // Initialize Firebase user profile
+      try {
+        await dataService.createUserProfile(response.user.id, {
+          username: response.user.username || response.user.name || name,
+          email: response.user.email,
+          isAnonymous: false
+        });
+        dataService.setUser(response.user.id);
+      } catch (error) {
+        console.error('Error creating Firebase user profile:', error);
+      }
 
       if (anonymousUser) {
         await migrateAnonymousProgress(response.user);
@@ -169,6 +194,11 @@ export const AuthProvider = ({ children }) => {
           sessions: sessionsData.length,
           progress: progressData
         });
+        
+        // Migrate to Firebase
+        if (anonymousUser) {
+          await dataService.migrateAnonymousUserData(newUser.id, anonymousUser);
+        }
         
         localStorage.removeItem('mindmelt_anonymous_progress');
         localStorage.removeItem('mindmelt_anonymous_sessions');

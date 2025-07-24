@@ -292,11 +292,11 @@ function parseAIResponse(rawResponse) {
   };
 
   try {
-    const levelMatch = rawResponse.match(/###\s*Level\s*(\d+)\s*-\s*([^📝💡🔧🔍⚖️🚀]+)\s*(📝|💡|🔧|🔍|⚖️|🚀)?/i);
+    const levelMatch = rawResponse.match(/###\s*Level\s*(\d+)\s*-\s*([^\n]+)/i);
     if (levelMatch) {
       parsed.level = parseInt(levelMatch[1]);
       parsed.levelName = levelMatch[2].trim();
-      parsed.levelEmoji = levelMatch[3] || '';
+      parsed.levelEmoji = '';
     }
 
     const punMatch = rawResponse.match(/\*\*Pun:\*\*\s*"?([^"\n]+)"?/i);
@@ -337,7 +337,7 @@ function parseAIResponse(rawResponse) {
     } else {
       const cleanContent = rawResponse
         .split(/\*\*Explanation of Approach:\*\*/i)[0]
-        .replace(/###\s*Level\s*\d+[^📝💡🔧🔍⚖️🚀\n]*[📝💡🔧🔍⚖️🚀]?\s*/gi, '')
+        .replace(/###\s*Level\s*\d+[^\n]*\n?/gi, '')
         .replace(/\*\*(Pun|Question):\*\*/gi, '')
         .replace(/["']/g, '')
         .trim();
@@ -422,7 +422,7 @@ Return ONLY this exact JSON format with exactly 5 topics:
     "description": "Brief 40-50 character description",
     "category": "Programming Languages|Web Development|Data Science|AI & ML|Cloud Computing|Mobile Development|Databases|Cybersecurity|Algorithms|DevOps|Blockchain|Game Development",
     "difficulty": "Beginner|Intermediate|Advanced",
-    "icon": "🐍",
+
     "keywords": ["key1", "key2", "key3"]
   }
 ]
@@ -461,7 +461,10 @@ JSON (exactly 5):`;
 
     const validTopics = topics.filter(topic => 
       topic && topic.name && topic.description && topic.category
-    ).slice(0, 5);
+    ).slice(0, 5).map(topic => {
+      const { icon, ...topicWithoutIcon } = topic;
+      return topicWithoutIcon;
+    });
 
     while (validTopics.length < 5) {
       validTopics.push({
@@ -469,7 +472,6 @@ JSON (exactly 5):`;
         description: `Advanced concepts in ${query.trim()}`,
         category: "Computer Science",
         difficulty: "Intermediate",
-        icon: "💻",
         keywords: [query.trim().toLowerCase(), "cs", "programming"]
       });
     }
@@ -663,7 +665,7 @@ ADAPTIVE QUESTIONING RULES:
 RESPONSE FORMAT:
 Always structure your response EXACTLY like this:
 
-### Level [NUMBER] - [LEVEL NAME] [EMOJI]
+### Level [NUMBER] - [LEVEL NAME]
 
 **Pun:** "[Your clever pun or wordplay about the concept]"
 
@@ -796,17 +798,17 @@ Questioning Style: ${styleContext}
 HINT GUIDELINES:
 - Provide a helpful but not complete hint (1-2 sentences max)
 - Don't give away the full answer - guide them toward discovery
-- Use encouraging language with a lightbulb emoji 💡
+- Use encouraging language
 - Focus on the specific concept they're stuck on
 - Give a gentle nudge in the right direction
 - Make it feel supportive, not like giving up
 - Connect to their learning path and style preferences
 
 Examples of good hints:
-💡 "Think about what happens to the data when you need to access it frequently..."
-💡 "Consider the trade-offs between memory usage and processing speed here..."
-💡 "What if you broke this problem down into smaller parts?"
-💡 "Try connecting this concept to something you use in everyday life..."
+"Think about what happens to the data when you need to access it frequently..."
+"Consider the trade-offs between memory usage and processing speed here..."
+"What if you broke this problem down into smaller parts?"
+"Try connecting this concept to something you use in everyday life..."
 
 Your hint for "${concept}":`;
 }

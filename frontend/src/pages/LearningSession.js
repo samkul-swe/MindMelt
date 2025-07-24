@@ -1,7 +1,3 @@
-// ============================================================================
-// pages/LearningSession.js - Progressive Auth Support
-// ============================================================================
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { 
@@ -30,6 +26,7 @@ import { api } from '../services/authAPI';
 import { getSocraticResponse, getHintResponse, assessUnderstandingQuality } from '../services/aiService';
 import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
+import dataService from '../services/dataService';
 import '../styles/pages/learning-session.css'
 
 // Timer Constants
@@ -673,18 +670,22 @@ const LearningSession = () => {
 
   // Initialize session
   useEffect(() => {
+    console.log('Initializing session with:', { sessionId, locationState: location.state });
     initializeSession();
   }, [sessionId, location.state]);
 
   const initializeSession = async () => {
     try {
+      console.log('🔄 Starting initializeSession...', { sessionId, locationState: location.state });
       let sessionInfo = null;
 
       if (sessionId && sessionId !== 'new') {
+        console.log('📖 Loading existing session:', sessionId);
         // Load existing session (only for registered users)
         if (isRegistered) {
           try {
-            sessionInfo = await api.getLearningSession(sessionId);
+            sessionInfo = await dataService.getLearningSession(sessionId);
+            console.log('✅ Loaded existing session:', sessionInfo);
             setMessages(sessionInfo.messages || []);
             setProgress(sessionInfo.progress || []);
             setCorrectStreak(sessionInfo.correctStreak || 0);
@@ -701,27 +702,50 @@ const LearningSession = () => {
               timer.setTimeRemaining(sessionInfo.timerRemaining);
             }
           } catch (error) {
-            console.error('Failed to load session:', error);
-            navigate('/dashboard', { replace: true });
-            return;
+            console.error('❌ Failed to load session:', error);
+            // Don't navigate away, continue with new session instead
+            sessionInfo = location.state;
+            if (!sessionInfo?.isNewSession) {
+              console.log('⚠️ No location state, redirecting to dashboard');
+              navigate('/dashboard', { replace: true });
+              return;
+            }
           }
         } else {
-          // Anonymous users can't load existing sessions
-          navigate('/start', { replace: true });
-          return;
+          console.log('👤 Anonymous user can\'t load existing sessions, checking location state');
+          // For anonymous users, check if we have location state for new session
+          sessionInfo = location.state;
+          if (!sessionInfo?.isNewSession) {
+            console.log('⚠️ No valid session data for anonymous user, redirecting to start');
+            navigate('/start', { replace: true });
+            return;
+          }
         }
       } else {
+        console.log('🆕 Creating new session from location state');
         // New session from location state
         sessionInfo = location.state;
-        if (!sessionInfo?.isNewSession || !sessionInfo?.topicData) {
-          navigate('/start', { replace: true });
+        if (!sessionInfo?.isNewSession || (!sessionInfo?.topicData && !sessionInfo?.selectedTopicData)) {
+          console.error('❌ Invalid session data for new session:', sessionInfo);
+          const redirectPath = isRegistered ? '/dashboard' : '/start';
+          console.log(`🔄 Redirecting to ${redirectPath}`);
+          navigate(redirectPath, { replace: true });
           return;
+        }
+        
+        console.log('✅ Valid new session data found:', sessionInfo);
+        
+        // Ensure we have proper topic data structure
+        if (!sessionInfo.topicData && sessionInfo.selectedTopicData) {
+          console.log('🔄 Copying selectedTopicData to topicData');
+          sessionInfo.topicData = sessionInfo.selectedTopicData;
         }
 
         // Create new session in backend only for registered users
         if (isRegistered) {
           try {
-            const newSession = await api.createLearningSession({
+            console.log('💾 Creating new session in Firebase...');
+            const newSession = await dataService.createLearningSession({
               topicName: sessionInfo.topicData.name,
               topicData: sessionInfo.topicData,
               learningPath: sessionInfo.learningPath,
@@ -730,31 +754,41 @@ const LearningSession = () => {
               exchangeCount: 0
             });
             
-            // Update URL with new session ID
-            navigate(`/learn/${newSession.id}`, { replace: true, state: null });
+            console.log('✅ Session created with ID:', newSession.id);
+            // Update URL with new session ID but don't navigate away from learning
+            window.history.replaceState(null, '', `/learn/${newSession.id}`);
           } catch (error) {
-            console.error('Failed to create session:', error);
-            // Continue with local session
+            console.error('⚠️ Failed to create session in Firebase, continuing with local session:', error);
+            // Continue with local session - don't redirect
           }
+        } else {
+          console.log('👤 Anonymous user - continuing with local session');
         }
       }
 
+      console.log('🎯 Setting session data and starting session...', sessionInfo);
       setSessionData(sessionInfo);
-      setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
+      setCurrentQuestioningStyle(sessionInfo?.questioningStyle || 'socratic');
       
       // Start timer
       timer.setTimerActive(true);
       
       // Get first question if new session
       if (!sessionId || sessionId === 'new') {
+        console.log('❓ Getting first question...');
         await getFirstQuestion(sessionInfo);
       } else {
+        console.log('📚 Using existing session, skipping first question');
         setIsLoadingFirstQuestion(false);
       }
+      
+      console.log('✅ Session initialization complete!');
 
     } catch (error) {
-      console.error('Failed to initialize session:', error);
-      navigate('/start', { replace: true });
+      console.error('❌ Failed to initialize session:', error);
+      const redirectPath = isRegistered ? '/dashboard' : '/start';
+      console.log(`🔄 Error occurred, redirecting to ${redirectPath}`);
+      navigate(redirectPath, { replace: true });
     }
   };
 
@@ -768,8 +802,8 @@ const LearningSession = () => {
     try {
       setIsLoadingFirstQuestion(true);
       
-      const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name;
-      const learningPathName = learningPaths[sessionInfo.learningPath].name;
+      const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name || 'Unknown Topic';
+      const learningPathName = learningPaths[sessionInfo.learningPath]?.name || 'Comprehensive Track';
       
       const firstQuestion = await getSocraticResponse(
         topicName,
@@ -793,7 +827,7 @@ const LearningSession = () => {
       
     } catch (error) {
       console.error('Failed to get first question:', error);
-      const fallbackQuestion = `Welcome to learning ${sessionInfo.topicData?.name || 'this topic'}! 🧠 What would you like to explore first?`;
+      const fallbackQuestion = `Welcome to learning ${sessionInfo?.topicData?.name || sessionInfo?.selectedTopicData?.name || 'this topic'}! 🧠 What would you like to explore first?`;
       const fallbackMessage = createMessage(MESSAGE_TYPES.BOT, fallbackQuestion);
       setMessages([fallbackMessage]);
     } finally {
@@ -848,7 +882,7 @@ const LearningSession = () => {
     hints.setIsRequestingHint(true);
     
     try {
-      const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
       const recentMessages = messages.slice(-6); // Get last 6 messages for context
       const conversationContext = recentMessages.map(msg => 
         `${msg.type === MESSAGE_TYPES.USER ? 'Student' : 'Tutor'}: ${msg.content}`
@@ -928,7 +962,7 @@ const LearningSession = () => {
 
     const saveSession = async () => {
       try {
-        await api.updateLearningSession(sessionId, {
+        await dataService.updateLearningSession(sessionId, {
           messages,
           progress,
           correctStreak,
@@ -973,7 +1007,7 @@ const LearningSession = () => {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
       const botReply = await getSocraticResponse(
         topicName, 
         userInput, 
@@ -1002,6 +1036,28 @@ const LearningSession = () => {
           "🍦✨ Great progress! Your ice cream is refreezing - you've earned more focus time!",
           { isBonus: true }
         )]);
+        
+        // Update topic progress in Firebase
+        if (isRegistered && sessionData.topicData) {
+          try {
+            const newProgress = Math.min(progress.length * 10, 100);
+            await dataService.updateTopicProgress(
+              sessionData.roadmapId || sessionData.topicData.roadmapId,
+              sessionData.topicData.id,
+              {
+                progress: newProgress,
+                unlocked: true,
+                started: true,
+                canAdvance: newProgress >= 70,
+                questionsAnswered: progress.length + 1,
+                correctAnswers: correctStreak,
+                timeSpent: Math.floor((Date.now() - sessionStartTime) / 1000)
+              }
+            );
+          } catch (error) {
+            console.error('Error updating topic progress:', error);
+          }
+        }
       }
       
     } catch (error) {
@@ -1062,7 +1118,7 @@ const LearningSession = () => {
     timer.setTimerActive(true);
     
     const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
-      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle].name}! Starting fresh with new questions and full hints restored.`, 
+      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle]?.name || 'New Style'}! Starting fresh with new questions and full hints restored.`, 
       { isBonus: true }
     );
     setMessages([restartMessage]);
@@ -1074,10 +1130,33 @@ const LearningSession = () => {
   }, [sessionData, timer, hints, getFirstQuestion]);
 
   if (!sessionData) {
+    console.log('SessionData is null/undefined');
     return <LoadingSpinner message="Loading your learning session..." />;
   }
+  
+  if (!sessionData.topicData && !sessionData.selectedTopicData) {
+    console.error('SessionData missing topic data:', sessionData);
+    return (
+      <div className="error-container" style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>Session Error</h2>
+        <p>Topic data is missing. Please try starting a new session.</p>
+        <button onClick={() => navigate('/dashboard')} className="btn btn-primary">
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
-  const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name || 'Unknown Topic';
+  const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
+  const topicIcon = sessionData?.topicData?.icon || sessionData?.selectedTopicData?.icon || '📚';
+  
+  // Debug: Log the critical values to help identify the issue
+  console.log('LearningSession render values:', {
+    learningPath: sessionData.learningPath,
+    currentQuestioningStyle,
+    learningPathExists: !!learningPaths[sessionData.learningPath],
+    questioningStyleExists: !!questioningStyles[currentQuestioningStyle]
+  });
 
   return (
     <div className="learning-session-page">
@@ -1100,7 +1179,7 @@ const LearningSession = () => {
               </div>
               <div className="session-meta">
                 <div className="path-badge">
-                  {learningPaths[sessionData.learningPath].icon} {learningPaths[sessionData.learningPath].name}
+                  {learningPaths[sessionData.learningPath]?.icon || '🎯'} {learningPaths[sessionData.learningPath]?.name || 'Learning Path'}
                 </div>
 
                 <div className="style-selector-container">
@@ -1110,7 +1189,7 @@ const LearningSession = () => {
                     onClick={() => setShowStyleSelector(!showStyleSelector)}
                     title="Click to change questioning style (restarts session)"
                   >
-                    {questioningStyles[currentQuestioningStyle].icon} {questioningStyles[currentQuestioningStyle].name}
+                    {questioningStyles[currentQuestioningStyle]?.icon || '💭'} {questioningStyles[currentQuestioningStyle]?.name || 'Questioning Style'}
                     <span className="dropdown-arrow">🔄</span>
                   </button>
                   
@@ -1133,8 +1212,8 @@ const LearningSession = () => {
                               setShowStyleSelector(false);
                             }}
                           >
-                            <span className="style-option-icon">{style.icon}</span>
-                            <span className="style-option-name">{style.name}</span>
+                            <span className="style-option-icon">{style?.icon || '💭'}</span>
+                            <span className="style-option-name">{style?.name || 'Unknown Style'}</span>
                             {currentQuestioningStyle === key && <span className="current-badge">Current</span>}
                           </button>
                         ))}
@@ -1195,7 +1274,7 @@ const LearningSession = () => {
             {isLoadingFirstQuestion ? (
               <div className="loading-first-question">
                 <div className="loading-spinner"></div>
-                <p>🧠 Preparing your {learningPaths[sessionData.learningPath].name.toLowerCase()} question...</p>
+                <p>🧠 Preparing your {learningPaths[sessionData.learningPath]?.name?.toLowerCase() || 'learning'} question...</p>
               </div>
             ) : (
               <>
@@ -1359,10 +1438,10 @@ const LearningSession = () => {
                         <strong>Topic:</strong> {topicName}
                       </div>
                       <div className="summary-item">
-                        <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath].name}
+                        <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath]?.name || 'Unknown'}
                       </div>
                       <div className="summary-item">
-                        <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
+                        <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle]?.name || 'Unknown'}
                       </div>
                       <div className="summary-item">
                         <strong>Progress:</strong> {exchangeCount} exchanges completed
@@ -1384,11 +1463,11 @@ const LearningSession = () => {
                       {Object.entries(questioningStyles).map(([key, style]) => (
                         <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
                           <div className="style-info-header">
-                            <span className="style-info-icon">{style.icon}</span>
-                            <span className="style-info-name">{style.name}</span>
+                            <span className="style-info-icon">{style?.icon || '💭'}</span>
+                            <span className="style-info-name">{style?.name || 'Unknown Style'}</span>
                             {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
                           </div>
-                          <p className="style-info-desc">{style.description}</p>
+                          <p className="style-info-desc">{style?.description || 'No description available'}</p>
                         </div>
                       ))}
                     </div>

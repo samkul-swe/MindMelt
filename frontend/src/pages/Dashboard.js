@@ -15,7 +15,12 @@ import {
   CheckCircle,
   Shield,
   Mail,
-  Save
+  Save,
+  ArrowLeft,
+  ArrowRight,
+  Star,
+  Play,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
@@ -24,6 +29,93 @@ import { useApiKey } from '../hooks/useApiKey';
 import SearchBar from '../components/SearchBar';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
+
+// Mock user progress data - this would come from your API
+const getUserProgress = (roadmapId) => {
+  // This is mock data - replace with actual API call
+  const mockProgress = {
+    "dsa-fundamentals": {
+      1: { completed: false, progress: 75, unlocked: true, started: true, canAdvance: true },
+      2: { completed: false, progress: 35, unlocked: true, started: true, canAdvance: false },
+      3: { completed: false, progress: 0, unlocked: true, started: false, canAdvance: false },
+      4: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      5: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      6: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      7: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      8: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      9: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      10: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      11: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      12: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      13: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      14: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
+      15: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false }
+    },
+    "web-development": {
+      1: { completed: false, progress: 0, unlocked: true, started: false },
+      2: { completed: false, progress: 0, unlocked: false, started: false }
+    },
+    "machine-learning": {
+      1: { completed: false, progress: 0, unlocked: true, started: false }
+    },
+    "system-design": {
+      1: { completed: false, progress: 0, unlocked: true, started: false }
+    },
+    "android-development": {
+      1: { completed: false, progress: 0, unlocked: true, started: false }
+    },
+    "interview-preparation": {
+      1: { completed: false, progress: 0, unlocked: true, started: false }
+    }
+  };
+  
+  return mockProgress[roadmapId] || {};
+};
+
+// Calculate overall roadmap progress
+const calculateRoadmapProgress = (progress) => {
+  const topics = Object.values(progress);
+  if (topics.length === 0) return 0;
+  const totalProgress = topics.reduce((sum, topic) => sum + topic.progress, 0);
+  return Math.round(totalProgress / topics.length);
+};
+
+// Roadmap topics data
+const roadmapTopics = {
+  "dsa-fundamentals": [
+    { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
+    { id: 2, name: "Linked Lists", difficulty: "Beginner", duration: "2-3 hours", description: "Understand pointer concepts and list operations" },
+    { id: 3, name: "Stacks & Queues", difficulty: "Beginner", duration: "2-3 hours", description: "Learn LIFO and FIFO data structures" },
+    { id: 4, name: "Trees & Binary Trees", difficulty: "Intermediate", duration: "4-5 hours", description: "Explore hierarchical data structures" },
+    { id: 5, name: "Binary Search Trees", difficulty: "Intermediate", duration: "3-4 hours", description: "Efficient searching and sorting with BSTs" },
+    { id: 6, name: "Heaps & Priority Queues", difficulty: "Intermediate", duration: "3-4 hours", description: "Priority-based data structures" },
+    { id: 7, name: "Hash Tables", difficulty: "Intermediate", duration: "3-4 hours", description: "Fast lookups with hashing" },
+    { id: 8, name: "Graphs", difficulty: "Advanced", duration: "5-6 hours", description: "Network representations and traversals" },
+    { id: 9, name: "Dynamic Programming", difficulty: "Advanced", duration: "6-8 hours", description: "Optimization through memoization" },
+    { id: 10, name: "Greedy Algorithms", difficulty: "Advanced", duration: "4-5 hours", description: "Locally optimal choices" },
+    { id: 11, name: "Backtracking", difficulty: "Advanced", duration: "4-5 hours", description: "Systematic solution exploration" },
+    { id: 12, name: "Divide & Conquer", difficulty: "Advanced", duration: "4-5 hours", description: "Break problems into subproblems" },
+    { id: 13, name: "String Algorithms", difficulty: "Advanced", duration: "4-5 hours", description: "Pattern matching and manipulation" },
+    { id: 14, name: "Advanced Graph Algorithms", difficulty: "Expert", duration: "6-7 hours", description: "Shortest paths and network flows" },
+    { id: 15, name: "Computational Complexity", difficulty: "Expert", duration: "3-4 hours", description: "Big O analysis and optimization" }
+  ],
+  "web-development": [
+    { id: 1, name: "HTML Fundamentals", difficulty: "Beginner", duration: "2-3 hours", description: "Structure and semantic markup" },
+    { id: 2, name: "CSS Styling & Layout", difficulty: "Beginner", duration: "4-5 hours", description: "Visual design and responsive layouts" }
+  ],
+  "machine-learning": [
+    { id: 1, name: "Python for ML", difficulty: "Beginner", duration: "4-5 hours", description: "NumPy, Pandas, and basic libraries" }
+  ],
+  "system-design": [
+    { id: 1, name: "Scalability Fundamentals", difficulty: "Intermediate", duration: "3-4 hours", description: "Horizontal vs vertical scaling" }
+  ],
+  "android-development": [
+    { id: 1, name: "Kotlin Fundamentals", difficulty: "Beginner", duration: "4-5 hours", description: "Modern Android programming language" }
+  ],
+  "interview-preparation": [
+    { id: 1, name: "Resume & Portfolio", difficulty: "Beginner", duration: "3-4 hours", description: "Crafting compelling applications" }
+  ]
+};
 
 // Helper function to calculate learning streak
 const calculateStreak = (sessions) => {
@@ -179,6 +271,9 @@ const Dashboard = () => {
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameUpdateSuccess, setUsernameUpdateSuccess] = useState(false);
   const [dailyPun, setDailyPun] = useState(null);
+  const [showRoadmapTopics, setShowRoadmapTopics] = useState(false);
+  const [selectedRoadmap, setSelectedRoadmap] = useState(null);
+  const [userProgress, setUserProgress] = useState({});
 
   const apiKeyManager = useApiKey();
   const topicSearch = useTopicSearch();
@@ -242,6 +337,13 @@ const Dashboard = () => {
     fetchLearningSessions();
     // Initialize daily pun
     setDailyPun(getTechPunPersistent());
+    
+    // Initialize user progress for all roadmaps
+    const allProgress = {};
+    Object.keys(roadmapTopics).forEach(roadmapId => {
+      allProgress[roadmapId] = getUserProgress(roadmapId);
+    });
+    setUserProgress(allProgress);
   }, [fetchLearningSessions]);
 
   // Show upgrade prompt for anonymous users after some time
@@ -350,30 +452,107 @@ const Dashboard = () => {
     }
   };
 
+  const handleRoadmapClick = (roadmapData) => {
+    // Navigate to dedicated roadmap details page
+    navigate(`/roadmap/${roadmapData.roadmapId}`);
+  };
+
   const startNewSession = () => {
-    if (!selectedTopic || !learningPath) return;
-    
-    // Check if this is a roadmap selection
-    if (selectedTopic.roadmapId) {
+    if (selectedTopic?.roadmapId) {
       navigate('/learn', {
         state: {
           isNewSession: true,
           roadmapId: selectedTopic.roadmapId,
           topicData: selectedTopic,
-          learningPath: learningPath,
-          questioningStyle: 'socratic'
+          learningPath: learningPath || 'comprehensive',
+          questioningStyle: 'socratic',
+          skipConfiguration: true
         }
       });
-    } else {
-      // Individual topic selection (fallback)
-      navigate('/learn', {
-        state: {
-          isNewSession: true,
-          topicData: selectedTopic,
-          learningPath: learningPath,
-          questioningStyle: 'socratic'
-        }
-      });
+      setShowNewSession(false);
+    }
+  };
+
+  const handleTopicSelect = (topic) => {
+    const roadmapProgress = userProgress[selectedRoadmap?.roadmapId] || {};
+    const topicProgress = roadmapProgress[topic.id];
+    
+    // Check if topic is unlocked
+    if (!topicProgress?.unlocked) {
+      alert("This topic is locked. Complete previous topics to unlock it!");
+      return;
+    }
+    
+    // Determine initial difficulty based on progress
+    let initialDifficulty = 'beginner';
+    let questioningStyle = 'socratic';
+    
+    if (topicProgress.progress >= 70) {
+      initialDifficulty = 'advanced';
+      questioningStyle = 'challenging';
+    } else if (topicProgress.progress >= 40) {
+      initialDifficulty = 'intermediate';
+      questioningStyle = 'guided';
+    } else if (topicProgress.progress > 0) {
+      initialDifficulty = 'beginner-plus';
+      questioningStyle = 'supportive';
+    }
+
+    // Start learning session directly
+    navigate('/learn', {
+      state: {
+        isNewSession: true,
+        roadmapId: selectedRoadmap.roadmapId,
+        topicData: {
+          ...topic,
+          roadmapName: selectedRoadmap.name,
+          currentProgress: topicProgress?.progress || 0,
+          initialDifficulty: initialDifficulty
+        },
+        learningPath: 'comprehensive', // Default to comprehensive for roadmap topics
+        questioningStyle: questioningStyle,
+        skipConfiguration: true // Skip the configuration modal
+      }
+    });
+  };
+
+  const getTopicStatus = (topic, roadmapProgress) => {
+    const topicProgress = roadmapProgress[topic.id];
+    if (!topicProgress) return 'locked';
+    
+    if (topicProgress.completed) return 'completed';
+    if (topicProgress.progress > 0) return 'in-progress';
+    if (topicProgress.unlocked) return 'available';
+    return 'locked';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return '#10B981';
+      case 'in-progress': return '#F59E0B';
+      case 'available': return '#6366F1';
+      case 'locked': return '#9CA3AF';
+      default: return '#9CA3AF';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return '✅';
+      case 'in-progress': return '⏳';
+      case 'available': return '🚀';
+      case 'locked': return '🔒';
+      default: return '🔒';
+    }
+  };
+
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'Beginner': return '#2ECC71';
+      case 'Intermediate': return '#F39C12';
+      case 'Advanced': return '#E74C3C';
+      case 'Expert': return '#9B59B6';
+      default: return '#95A5A6';
     }
   };
 
@@ -474,30 +653,16 @@ const Dashboard = () => {
               <h2>{dailyPun?.text || "Welcome to MindMelt!"}</h2>
               <p>{dailyPun?.subtitle || "Your AI-powered learning companion"}</p>
             </div>
-          </div>
-          
-          <div className="quick-actions">
-            <button
-              onClick={() => setShowNewSession(true)}
-              className="quick-action-btn primary"
-            >
-              <Sparkles size={24} />
-              <div>
-                <h4>Start Learning</h4>
-                <p>Search any CS topic and begin an AI-powered learning session with personalized questions</p>
-              </div>
-            </button>
-            
-            <button
-              onClick={generateDailySummary}
-              className="quick-action-btn secondary"
-            >
-              <Calendar size={24} />
-              <div>
-                <h4>Yesterday's Summary</h4>
-                <p>{isRegistered ? "View your learning progress and achievements from yesterday" : "Create account to track daily progress and insights"}</p>
-              </div>
-            </button>
+            {isRegistered && (
+              <button
+                onClick={generateDailySummary}
+                className="summary-btn-compact"
+                title="View Yesterday's Summary"
+              >
+                <Calendar size={20} />
+                <span>Yesterday</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -508,221 +673,258 @@ const Dashboard = () => {
             <div className="simple-activity">
               <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
                 <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Select a structured learning path based on GeeksforGeeks roadmaps:</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="roadmap-grid">
                   
                   {/* DSA Fundamentals Roadmap */}
                   <div 
-                    style={{ 
-                      padding: '1.5rem', 
-                      border: '2px solid var(--gray-200)', 
-                      borderRadius: '1rem', 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: 'linear-gradient(135deg, #fff4e6 0%, #ffffff 100%)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.borderColor = '#FF6B35';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(255, 107, 53, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.borderColor = 'var(--gray-200)';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="roadmap-card dsa-fundamentals"
                     onClick={() => {
-                      setSelectedTopic({
+                      handleRoadmapClick({
                         name: "Data Structures & Algorithms Fundamentals",
-                        icon: "🧮",
                         description: "Master the core concepts of DSA from basics to advanced topics",
                         category: "Programming Fundamentals",
                         difficulty: "Beginner to Advanced",
                         roadmapId: "dsa-fundamentals"
                       });
-                      setShowNewSession(true);
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🧮</span>
-                      <div>
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>DSA Fundamentals</h5>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>15 Topics • 8-12 weeks</span>
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">DSA</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">DSA Fundamentals</h5>
+                        <p className="roadmap-category">Programming Fundamentals</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Master core data structures and algorithms from basics to advanced topics</p>
-                    <div style={{ fontSize: '0.75rem', color: '#FF6B35', fontWeight: '600' }}>Beginner to Advanced</div>
+                    <p className="roadmap-description">Master core data structures and algorithms from basics to advanced topics</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        15 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        8-12 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Beginner to Advanced
+                    </div>
                   </div>
 
                   {/* Web Development Roadmap */}
                   <div 
-                    style={{ 
-                      padding: '1.5rem', 
-                      border: '2px solid var(--gray-200)', 
-                      borderRadius: '1rem', 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: 'linear-gradient(135deg, #e6fffe 0%, #ffffff 100%)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.borderColor = '#4ECDC4';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(78, 205, 196, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.borderColor = 'var(--gray-200)';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="roadmap-card web-development"
                     onClick={() => {
-                      setSelectedTopic({
+                      handleRoadmapClick({
                         name: "Complete Web Development",
-                        icon: "🌐",
                         description: "From HTML basics to full-stack web applications",
                         category: "Web Development",
                         difficulty: "Beginner to Advanced",
                         roadmapId: "web-development"
                       });
-                      setShowNewSession(true);
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🌐</span>
-                      <div>
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Web Development</h5>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>14 Topics • 12-16 weeks</span>
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">WEB</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">Web Development</h5>
+                        <p className="roadmap-category">Web Development</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Complete web development from HTML basics to full-stack applications</p>
-                    <div style={{ fontSize: '0.75rem', color: '#4ECDC4', fontWeight: '600' }}>Beginner to Advanced</div>
+                    <p className="roadmap-description">Complete web development from HTML basics to full-stack applications</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        14 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        12-16 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Beginner to Advanced
+                    </div>
                   </div>
 
                   {/* Machine Learning Roadmap */}
                   <div 
-                    style={{ 
-                      padding: '1.5rem', 
-                      border: '2px solid var(--gray-200)', 
-                      borderRadius: '1rem', 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: 'linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.borderColor = '#9B59B6';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(155, 89, 182, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.borderColor = 'var(--gray-200)';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="roadmap-card machine-learning"
                     onClick={() => {
-                      setSelectedTopic({
+                      handleRoadmapClick({
                         name: "Machine Learning Mastery",
-                        icon: "🤖",
                         description: "Complete journey from ML basics to deep learning",
                         category: "Artificial Intelligence",
                         difficulty: "Intermediate to Advanced",
                         roadmapId: "machine-learning"
                       });
-                      setShowNewSession(true);
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🤖</span>
-                      <div>
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Machine Learning</h5>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>12 Topics • 10-14 weeks</span>
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">ML</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">Machine Learning</h5>
+                        <p className="roadmap-category">Artificial Intelligence</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Complete journey from ML basics to deep learning and neural networks</p>
-                    <div style={{ fontSize: '0.75rem', color: '#9B59B6', fontWeight: '600' }}>Intermediate to Advanced</div>
+                    <p className="roadmap-description">Complete journey from ML basics to deep learning and neural networks</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        12 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        10-14 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Intermediate to Advanced
+                    </div>
                   </div>
 
                   {/* System Design Roadmap */}
                   <div 
-                    style={{ 
-                      padding: '1.5rem', 
-                      border: '2px solid var(--gray-200)', 
-                      borderRadius: '1rem', 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: 'linear-gradient(135deg, #ffebee 0%, #ffffff 100%)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.borderColor = '#E74C3C';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.borderColor = 'var(--gray-200)';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="roadmap-card system-design"
                     onClick={() => {
-                      setSelectedTopic({
+                      handleRoadmapClick({
                         name: "System Design Interview Prep",
-                        icon: "🏗️",
                         description: "Master large-scale system design for tech interviews",
                         category: "System Architecture",
                         difficulty: "Advanced",
                         roadmapId: "system-design"
                       });
-                      setShowNewSession(true);
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🏗️</span>
-                      <div>
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>System Design</h5>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>12 Topics • 8-10 weeks</span>
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">SYS</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">System Design</h5>
+                        <p className="roadmap-category">System Architecture</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Master large-scale system design for technical interviews</p>
-                    <div style={{ fontSize: '0.75rem', color: '#E74C3C', fontWeight: '600' }}>Advanced</div>
+                    <p className="roadmap-description">Master large-scale system design for technical interviews</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        12 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        8-10 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Advanced
+                    </div>
                   </div>
 
                   {/* Android Development Roadmap */}
                   <div 
-                    style={{ 
-                      padding: '1.5rem', 
-                      border: '2px solid var(--gray-200)', 
-                      borderRadius: '1rem', 
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: 'linear-gradient(135deg, #e8f5e8 0%, #ffffff 100%)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.borderColor = '#2ECC71';
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(46, 204, 113, 0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.borderColor = 'var(--gray-200)';
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                    className="roadmap-card android-development"
                     onClick={() => {
-                      setSelectedTopic({
+                      handleRoadmapClick({
                         name: "Android App Development",
-                        icon: "📱",
                         description: "Build modern Android applications with Kotlin",
                         category: "Mobile Development",
                         difficulty: "Beginner to Advanced",
                         roadmapId: "android-development"
                       });
-                      setShowNewSession(true);
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <span style={{ fontSize: '2rem' }}>📱</span>
-                      <div>
-                        <h5 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', color: 'var(--gray-800)' }}>Android Development</h5>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>13 Topics • 10-12 weeks</span>
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">AND</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">Android Development</h5>
+                        <p className="roadmap-category">Mobile Development</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'var(--gray-600)', lineHeight: '1.4' }}>Build modern Android applications with Kotlin and Android SDK</p>
-                    <div style={{ fontSize: '0.75rem', color: '#2ECC71', fontWeight: '600' }}>Beginner to Advanced</div>
+                    <p className="roadmap-description">Build modern Android applications with Kotlin and Android SDK</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        13 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        10-12 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Beginner to Advanced
+                    </div>
+                  </div>
+
+                  {/* Interview Preparation Roadmap */}
+                  <div 
+                    className="roadmap-card interview-preparation"
+                    onClick={() => {
+                      handleRoadmapClick({
+                        name: "Interview Preparation Mastery",
+                        description: "Complete technical interview preparation for top tech companies",
+                        category: "Interview Prep",
+                        difficulty: "Intermediate to Advanced",
+                        roadmapId: "interview-preparation"
+                      });
+                    }}
+                  >
+                    <div className="roadmap-card-header">
+                      <div className="roadmap-icon-container">
+                        <span className="roadmap-icon">INT</span>
+                      </div>
+                      <div className="roadmap-title-section">
+                        <h5 className="roadmap-title">Interview Preparation</h5>
+                        <p className="roadmap-category">Interview Prep</p>
+                      </div>
+                      <div className="roadmap-action">
+                        <ChevronRight size={20} />
+                      </div>
+                    </div>
+                    <p className="roadmap-description">Complete technical interview preparation for FAANG and top tech companies</p>
+                    <div className="roadmap-meta">
+                      <span className="meta-item">
+                        <BookOpen size={14} />
+                        16 Topics
+                      </span>
+                      <span className="meta-item">
+                        <Clock size={14} />
+                        12-16 weeks
+                      </span>
+                    </div>
+                    <div className="difficulty-badge">
+                      <Target size={12} />
+                      Intermediate to Advanced
+                    </div>
                   </div>
                   
                 </div>
@@ -947,16 +1149,6 @@ const Dashboard = () => {
               >
                 Close
               </button>
-              <button
-                onClick={() => {
-                  setShowDailySummary(false);
-                  setShowNewSession(true);
-                }}
-                className="btn btn-primary"
-              >
-                <Plus size={16} />
-                Start New Session
-              </button>
             </div>
           </div>
         </div>
@@ -1057,6 +1249,130 @@ const Dashboard = () => {
                 <Sparkles size={16} />
                 Start Roadmap Journey
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Topic Selection Modal */}
+      {showRoadmapTopics && selectedRoadmap && (
+        <div className="modal-overlay" onClick={() => setShowRoadmapTopics(false)}>
+          <div className="modal-content topics-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <button 
+                className="back-btn"
+                onClick={() => setShowRoadmapTopics(false)}
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="modal-title">
+                <span className="modal-icon">{selectedRoadmap.icon}</span>
+                <div>
+                  <h2>{selectedRoadmap.name}</h2>
+                  <p>Choose a topic to start learning</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-body">
+              <div className="roadmap-progress-overview">
+                <div className="progress-stats">
+                  <div className="stat-item">
+                    <span className="stat-number">{Object.values(userProgress[selectedRoadmap?.roadmapId] || {}).filter(p => p.completed).length}</span>
+                    <span className="stat-label">Completed</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">{Object.values(userProgress[selectedRoadmap?.roadmapId] || {}).filter(p => p.progress > 0 && !p.completed).length}</span>
+                    <span className="stat-label">In Progress</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">{Object.values(userProgress[selectedRoadmap?.roadmapId] || {}).filter(p => p.unlocked).length}</span>
+                    <span className="stat-label">Unlocked</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">{roadmapTopics[selectedRoadmap.roadmapId]?.length || 0}</span>
+                    <span className="stat-label">Total Topics</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="topics-list">
+                {roadmapTopics[selectedRoadmap.roadmapId]?.map((topic, index) => {
+                  const roadmapProgress = userProgress[selectedRoadmap?.roadmapId] || {};
+                  const status = getTopicStatus(topic, roadmapProgress);
+                  const topicProgress = roadmapProgress[topic.id];
+                  const isClickable = status !== 'locked';
+                  
+                  return (
+                    <div
+                      key={topic.id}
+                      className={`topic-item ${status}`}
+                      onClick={() => isClickable && handleTopicSelect(topic)}
+                    >
+                      {/* Topic Number */}
+                      <div 
+                        className="topic-number" 
+                        style={{ background: status === 'locked' ? '#9CA3AF' : getStatusColor(status) }}
+                      >
+                        {status === 'locked' ? '🔒' : index + 1}
+                      </div>
+                      
+                      {/* Main Content */}
+                      <div className="topic-main">
+                        <div className="topic-header">
+                          <h3 className="topic-title">{topic.name}</h3>
+                          <div className="topic-status">{getStatusIcon(status)}</div>
+                        </div>
+                        
+                        <p className="topic-description">{topic.description}</p>
+                        
+                        {/* Progress Bar - only for unlocked topics */}
+                        {status !== 'locked' && (
+                          <div className="topic-progress">
+                            <div className="progress-bar">
+                              <div 
+                                className="progress-fill" 
+                                style={{ 
+                                  width: `${topicProgress?.progress || 0}%`,
+                                  background: getStatusColor(status)
+                                }}
+                              />
+                            </div>
+                            <span className="progress-text">
+                              {topicProgress?.progress || 0}%
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Meta Information */}
+                        <div className="topic-meta">
+                          <span 
+                            className="difficulty-tag"
+                            style={{ 
+                              backgroundColor: `${getDifficultyColor(topic.difficulty)}20`,
+                              color: getDifficultyColor(topic.difficulty)
+                            }}
+                          >
+                            {topic.difficulty}
+                          </span>
+                          <span className="duration-tag">
+                            <Clock size={12} />
+                            {topic.duration}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Action Button */}
+                      <div className="topic-action">
+                        {status === 'locked' ? 'Locked' :
+                         status === 'completed' ? 'Review' :
+                         status === 'in-progress' ? 'Continue' :
+                         'Start'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

@@ -7,6 +7,7 @@ import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import LearningSession from './pages/LearningSession';
 import InstantStart from './pages/InstantStart';
+import RoadmapDetails from './pages/RoadmapDetails';
 import './styles/globals/index.css'
 
 function App() {
@@ -33,6 +34,13 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute allowAnonymous={true}>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Roadmap details route - allow anonymous users */}
+            <Route path="/roadmap/:roadmapId" element={
+              <ProtectedRoute allowAnonymous={true}>
+                <RoadmapDetails />
               </ProtectedRoute>
             } />
             

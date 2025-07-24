@@ -5,7 +5,6 @@ export const CS_TOPICS_DATABASE = [
   // Programming Languages
   { 
     name: "JavaScript", 
-    icon: "🟨", 
     category: "Programming Languages", 
     difficulty: "Beginner", 
     description: "Dynamic programming language for web development, both frontend and backend",
@@ -13,7 +12,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Python", 
-    icon: "🐍", 
     category: "Programming Languages", 
     difficulty: "Beginner", 
     description: "High-level programming language popular for data science, AI, and web development",
@@ -21,7 +19,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Java", 
-    icon: "☕", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Object-oriented programming language used for enterprise applications and Android development",
@@ -29,7 +26,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "C++", 
-    icon: "⚙️", 
     category: "Programming Languages", 
     difficulty: "Advanced", 
     description: "Low-level programming language for system programming and performance-critical applications",
@@ -37,7 +33,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "C Programming", 
-    icon: "🔧", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Foundational programming language for system programming and understanding computer fundamentals",
@@ -45,7 +40,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "TypeScript", 
-    icon: "📘", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Statically typed superset of JavaScript that adds type safety to web development",
@@ -53,7 +47,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Go", 
-    icon: "🐹", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Modern programming language designed for concurrency and cloud applications",
@@ -61,7 +54,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Rust", 
-    icon: "🦀", 
     category: "Programming Languages", 
     difficulty: "Advanced", 
     description: "Systems programming language focused on safety, speed, and concurrency",
@@ -69,7 +61,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Swift", 
-    icon: "🍎", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Apple's programming language for iOS, macOS, and other Apple platform development",
@@ -77,7 +68,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Kotlin", 
-    icon: "🎯", 
     category: "Programming Languages", 
     difficulty: "Intermediate", 
     description: "Modern programming language for Android development and JVM applications",
@@ -87,7 +77,6 @@ export const CS_TOPICS_DATABASE = [
   // Web Development
   { 
     name: "React", 
-    icon: "⚛️", 
     category: "Web Development", 
     difficulty: "Intermediate", 
     description: "Popular JavaScript library for building user interfaces and single-page applications",
@@ -95,7 +84,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Vue.js", 
-    icon: "💚", 
     category: "Web Development", 
     difficulty: "Beginner", 
     description: "Progressive JavaScript framework for building user interfaces",
@@ -103,7 +91,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Angular", 
-    icon: "🅰️", 
     category: "Web Development", 
     difficulty: "Advanced", 
     description: "Full-featured TypeScript framework for building large-scale web applications",
@@ -111,7 +98,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Node.js", 
-    icon: "🟢", 
     category: "Web Development", 
     difficulty: "Intermediate", 
     description: "JavaScript runtime for building server-side applications and APIs",
@@ -119,7 +105,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "HTML & CSS", 
-    icon: "🎨", 
     category: "Web Development", 
     difficulty: "Beginner", 
     description: "Fundamental technologies for creating and styling web pages",
@@ -127,7 +112,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "REST APIs", 
-    icon: "🔌", 
     category: "Web Development", 
     difficulty: "Intermediate", 
     description: "Architectural style for designing networked applications using HTTP methods",
@@ -135,7 +119,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "GraphQL", 
-    icon: "📊", 
     category: "Web Development", 
     difficulty: "Intermediate", 
     description: "Query language and runtime for APIs that allows clients to request specific data",
@@ -143,7 +126,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "WebSockets", 
-    icon: "🔄", 
     category: "Web Development", 
     difficulty: "Intermediate", 
     description: "Protocol for real-time, bidirectional communication between client and server",
@@ -153,7 +135,6 @@ export const CS_TOPICS_DATABASE = [
   // Data Structures & Algorithms
   { 
     name: "Arrays and Lists", 
-    icon: "📋", 
     category: "Data Structures", 
     difficulty: "Beginner", 
     description: "Linear data structures for storing collections of elements",
@@ -161,7 +142,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Linked Lists", 
-    icon: "🔗", 
     category: "Data Structures", 
     difficulty: "Beginner", 
     description: "Linear data structure where elements are stored in nodes with pointers",
@@ -169,7 +149,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Stacks and Queues", 
-    icon: "📚", 
     category: "Data Structures", 
     difficulty: "Beginner", 
     description: "LIFO and FIFO data structures for managing elements in specific order",
@@ -177,7 +156,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Hash Tables", 
-    icon: "🗂️", 
     category: "Data Structures", 
     difficulty: "Intermediate", 
     description: "Data structure that uses hash functions to map keys to values for fast lookup",
@@ -185,7 +163,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Binary Trees", 
-    icon: "🌳", 
     category: "Data Structures", 
     difficulty: "Intermediate", 
     description: "Hierarchical data structure where each node has at most two children",
@@ -193,7 +170,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Graphs", 
-    icon: "🕸️", 
     category: "Data Structures", 
     difficulty: "Advanced", 
     description: "Non-linear data structure consisting of vertices connected by edges",
@@ -201,7 +177,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Heaps", 
-    icon: "⛰️", 
     category: "Data Structures", 
     difficulty: "Intermediate", 
     description: "Complete binary tree that satisfies the heap property for priority operations",
@@ -209,7 +184,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Sorting Algorithms", 
-    icon: "🔢", 
     category: "Algorithms", 
     difficulty: "Intermediate", 
     description: "Algorithms for arranging elements in a specific order",
@@ -217,7 +191,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Search Algorithms", 
-    icon: "🔍", 
     category: "Algorithms", 
     difficulty: "Beginner", 
     description: "Algorithms for finding elements in data structures",
@@ -225,7 +198,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Dynamic Programming", 
-    icon: "🧩", 
     category: "Algorithms", 
     difficulty: "Advanced", 
     description: "Optimization technique that solves complex problems by breaking them into subproblems",
@@ -235,7 +207,6 @@ export const CS_TOPICS_DATABASE = [
   // Machine Learning & AI
   { 
     name: "Machine Learning Basics", 
-    icon: "🤖", 
     category: "Machine Learning", 
     difficulty: "Intermediate", 
     description: "Fundamental concepts of algorithms that learn patterns from data",
@@ -243,7 +214,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Neural Networks", 
-    icon: "🧠", 
     category: "Machine Learning", 
     difficulty: "Advanced", 
     description: "Computing systems inspired by biological neural networks",
@@ -251,7 +221,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Natural Language Processing", 
-    icon: "💬", 
     category: "Machine Learning", 
     difficulty: "Advanced", 
     description: "AI field focused on interaction between computers and human language",
@@ -259,7 +228,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Computer Vision", 
-    icon: "👁️", 
     category: "Machine Learning", 
     difficulty: "Advanced", 
     description: "AI field that trains computers to interpret and understand visual information",
@@ -267,7 +235,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Data Science", 
-    icon: "📊", 
     category: "Machine Learning", 
     difficulty: "Intermediate", 
     description: "Interdisciplinary field using scientific methods to extract insights from data",
@@ -277,7 +244,6 @@ export const CS_TOPICS_DATABASE = [
   // Databases
   { 
     name: "SQL Databases", 
-    icon: "🗄️", 
     category: "Databases", 
     difficulty: "Beginner", 
     description: "Relational databases that use SQL for managing structured data",
@@ -285,7 +251,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "NoSQL Databases", 
-    icon: "📄", 
     category: "Databases", 
     difficulty: "Intermediate", 
     description: "Non-relational databases designed for flexible, scalable data storage",
@@ -293,7 +258,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Database Design", 
-    icon: "🏗️", 
     category: "Databases", 
     difficulty: "Intermediate", 
     description: "Principles and practices for designing efficient database schemas",
@@ -303,7 +267,6 @@ export const CS_TOPICS_DATABASE = [
   // System Design
   { 
     name: "System Architecture", 
-    icon: "🏛️", 
     category: "System Design", 
     difficulty: "Advanced", 
     description: "High-level design of complex software systems and their components",
@@ -311,7 +274,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Microservices", 
-    icon: "🧱", 
     category: "System Design", 
     difficulty: "Advanced", 
     description: "Architectural approach for building applications as independent services",
@@ -319,7 +281,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Load Balancing", 
-    icon: "⚖️", 
     category: "System Design", 
     difficulty: "Intermediate", 
     description: "Distributing incoming requests across multiple servers",
@@ -327,7 +288,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Caching Strategies", 
-    icon: "💾", 
     category: "System Design", 
     difficulty: "Intermediate", 
     description: "Techniques for storing frequently accessed data for faster retrieval",
@@ -337,7 +297,6 @@ export const CS_TOPICS_DATABASE = [
   // DevOps & Cloud
   { 
     name: "Docker", 
-    icon: "🐳", 
     category: "DevOps", 
     difficulty: "Intermediate", 
     description: "Containerization platform for packaging applications and dependencies",
@@ -345,7 +304,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Kubernetes", 
-    icon: "☸️", 
     category: "DevOps", 
     difficulty: "Advanced", 
     description: "Container orchestration platform for automating deployment and scaling",
@@ -353,7 +311,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "AWS Cloud Services", 
-    icon: "☁️", 
     category: "Cloud Computing", 
     difficulty: "Intermediate", 
     description: "Amazon's cloud computing platform and web services",
@@ -361,7 +318,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "CI/CD Pipelines", 
-    icon: "🔄", 
     category: "DevOps", 
     difficulty: "Intermediate", 
     description: "Continuous Integration and Continuous Deployment practices",
@@ -369,7 +325,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Infrastructure as Code", 
-    icon: "📜", 
     category: "DevOps", 
     difficulty: "Advanced", 
     description: "Managing and provisioning infrastructure through code",
@@ -379,7 +334,6 @@ export const CS_TOPICS_DATABASE = [
   // Security
   { 
     name: "Cybersecurity Basics", 
-    icon: "🛡️", 
     category: "Security", 
     difficulty: "Intermediate", 
     description: "Fundamental principles of protecting systems and data from threats",
@@ -387,7 +341,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Cryptography", 
-    icon: "🔐", 
     category: "Security", 
     difficulty: "Advanced", 
     description: "Mathematical techniques for securing communication and data",
@@ -395,7 +348,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Web Security", 
-    icon: "🌐", 
     category: "Security", 
     difficulty: "Intermediate", 
     description: "Security practices for web applications and services",
@@ -405,7 +357,6 @@ export const CS_TOPICS_DATABASE = [
   // Mobile Development
   { 
     name: "Android Development", 
-    icon: "🤖", 
     category: "Mobile Development", 
     difficulty: "Intermediate", 
     description: "Building applications for Android mobile devices",
@@ -413,7 +364,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "iOS Development", 
-    icon: "📱", 
     category: "Mobile Development", 
     difficulty: "Intermediate", 
     description: "Building applications for iPhone and iPad devices",
@@ -421,7 +371,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "React Native", 
-    icon: "📲", 
     category: "Mobile Development", 
     difficulty: "Intermediate", 
     description: "Cross-platform mobile app development using React",
@@ -429,7 +378,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Flutter", 
-    icon: "🦋", 
     category: "Mobile Development", 
     difficulty: "Intermediate", 
     description: "Google's UI toolkit for building cross-platform applications",
@@ -439,7 +387,6 @@ export const CS_TOPICS_DATABASE = [
   // Emerging Technologies
   { 
     name: "Blockchain", 
-    icon: "⛓️", 
     category: "Emerging Technologies", 
     difficulty: "Advanced", 
     description: "Distributed ledger technology for secure, transparent transactions",
@@ -447,7 +394,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Internet of Things", 
-    icon: "🌐", 
     category: "Emerging Technologies", 
     difficulty: "Intermediate", 
     description: "Network of interconnected devices that collect and exchange data",
@@ -455,7 +401,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Quantum Computing", 
-    icon: "⚛️", 
     category: "Emerging Technologies", 
     difficulty: "Advanced", 
     description: "Computing paradigm using quantum mechanical phenomena",
@@ -465,7 +410,6 @@ export const CS_TOPICS_DATABASE = [
   // Software Engineering Practices
   { 
     name: "Version Control (Git)", 
-    icon: "📝", 
     category: "Software Engineering", 
     difficulty: "Beginner", 
     description: "System for tracking changes in source code during development",
@@ -473,7 +417,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Software Testing", 
-    icon: "🧪", 
     category: "Software Engineering", 
     difficulty: "Intermediate", 
     description: "Process of evaluating software to detect defects and ensure quality",
@@ -481,7 +424,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Agile Development", 
-    icon: "🏃", 
     category: "Software Engineering", 
     difficulty: "Beginner", 
     description: "Iterative development methodology emphasizing collaboration and adaptability",
@@ -489,7 +431,6 @@ export const CS_TOPICS_DATABASE = [
   },
   { 
     name: "Design Patterns", 
-    icon: "🎯", 
     category: "Software Engineering", 
     difficulty: "Advanced", 
     description: "Reusable solutions to common problems in software design",

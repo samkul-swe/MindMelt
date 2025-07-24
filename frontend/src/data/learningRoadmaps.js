@@ -6,7 +6,6 @@ export const LEARNING_ROADMAPS = {
     id: "dsa-fundamentals",
     title: "Data Structures & Algorithms Fundamentals",
     description: "Master the core concepts of DSA from basics to advanced topics",
-    icon: "🧮",
     difficulty: "Beginner to Advanced",
     estimatedTime: "8-12 weeks",
     category: "Programming Fundamentals",
@@ -17,7 +16,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 1,
         name: "Introduction to Data Structures",
-        icon: "📊",
         description: "Understanding what data structures are and why they matter",
         difficulty: "Beginner",
         estimatedTime: "2-3 hours",
@@ -27,7 +25,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 2,
         name: "Arrays and Strings",
-        icon: "📋",
         description: "Working with linear data structures - arrays and string manipulation",
         difficulty: "Beginner",
         estimatedTime: "4-5 hours",
@@ -37,7 +34,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 3,
         name: "Linked Lists",
-        icon: "🔗",
         description: "Understanding pointer-based data structures",
         difficulty: "Beginner",
         estimatedTime: "3-4 hours",
@@ -47,7 +43,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 4,
         name: "Stacks and Queues",
-        icon: "📚",
         description: "LIFO and FIFO data structures with practical applications",
         difficulty: "Beginner",
         estimatedTime: "3-4 hours",
@@ -57,7 +52,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 5,
         name: "Recursion and Backtracking",
-        icon: "🔄",
         description: "Master recursive thinking and backtracking algorithms",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -67,7 +61,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 6,
         name: "Binary Trees",
-        icon: "🌳",
         description: "Hierarchical data structures and tree traversals",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -77,7 +70,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 7,
         name: "Binary Search Trees",
-        icon: "🔍",
         description: "Efficient searching and sorting with BSTs",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -87,7 +79,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 8,
         name: "Heaps and Priority Queues",
-        icon: "⛰️",
         description: "Understanding heap data structure and priority queues",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -97,7 +88,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 9,
         name: "Hash Tables and Hashing",
-        icon: "🗂️",
         description: "Fast data retrieval using hash functions",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -107,7 +97,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 10,
         name: "Graphs - Representation and Traversal",
-        icon: "🕸️",
         description: "Graph data structures, BFS, and DFS algorithms",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -117,7 +106,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 11,
         name: "Sorting Algorithms",
-        icon: "🔢",
         description: "Comparison and non-comparison based sorting techniques",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -127,7 +115,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 12,
         name: "Searching Algorithms",
-        icon: "🎯",
         description: "Linear and binary search techniques",
         difficulty: "Beginner",
         estimatedTime: "3-4 hours",
@@ -137,7 +124,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 13,
         name: "Dynamic Programming",
-        icon: "🧩",
         description: "Optimization technique for solving complex problems",
         difficulty: "Advanced",
         estimatedTime: "6-8 hours",
@@ -147,7 +133,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 14,
         name: "Greedy Algorithms",
-        icon: "🎯",
         description: "Making locally optimal choices for global optimization",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -157,7 +142,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 15,
         name: "Graph Algorithms",
-        icon: "🗺️",
         description: "Advanced graph algorithms - Dijkstra, MST, etc.",
         difficulty: "Advanced",
         estimatedTime: "6-7 hours",
@@ -167,11 +151,186 @@ export const LEARNING_ROADMAPS = {
     ]
   },
 
+  "interview-preparation": {
+    id: "interview-preparation",
+    title: "Complete Interview Preparation",
+    description: "Comprehensive preparation for technical interviews at top tech companies",
+    difficulty: "Intermediate to Advanced",
+    estimatedTime: "12-16 weeks",
+    category: "Interview Preparation",
+    color: "#F39C12",
+    prerequisites: ["Basic programming knowledge", "Data structures basics", "Problem-solving skills"],
+    skills: ["Algorithmic Thinking", "System Design", "Behavioral Interview", "Coding Interview"],
+    topics: [
+      {
+        id: 1,
+        name: "Interview Fundamentals",
+        description: "Understanding the interview process, types of questions, and preparation strategy",
+        difficulty: "Beginner",
+        estimatedTime: "2-3 hours",
+        keywords: ["interview process", "preparation strategy", "question types", "fundamentals"],
+        isCompleted: false
+      },
+      {
+        id: 2,
+        name: "Time and Space Complexity Analysis",
+        description: "Master Big O notation, time complexity, and space complexity analysis",
+        difficulty: "Intermediate",
+        estimatedTime: "4-5 hours",
+        keywords: ["big o", "time complexity", "space complexity", "analysis", "optimization"],
+        isCompleted: false
+      },
+      {
+        id: 3,
+        name: "Array and String Problems",
+        description: "Essential array and string manipulation problems commonly asked in interviews",
+        difficulty: "Beginner",
+        estimatedTime: "6-8 hours",
+        keywords: ["arrays", "strings", "two pointers", "sliding window", "manipulation"],
+        isCompleted: false
+      },
+      {
+        id: 4,
+        name: "Linked List Interview Problems",
+        description: "Classic linked list problems: reversal, cycle detection, merging",
+        difficulty: "Intermediate",
+        estimatedTime: "5-6 hours",
+        keywords: ["linked list", "reversal", "cycle detection", "merging", "pointers"],
+        isCompleted: false
+      },
+      {
+        id: 5,
+        name: "Stack and Queue Problems",
+        description: "Stack and queue based problems including valid parentheses, monotonic stack",
+        difficulty: "Intermediate",
+        estimatedTime: "4-5 hours",
+        keywords: ["stack", "queue", "parentheses", "monotonic stack", "deque"],
+        isCompleted: false
+      },
+      {
+        id: 6,
+        name: "Binary Tree and BST Problems",
+        description: "Tree traversals, path problems, validation, and construction problems",
+        difficulty: "Intermediate",
+        estimatedTime: "6-7 hours",
+        keywords: ["binary tree", "bst", "traversal", "path problems", "validation"],
+        isCompleted: false
+      },
+      {
+        id: 7,
+        name: "Hash Table and HashMap Problems",
+        description: "Hash-based solutions for frequency counting, anagrams, and lookup problems",
+        difficulty: "Intermediate",
+        estimatedTime: "4-5 hours",
+        keywords: ["hash table", "hashmap", "frequency", "anagrams", "lookup"],
+        isCompleted: false
+      },
+      {
+        id: 8,
+        name: "Two Pointers and Sliding Window",
+        description: "Master two-pointer technique and sliding window for array and string problems",
+        difficulty: "Intermediate",
+        estimatedTime: "5-6 hours",
+        keywords: ["two pointers", "sliding window", "subarray", "substring", "optimization"],
+        isCompleted: false
+      },
+      {
+        id: 9,
+        name: "Binary Search and Variants",
+        description: "Binary search on arrays, search in rotated arrays, and peak finding",
+        difficulty: "Intermediate",
+        estimatedTime: "4-5 hours",
+        keywords: ["binary search", "rotated array", "peak finding", "search variants"],
+        isCompleted: false
+      },
+      {
+        id: 10,
+        name: "Recursion and Backtracking",
+        description: "Recursive solutions, backtracking for permutations, combinations, and puzzles",
+        difficulty: "Advanced",
+        estimatedTime: "6-7 hours",
+        keywords: ["recursion", "backtracking", "permutations", "combinations", "puzzles"],
+        isCompleted: false
+      },
+      {
+        id: 11,
+        name: "Dynamic Programming Patterns",
+        description: "Classic DP patterns: knapsack, LIS, LCS, matrix chain multiplication",
+        difficulty: "Advanced",
+        estimatedTime: "8-10 hours",
+        keywords: ["dynamic programming", "dp", "knapsack", "lis", "lcs", "optimization"],
+        isCompleted: false
+      },
+      {
+        id: 12,
+        name: "Graph Algorithms for Interviews",
+        description: "DFS, BFS, shortest path, topological sort, and cycle detection",
+        difficulty: "Advanced",
+        estimatedTime: "6-8 hours",
+        keywords: ["graph", "dfs", "bfs", "shortest path", "topological sort", "cycles"],
+        isCompleted: false
+      },
+      {
+        id: 13,
+        name: "Greedy Algorithm Problems",
+        description: "Greedy approach for interval scheduling, activity selection, and optimization",
+        difficulty: "Advanced",
+        estimatedTime: "4-5 hours",
+        keywords: ["greedy", "interval scheduling", "activity selection", "optimization"],
+        isCompleted: false
+      },
+      {
+        id: 14,
+        name: "Heap and Priority Queue Problems",
+        description: "Top K problems, merge K lists, median finding using heaps",
+        difficulty: "Advanced",
+        estimatedTime: "5-6 hours",
+        keywords: ["heap", "priority queue", "top k", "merge", "median"],
+        isCompleted: false
+      },
+      {
+        id: 15,
+        name: "System Design Fundamentals",
+        description: "Basics of system design interviews: scalability, load balancing, databases",
+        difficulty: "Advanced",
+        estimatedTime: "6-7 hours",
+        keywords: ["system design", "scalability", "load balancing", "databases", "architecture"],
+        isCompleted: false
+      },
+      {
+        id: 16,
+        name: "Behavioral Interview Preparation",
+        description: "STAR method, leadership principles, and common behavioral questions",
+        difficulty: "Intermediate",
+        estimatedTime: "4-5 hours",
+        keywords: ["behavioral", "star method", "leadership", "teamwork", "communication"],
+        isCompleted: false
+      },
+      {
+        id: 17,
+        name: "Mock Interview Practice",
+        description: "Practice sessions, common mistakes, time management, and interview tips",
+        difficulty: "Intermediate",
+        estimatedTime: "5-6 hours",
+        keywords: ["mock interview", "practice", "time management", "tips", "mistakes"],
+        isCompleted: false
+      },
+      {
+        id: 18,
+        name: "Company-Specific Preparation",
+        description: "FAANG-specific prep, company culture, and specialized question patterns",
+        difficulty: "Advanced",
+        estimatedTime: "6-8 hours",
+        keywords: ["faang", "company specific", "culture", "question patterns", "preparation"],
+        isCompleted: false
+      }
+    ]
+  },
+
   "web-development": {
     id: "web-development",
     title: "Complete Web Development",
     description: "From HTML basics to full-stack web applications",
-    icon: "🌐",
     difficulty: "Beginner to Advanced",
     estimatedTime: "12-16 weeks",
     category: "Web Development",
@@ -182,7 +341,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 1,
         name: "HTML Fundamentals",
-        icon: "📄",
         description: "Structure and markup of web pages",
         difficulty: "Beginner",
         estimatedTime: "3-4 hours",
@@ -192,7 +350,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 2,
         name: "CSS Styling and Layout",
-        icon: "🎨",
         description: "Styling web pages with CSS and modern layout techniques",
         difficulty: "Beginner",
         estimatedTime: "5-6 hours",
@@ -202,7 +359,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 3,
         name: "JavaScript Basics",
-        icon: "🟨",
         description: "Programming fundamentals with JavaScript",
         difficulty: "Beginner",
         estimatedTime: "6-8 hours",
@@ -212,7 +368,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 4,
         name: "Advanced JavaScript",
-        icon: "⚡",
         description: "ES6+, async/await, closures, and advanced concepts",
         difficulty: "Intermediate",
         estimatedTime: "8-10 hours",
@@ -222,7 +377,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 5,
         name: "React Fundamentals",
-        icon: "⚛️",
         description: "Building user interfaces with React",
         difficulty: "Intermediate",
         estimatedTime: "8-10 hours",
@@ -232,7 +386,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 6,
         name: "React Hooks and State Management",
-        icon: "🎣",
         description: "Modern React patterns and state management",
         difficulty: "Intermediate",
         estimatedTime: "6-8 hours",
@@ -242,7 +395,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 7,
         name: "Node.js and Express",
-        icon: "🟢",
         description: "Server-side JavaScript development",
         difficulty: "Intermediate",
         estimatedTime: "6-8 hours",
@@ -252,7 +404,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 8,
         name: "RESTful APIs",
-        icon: "🔌",
         description: "Building and consuming REST APIs",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -262,7 +413,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 9,
         name: "Database Integration",
-        icon: "🗄️",
         description: "Working with databases in web applications",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -272,7 +422,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 10,
         name: "Authentication and Security",
-        icon: "🔐",
         description: "User authentication and web security practices",
         difficulty: "Advanced",
         estimatedTime: "6-7 hours",
@@ -282,7 +431,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 11,
         name: "Frontend Build Tools",
-        icon: "🛠️",
         description: "Webpack, Vite, and modern build processes",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -292,7 +440,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 12,
         name: "Testing and Debugging",
-        icon: "🧪",
         description: "Unit testing, integration testing, and debugging techniques",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -302,7 +449,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 13,
         name: "Deployment and DevOps",
-        icon: "🚀",
         description: "Deploying web applications to production",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -312,7 +458,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 14,
         name: "Performance Optimization",
-        icon: "⚡",
         description: "Optimizing web application performance",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -326,7 +471,6 @@ export const LEARNING_ROADMAPS = {
     id: "machine-learning",
     title: "Machine Learning Mastery",
     description: "Complete journey from ML basics to deep learning",
-    icon: "🤖",
     difficulty: "Intermediate to Advanced",
     estimatedTime: "10-14 weeks",
     category: "Artificial Intelligence",
@@ -337,7 +481,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 1,
         name: "Introduction to Machine Learning",
-        icon: "🎯",
         description: "Understanding ML concepts, types, and applications",
         difficulty: "Beginner",
         estimatedTime: "3-4 hours",
@@ -347,7 +490,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 2,
         name: "Python for Data Science",
-        icon: "🐍",
         description: "NumPy, Pandas, and Matplotlib for data manipulation",
         difficulty: "Beginner",
         estimatedTime: "6-8 hours",
@@ -357,7 +499,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 3,
         name: "Data Preprocessing",
-        icon: "🧹",
         description: "Cleaning, transforming, and preparing data for ML",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -367,7 +508,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 4,
         name: "Linear Regression",
-        icon: "📈",
         description: "Understanding linear relationships and regression analysis",
         difficulty: "Beginner",
         estimatedTime: "4-5 hours",
@@ -377,7 +517,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 5,
         name: "Classification Algorithms",
-        icon: "🏷️",
         description: "Logistic regression, SVM, and decision trees",
         difficulty: "Intermediate",
         estimatedTime: "6-7 hours",
@@ -387,7 +526,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 6,
         name: "Clustering and Unsupervised Learning",
-        icon: "🔍",
         description: "K-means, hierarchical clustering, and dimensionality reduction",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -397,7 +535,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 7,
         name: "Model Evaluation and Validation",
-        icon: "📊",
         description: "Cross-validation, metrics, and model selection",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -407,7 +544,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 8,
         name: "Ensemble Methods",
-        icon: "🌲",
         description: "Random forests, boosting, and ensemble techniques",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -417,7 +553,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 9,
         name: "Introduction to Neural Networks",
-        icon: "🧠",
         description: "Perceptrons, feedforward networks, and backpropagation",
         difficulty: "Advanced",
         estimatedTime: "6-8 hours",
@@ -427,7 +562,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 10,
         name: "Deep Learning with TensorFlow",
-        icon: "🔥",
         description: "Building deep neural networks with TensorFlow/Keras",
         difficulty: "Advanced",
         estimatedTime: "8-10 hours",
@@ -437,7 +571,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 11,
         name: "Convolutional Neural Networks",
-        icon: "👁️",
         description: "CNNs for image processing and computer vision",
         difficulty: "Advanced",
         estimatedTime: "6-8 hours",
@@ -447,7 +580,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 12,
         name: "Natural Language Processing",
-        icon: "💬",
         description: "Text processing, sentiment analysis, and language models",
         difficulty: "Advanced",
         estimatedTime: "7-8 hours",
@@ -461,7 +593,6 @@ export const LEARNING_ROADMAPS = {
     id: "system-design",
     title: "System Design Interview Prep",
     description: "Master large-scale system design for tech interviews",
-    icon: "🏗️",
     difficulty: "Advanced",
     estimatedTime: "8-10 weeks",
     category: "System Architecture",
@@ -472,7 +603,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 1,
         name: "System Design Fundamentals",
-        icon: "🏛️",
         description: "Basic concepts of system design and architecture",
         difficulty: "Intermediate",
         estimatedTime: "3-4 hours",
@@ -482,7 +612,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 2,
         name: "Scalability Principles",
-        icon: "📈",
         description: "Horizontal vs vertical scaling, load distribution",
         difficulty: "Intermediate",
         estimatedTime: "3-4 hours",
@@ -492,7 +621,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 3,
         name: "Load Balancing",
-        icon: "⚖️",
         description: "Load balancers, algorithms, and failover strategies",
         difficulty: "Intermediate",
         estimatedTime: "3-4 hours",
@@ -502,7 +630,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 4,
         name: "Caching Strategies",
-        icon: "💾",
         description: "Redis, Memcached, CDNs, and caching patterns",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -512,7 +639,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 5,
         name: "Database Design and Sharding",
-        icon: "🗄️",
         description: "SQL vs NoSQL, sharding, replication, and consistency",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -522,7 +648,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 6,
         name: "Message Queues and Pub/Sub",
-        icon: "📨",
         description: "Asynchronous processing with RabbitMQ, Kafka",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -532,7 +657,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 7,
         name: "Microservices Architecture",
-        icon: "🧱",
         description: "Service decomposition, API gateways, and service mesh",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -542,7 +666,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 8,
         name: "Designing Chat Systems",
-        icon: "💬",
         description: "Real-time messaging, WebSockets, and notification systems",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -552,7 +675,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 9,
         name: "Designing Social Media Feeds",
-        icon: "📱",
         description: "News feeds, timeline generation, and content ranking",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -562,7 +684,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 10,
         name: "Designing URL Shorteners",
-        icon: "🔗",
         description: "URL encoding, analytics, and rate limiting",
         difficulty: "Advanced",
         estimatedTime: "3-4 hours",
@@ -572,7 +693,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 11,
         name: "Search Engine Design",
-        icon: "🔍",
         description: "Indexing, ranking algorithms, and distributed search",
         difficulty: "Advanced",
         estimatedTime: "6-7 hours",
@@ -582,7 +702,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 12,
         name: "Monitoring and Observability",
-        icon: "📊",
         description: "Logging, metrics, tracing, and alerting systems",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -596,7 +715,6 @@ export const LEARNING_ROADMAPS = {
     id: "android-development",
     title: "Android App Development",
     description: "Build modern Android applications with Kotlin",
-    icon: "🤖",
     difficulty: "Beginner to Advanced",
     estimatedTime: "10-12 weeks",
     category: "Mobile Development",
@@ -607,7 +725,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 1,
         name: "Android Development Basics",
-        icon: "📱",
         description: "Android ecosystem, development environment setup",
         difficulty: "Beginner",
         estimatedTime: "2-3 hours",
@@ -617,7 +734,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 2,
         name: "Kotlin Programming",
-        icon: "🎯",
         description: "Kotlin syntax, features, and Android-specific usage",
         difficulty: "Beginner",
         estimatedTime: "6-8 hours",
@@ -627,7 +743,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 3,
         name: "Activities and Layouts",
-        icon: "📄",
         description: "Creating screens and designing user interfaces",
         difficulty: "Beginner",
         estimatedTime: "4-5 hours",
@@ -637,7 +752,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 4,
         name: "Views and ViewGroups",
-        icon: "🎨",
         description: "Working with UI components and layout managers",
         difficulty: "Beginner",
         estimatedTime: "4-5 hours",
@@ -647,7 +761,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 5,
         name: "Intents and Navigation",
-        icon: "🧭",
         description: "Moving between screens and app components",
         difficulty: "Intermediate",
         estimatedTime: "3-4 hours",
@@ -657,7 +770,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 6,
         name: "RecyclerView and Adapters",
-        icon: "📋",
         description: "Displaying lists and grids efficiently",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -667,7 +779,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 7,
         name: "Data Storage",
-        icon: "💾",
         description: "SharedPreferences, SQLite, and Room database",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -677,7 +788,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 8,
         name: "Networking and APIs",
-        icon: "🌐",
         description: "HTTP requests, REST APIs, and Retrofit",
         difficulty: "Intermediate",
         estimatedTime: "5-6 hours",
@@ -687,7 +797,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 9,
         name: "Background Processing",
-        icon: "⚙️",
         description: "Services, WorkManager, and background tasks",
         difficulty: "Advanced",
         estimatedTime: "4-5 hours",
@@ -697,7 +806,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 10,
         name: "Notifications and Permissions",
-        icon: "🔔",
         description: "Push notifications and runtime permissions",
         difficulty: "Intermediate",
         estimatedTime: "3-4 hours",
@@ -707,7 +815,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 11,
         name: "Material Design",
-        icon: "🎨",
         description: "Implementing Google's Material Design guidelines",
         difficulty: "Intermediate",
         estimatedTime: "4-5 hours",
@@ -717,7 +824,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 12,
         name: "Testing and Debugging",
-        icon: "🧪",
         description: "Unit testing, UI testing, and debugging tools",
         difficulty: "Advanced",
         estimatedTime: "5-6 hours",
@@ -727,7 +833,6 @@ export const LEARNING_ROADMAPS = {
       {
         id: 13,
         name: "App Publishing",
-        icon: "🚀",
         description: "Play Store publishing and app optimization",
         difficulty: "Advanced",
         estimatedTime: "3-4 hours",
