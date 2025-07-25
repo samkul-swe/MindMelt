@@ -3,17 +3,16 @@ const dataService = require('../services/dataService');
 
 const router = express.Router();
 
-// Get all courses
-router.get('/courses', async (req, res) => {
+router.get('/roadmaps', async (req, res) => {
   try {
-    const courses = await dataService.getCourses();
+    const roadmaps = await dataService.getRoadmaps();
     
     res.json({
       success: true,
-      data: courses
+      data: roadmaps
     });
   } catch (error) {
-    console.error('Courses fetch error:', error);
+    console.error('Roadmaps fetch error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -21,25 +20,24 @@ router.get('/courses', async (req, res) => {
   }
 });
 
-// Get specific course by ID
-router.get('/courses/:courseId', async (req, res) => {
+router.get('/roadmaps/:roadmapId', async (req, res) => {
   try {
-    const { courseId } = req.params;
-    const course = await dataService.getCourse(courseId);
+    const { roadmapId } = req.params;
+    const roadmap = await dataService.getRoadmap(roadmapId);
     
-    if (!course) {
+    if (!roadmap) {
       return res.status(404).json({
         success: false,
-        message: 'Course not found'
+        message: 'Roadmap not found'
       });
     }
 
     res.json({
       success: true,
-      data: course
+      data: roadmap
     });
   } catch (error) {
-    console.error('Course fetch error:', error);
+    console.error('Roadmap fetch error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -47,11 +45,10 @@ router.get('/courses/:courseId', async (req, res) => {
   }
 });
 
-// Get topics for a specific course
-router.get('/courses/:courseId/topics', async (req, res) => {
+router.get('/roadmaps/:roadmapId/topics', async (req, res) => {
   try {
-    const { courseId } = req.params;
-    const topics = await dataService.getTopicsForCourse(courseId);
+    const { roadmapId } = req.params;
+    const topics = await dataService.getTopicsForRoadmap(roadmapId);
     
     res.json({
       success: true,
@@ -66,7 +63,6 @@ router.get('/courses/:courseId/topics', async (req, res) => {
   }
 });
 
-// Get specific topic by ID
 router.get('/topics/:topicId', async (req, res) => {
   try {
     const { topicId } = req.params;
@@ -92,72 +88,17 @@ router.get('/topics/:topicId', async (req, res) => {
   }
 });
 
-// Search courses
-router.get('/search/courses', async (req, res) => {
+router.get('/roadmaps/:roadmapId/stats', async (req, res) => {
   try {
-    const { q } = req.query;
-    
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query must be at least 2 characters long'
-      });
-    }
-
-    const courses = await dataService.searchCourses(q.trim());
-    
-    res.json({
-      success: true,
-      data: courses
-    });
-  } catch (error) {
-    console.error('Course search error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Search topics
-router.get('/search/topics', async (req, res) => {
-  try {
-    const { q, courseId } = req.query;
-    
-    if (!q || q.trim().length < 2) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query must be at least 2 characters long'
-      });
-    }
-
-    const topics = await dataService.searchTopics(q.trim(), courseId);
-    
-    res.json({
-      success: true,
-      data: topics
-    });
-  } catch (error) {
-    console.error('Topic search error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Get course statistics
-router.get('/courses/:courseId/stats', async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const stats = await dataService.getCourseStats(courseId);
+    const { roadmapId } = req.params;
+    const stats = await dataService.getRoadmapStats(roadmapId);
     
     res.json({
       success: true,
       data: stats
     });
   } catch (error) {
-    console.error('Course stats error:', error);
+    console.error('Roadmap stats error:', error);
     res.status(500).json({
       success: false,
       message: error.message

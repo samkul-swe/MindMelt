@@ -2,67 +2,63 @@ const { db } = require('../config/firebase');
 
 class DataService {
   constructor() {
-    this.coursesCache = new Map();
+    this.roadmapsCache = new Map();
     this.topicsCache = new Map();
   }
 
-  // Get all courses
-  async getCourses() {
+  async getRoadmaps() {
     try {
-      if (this.coursesCache.size > 0) {
-        return Array.from(this.coursesCache.values());
+      if (this.roadmapsCache.size > 0) {
+        return Array.from(this.roadmapsCache.values());
       }
 
-      const coursesSnapshot = await db.collection('courses').get();
-      const courses = [];
+      const roadmapsSnapshot = await db.collection('roadmaps').get();
+      const roadmaps = [];
       
-      coursesSnapshot.forEach(doc => {
-        const course = { id: doc.id, ...doc.data() };
-        this.coursesCache.set(doc.id, course);
-        courses.push(course);
+      roadmapsSnapshot.forEach(doc => {
+        const roadmap = { id: doc.id, ...doc.data() };
+        this.roadmapsCache.set(doc.id, roadmap);
+        roadmaps.push(roadmap);
       });
 
-      console.log(`✅ Retrieved ${courses.length} courses from Firestore`);
-      return courses;
+      console.log(`✅ Retrieved ${roadmaps.length} roadmaps from Firestore`);
+      return roadmaps;
     } catch (error) {
-      console.error('❌ Error fetching courses:', error);
-      throw new Error(`Failed to fetch courses: ${error.message}`);
+      console.error('❌ Error fetching roadmaps:', error);
+      throw new Error(`Failed to fetch roadmaps: ${error.message}`);
     }
   }
 
-  // Get a specific course by ID
-  async getCourse(courseId) {
+  async getRoadmap(roadmapId) {
     try {
-      if (this.coursesCache.has(courseId)) {
-        return this.coursesCache.get(courseId);
+      if (this.roadmapsCache.has(roadmapId)) {
+        return this.roadmapsCache.get(roadmapId);
       }
 
-      const courseDoc = await db.collection('courses').doc(courseId).get();
+      const roadmapDoc = await db.collection('roadmaps').doc(roadmapId).get();
       
-      if (courseDoc.exists()) {
-        const course = { id: courseDoc.id, ...courseDoc.data() };
-        this.coursesCache.set(courseId, course);
-        return course;
+      if (roadmapDoc.exists()) {
+        const roadmap = { id: roadmapDoc.id, ...roadmapDoc.data() };
+        this.roadmapsCache.set(roadmapId, roadmap);
+        return roadmap;
       }
       
       return null;
     } catch (error) {
-      console.error(`❌ Error fetching course ${courseId}:`, error);
-      throw new Error(`Failed to fetch course: ${error.message}`);
+      console.error(`❌ Error fetching roadmap ${roadmapId}:`, error);
+      throw new Error(`Failed to fetch roadmap: ${error.message}`);
     }
   }
 
-  // Get all topics for a specific course
-  async getTopicsForCourse(courseId) {
+  async getTopicsForRoadmap(roadmapId) {
     try {
-      const cacheKey = `course_${courseId}`;
+      const cacheKey = `roadmap_${roadmapId}`;
       if (this.topicsCache.has(cacheKey)) {
         return this.topicsCache.get(cacheKey);
       }
 
       const topicsSnapshot = await db.collection('topics')
-        .where('courseId', '==', courseId)
-        .orderBy('order', 'asc')
+        .where('roadmapId', '==', roadmapId)
         .get();
       
       const topics = [];
@@ -70,16 +66,21 @@ class DataService {
         topics.push({ id: doc.id, ...doc.data() });
       });
 
+      topics.sort((a, b) => {
+        const aNum = parseInt(a.topicId.split('_').pop());
+        const bNum = parseInt(b.topicId.split('_').pop());
+        return aNum - bNum;
+      });
+
       this.topicsCache.set(cacheKey, topics);
-      console.log(`✅ Retrieved ${topics.length} topics for course ${courseId}`);
+      console.log(`✅ Retrieved ${topics.length} topics for roadmap ${roadmapId}`);
       return topics;
     } catch (error) {
-      console.error(`❌ Error fetching topics for course ${courseId}:`, error);
+      console.error(`❌ Error fetching topics for roadmap ${roadmapId}:`, error);
       throw new Error(`Failed to fetch topics: ${error.message}`);
     }
   }
 
-  // Get a specific topic by ID
   async getTopic(topicId) {
     try {
       const topicDoc = await db.collection('topics').doc(topicId).get();
@@ -95,69 +96,35 @@ class DataService {
     }
   }
 
-  // Search courses by name or category
-  async searchCourses(searchTerm) {
-    try {
-      const courses = await this.getCourses();
-      const searchLower = searchTerm.toLowerCase();
-      
-      return courses.filter(course => 
-        course.name.toLowerCase().includes(searchLower) ||
-        course.description.toLowerCase().includes(searchLower) ||
-        course.category.toLowerCase().includes(searchLower)
-      );
-    } catch (error) {
-      console.error('❌ Error searching courses:', error);
-      throw new Error(`Failed to search courses: ${error.message}`);
-    }
-  }
-
-  // Search topics by name
-  async searchTopics(searchTerm, courseId = null) {
-    try {
-      let topics = [];
-      
-      if (courseId) {
-        topics = await this.getTopicsForCourse(courseId);
-      } else {
-        // Get all topics (this might be expensive for large datasets)
-        const topicsSnapshot = await db.collection('topics').get();
-        topicsSnapshot.forEach(doc => {
-          topics.push({ id: doc.id, ...doc.data() });
-        });
-      }
-      
-      const searchLower = searchTerm.toLowerCase();
-      return topics.filter(topic => 
-        topic.name.toLowerCase().includes(searchLower) ||
-        topic.description.toLowerCase().includes(searchLower)
-      );
-    } catch (error) {
-      console.error('❌ Error searching topics:', error);
-      throw new Error(`Failed to search topics: ${error.message}`);
-    }
-  }
-
-  // Clear cache
   clearCache() {
-    this.coursesCache.clear();
+    this.roadmapsCache.clear();
     this.topicsCache.clear();
   }
 
-  // Get course statistics
-  async getCourseStats(courseId) {
+  async getRoadmapStats(roadmapId) {
     try {
-      // This would require aggregation queries or maintaining counters
-      // For now, return basic structure
+      const topics = await this.getTopicsForRoadmap(roadmapId);
+      
       return {
-        totalTopics: 0,
-        enrolledUsers: 0,
-        averageCompletion: 0
+        totalTopics: topics.length,
+        topicsByDifficulty: this.groupTopicsByDifficulty(topics)
       };
     } catch (error) {
-      console.error(`❌ Error fetching course stats for ${courseId}:`, error);
-      throw new Error(`Failed to fetch course stats: ${error.message}`);
+      console.error(`❌ Error fetching roadmap stats for ${roadmapId}:`, error);
+      throw new Error(`Failed to fetch roadmap stats: ${error.message}`);
     }
+  }
+
+  groupTopicsByDifficulty(topics) {
+    const grouped = {};
+    topics.forEach(topic => {
+      const difficulty = topic.difficulty || 'Unknown';
+      if (!grouped[difficulty]) {
+        grouped[difficulty] = 0;
+      }
+      grouped[difficulty]++;
+    });
+    return grouped;
   }
 }
 

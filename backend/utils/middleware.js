@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
 
-// JWT token authentication middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({
@@ -25,7 +24,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Optional authentication - allows both authenticated and anonymous users
 const optionalAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -41,7 +39,6 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
-// Rate limiting middleware
 const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   const requests = new Map();
   
@@ -75,11 +72,10 @@ const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   };
 };
 
-// CORS middleware
 const corsMiddleware = (req, res, next) => {
   const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
     process.env.ALLOWED_ORIGINS.split(',') : 
-    ['http://localhost:3000'];
+    ['http://localhost:3000', 'http://localhost:3001'];
   
   const origin = req.headers.origin;
   
@@ -98,8 +94,7 @@ const corsMiddleware = (req, res, next) => {
   }
 };
 
-// Request logging middleware
-const requestLogger = (req, res, next) => {
+const requestLogger = (req, _, next) => {
   const timestamp = new Date().toISOString();
   const method = req.method;
   const url = req.url;
@@ -110,19 +105,16 @@ const requestLogger = (req, res, next) => {
   next();
 };
 
-// Error handling middleware
 const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
-  
-  // Firebase-specific errors
+
   if (err.code && err.code.startsWith('auth/')) {
     return res.status(400).json({
       success: false,
       message: getFirebaseErrorMessage(err.code)
     });
   }
-  
-  // JWT errors
+
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
@@ -136,26 +128,40 @@ const errorHandler = (err, req, res, next) => {
       message: 'Token expired'
     });
   }
-  
-  // Default error
+
+  if (err.code && (err.code.includes('firestore') || err.code.includes('permission-denied'))) {
+    return res.status(403).json({
+      success: false,
+      message: 'Database access denied'
+    });
+  }
+
+  if (err.message && err.message.includes('MindMelt')) {
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error'
   });
 };
 
-// Convert Firebase error codes to user-friendly messages
 const getFirebaseErrorMessage = (errorCode) => {
   const messages = {
     'auth/email-already-in-use': 'Email address is already registered',
     'auth/invalid-email': 'Invalid email address',
-    'auth/weak-password': 'Password is too weak',
+    'auth/weak-password': 'Password is too weak (minimum 6 characters)',
     'auth/user-not-found': 'No account found with this email',
     'auth/wrong-password': 'Incorrect password',
     'auth/too-many-requests': 'Too many failed attempts, please try again later',
     'auth/user-disabled': 'This account has been disabled',
     'auth/invalid-id-token': 'Invalid authentication token',
-    'auth/id-token-expired': 'Authentication token has expired'
+    'auth/id-token-expired': 'Authentication token has expired',
+    'auth/network-request-failed': 'Network error, please check your connection',
+    'auth/operation-not-allowed': 'This operation is not allowed'
   };
   
   return messages[errorCode] || 'Authentication error occurred';

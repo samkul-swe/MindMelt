@@ -4,7 +4,6 @@ const { authenticateToken } = require('../utils/middleware');
 
 const router = express.Router();
 
-// Register new user
 router.post('/register', async (req, res) => {
   try {
     const { email, password, username } = req.body;
@@ -40,7 +39,6 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Authenticate user with Firebase ID token
 router.post('/authenticate', async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -77,7 +75,6 @@ router.post('/authenticate', async (req, res) => {
   }
 });
 
-// Get current user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const user = await authService.getUser(req.user.uid);
@@ -96,10 +93,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
         email: user.email,
         username: user.username,
         currentProgress: user.currentProgress || {},
-        totalLearningTime: user.totalLearningTime || 0,
-        completedSessions: user.completedSessions || 0,
-        joinedAt: user.joinedAt,
-        lastActiveAt: user.lastActiveAt
+        createdAt: user.createdAt
       }
     });
   } catch (error) {
@@ -111,7 +105,6 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Update user profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
     const updates = req.body;
@@ -135,21 +128,20 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Update user progress for a topic
 router.post('/progress', authenticateToken, async (req, res) => {
   try {
-    const { courseId, topicId, percentage } = req.body;
+    const { roadmapId, topicId, percentage } = req.body;
     
-    if (!courseId || !topicId || percentage === undefined) {
+    if (!roadmapId || !topicId || percentage === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'courseId, topicId, and percentage are required'
+        message: 'roadmapId, topicId, and percentage are required'
       });
     }
 
-    const courseProgress = await authService.updateUserProgress(
+    const roadmapProgress = await authService.updateUserProgress(
       req.user.uid, 
-      courseId, 
+      roadmapId, 
       topicId, 
       percentage
     );
@@ -157,7 +149,7 @@ router.post('/progress', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       message: 'Progress updated successfully',
-      data: courseProgress
+      data: roadmapProgress
     });
   } catch (error) {
     console.error('Progress update error:', error);
@@ -168,27 +160,6 @@ router.post('/progress', authenticateToken, async (req, res) => {
   }
 });
 
-// Record learning session
-router.post('/session', authenticateToken, async (req, res) => {
-  try {
-    const sessionData = req.body;
-    
-    await authService.recordLearningSession(req.user.uid, sessionData);
-
-    res.json({
-      success: true,
-      message: 'Learning session recorded successfully'
-    });
-  } catch (error) {
-    console.error('Session recording error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Delete user account
 router.delete('/account', authenticateToken, async (req, res) => {
   try {
     await authService.deleteUser(req.user.uid);

@@ -9,18 +9,25 @@
     "init-firestore": "node scripts/initializeFirestore.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["learning", "education", "firebase", "api", "nodejs"],
+  "keywords": [
+    "learning",
+    "education",
+    "firebase",
+    "api",
+    "nodejs"
+  ],
   "author": "MindMelt Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "helmet": "^7.0.0",
-    "dotenv": "^16.3.1",
-    "firebase-admin": "^11.10.1",
     "body-parser": "^1.20.2",
-    "morgan": "^1.10.0",
-    "jsonwebtoken": "^9.0.2"
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "firebase": "^12.0.0",
+    "firebase-admin": "^11.10.1",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

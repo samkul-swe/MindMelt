@@ -1,14 +1,14 @@
-const fetch = globalThis.fetch || require('node-fetch');
+const { getAI, getGenerativeModel, GoogleAIBackend } = require("firebase/ai");
+const { admin } = require('../config/firebase');
 
-const AI_API_URL = 'https://api.gmi-serving.com/v1/chat/completions';
-
-const API_CONFIG = {
-  model: "deepseek-ai/DeepSeek-Prover-V2-671B", // GMI model
-  temperature: 0.8,
-  max_tokens: 400,
-  stream: false,
-  top_p: 0.95,
-  top_k: 40
+const AI_CONFIG = {
+  model: "gemini-2.5-flash",
+  generationConfig: {
+    temperature: 0.8,
+    maxOutputTokens: 400,
+    topP: 0.95,
+    topK: 40
+  }
 };
 
 const QUALITY_THRESHOLDS = {
@@ -35,92 +35,59 @@ function validateApiKey(apiKey) {
   }
   
   if (!apiKey.startsWith('AIza')) {
-    return { valid: false, message: 'AI API key should start with "AIza"' };
+    return { valid: false, message: 'Gemini API key should start with "AIza"' };
   }
   
   if (apiKey.length < 30) {
-    return { valid: false, message: 'API key appears to be too short for AI' };
+    return { valid: false, message: 'API key appears to be too short for Gemini' };
   }
   
   return { valid: true, message: 'API key format looks correct! 🎉' };
 }
 
-function createRequestBody(prompt, config = {}) {
-  const finalConfig = { ...API_CONFIG, ...config };
- 
-  return {
+function getGenerativeModelInstance(apiKey, config = {}) {
+  const finalConfig = { ...AI_CONFIG, ...config };
+  
+  const ai = getAI(admin.app(), {
+    backend: new GoogleAIBackend(apiKey)
+  });
+  
+  return getGenerativeModel(ai, {
     model: finalConfig.model,
-    messages: [
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    max_tokens: finalConfig.max_tokens,
-    temperature: finalConfig.temperature,
-    top_p: finalConfig.top_p,
-    stream: finalConfig.stream
-  };
+    generationConfig: finalConfig.generationConfig
+  });
 }
 
-async function handleApiResponse(response) {
-  let data;
- 
-  try {
-    data = await response.json();
-  } catch (parseError) {
-    console.error('Failed to parse API response:', parseError);
-    throw new Error('Invalid response format from AI service');
-  }
-
-  if (!response.ok) {
-    throw new Error(getErrorMessage(response.status, data));
-  }
-
-  if (!data.choices || data.choices.length === 0) {
+async function handleGeminiResponse(result) {
+  if (!result || !result.response) {
     throw new Error(ERROR_MESSAGES.NO_RESPONSE);
   }
 
-  const choice = data.choices[0];
- 
-  if (choice.finish_reason === 'content_filter') {
-    throw new Error(ERROR_MESSAGES.CONTENT_FILTERED);
+  const response = result.response;
+  
+  // Check if response was blocked
+  if (response.promptFeedback?.blockReason) {
+    throw new Error(ERROR_MESSAGES.SAFETY_BLOCKED);
   }
- 
-  if (choice.finish_reason === 'length' || choice.finish_reason === 'max_tokens') {
-    console.warn('Response was truncated due to length limits');
-  }
- 
-  if (!choice.message?.content) {
+
+  // Get the text from the response
+  const text = response.text();
+  
+  if (!text || text.trim().length === 0) {
     throw new Error(ERROR_MESSAGES.EMPTY_RESPONSE);
   }
 
-  return choice.message.content.trim();
+  return text.trim();
 }
 
-function getErrorMessage(status, errorData) {
-  const baseMessage = errorData.error?.message || 'Unknown error occurred';
+function handleGeminiError(error) {
+  console.error('💥 MindMelt: Error calling Gemini API:', error);
   
-  switch (status) {
-    case 400:
-      return `🚫 MindMelt API Error: ${baseMessage}`;
-    case 403:
-      return '🔒 MindMelt: API access forbidden - please check your AI API key permissions and billing';
-    case 429:
-      return ERROR_MESSAGES.RATE_LIMITED;
-    default:
-      return `💥 MindMelt API Error: ${baseMessage}`;
-  }
-}
-
-function handleApiError(error) {
-  console.error('💥 MindMelt: Error calling AI API:', error);
-  
-  if (error.message.includes('API key') || error.message.includes('403')) {
+  if (error.message.includes('API key') || error.message.includes('invalid') || error.message.includes('403')) {
     return new Error(ERROR_MESSAGES.API_KEY_INVALID);
   }
   
-  if (error.message.includes('quota') || error.message.includes('billing')) {
+  if (error.message.includes('quota') || error.message.includes('billing') || error.message.includes('429')) {
     return new Error(ERROR_MESSAGES.QUOTA_EXCEEDED);
   }
   
@@ -132,40 +99,36 @@ function handleApiError(error) {
     return new Error(ERROR_MESSAGES.NETWORK_ERROR);
   }
   
-  if (error.message.includes('safety')) {
+  if (error.message.includes('safety') || error.message.includes('blocked')) {
     return new Error(ERROR_MESSAGES.SAFETY_BLOCKED);
   }
   
   return new Error(`🤖 MindMelt AI Error: ${error.message}`);
 }
 
-async function makeApiCall(prompt, apiKey, config = {}) {
-  console.log('🧠 MindMelt Backend: Making API call to AI...');
+async function makeGeminiCall(prompt, apiKey, config = {}) {
+  console.log('🧠 MindMelt Backend: Making API call to Gemini...');
   
-  const requestBody = createRequestBody(prompt, config);
-
-  const response = await fetch(AI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-  console.log('🍦 MindMelt Backend: AI API Response status:', response.status);
-  
-  return await handleApiResponse(response);
+  try {
+    const model = getGenerativeModelInstance(apiKey, config);
+    const result = await model.generateContent(prompt);
+    
+    console.log('🍦 MindMelt Backend: Gemini API Response received');
+    
+    return await handleGeminiResponse(result);
+  } catch (error) {
+    throw handleGeminiError(error);
+  }
 }
 
 async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, returnParsed = false) {
-  console.log('=== MINDMELT BACKEND GMI API DEBUG ===');
+  console.log('=== MINDMELT BACKEND GEMINI API DEBUG ===');
   console.log('Learning CS concept:', concept);
   console.log('Learning path:', learningPath);
   console.log('Questioning style:', questioningStyle);
   console.log('API Key available:', !!apiKey);
   console.log('API Key length:', apiKey?.length);
-  console.log('Using GMI model:', API_CONFIG.model);
+  console.log('Using Gemini model:', AI_CONFIG.model);
  
   if (!apiKey) {
     throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
@@ -175,8 +138,8 @@ async function getSocraticResponse(concept, userResponse, learningPath, question
   const fullPrompt = `${systemPrompt}\n\nStudent's response: "${userResponse}"\n\nYour next Socratic question to guide their learning:`;
 
   try {
-    const rawResponse = await makeApiCall(fullPrompt, apiKey);
-    console.log('✅ MindMelt Backend: GMI API Response received successfully');
+    const rawResponse = await makeGeminiCall(fullPrompt, apiKey);
+    console.log('✅ MindMelt Backend: Gemini API Response received successfully');
 
     const parsedResponse = parseAIResponse(rawResponse);
     console.log('📋 MindMelt Backend: Parsed response:', parsedResponse);
@@ -198,22 +161,24 @@ async function getSocraticResponse(concept, userResponse, learningPath, question
       return formatResponseForDisplay(parsedResponse);
     }
   } catch (error) {
-    throw handleApiError(error);
+    throw handleGeminiError(error);
   }
 }
 
 async function testApiKey(apiKey) {
-  const testPrompt = "Hello! I'm testing MindMelt's connection to AI. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else.";
+  const testPrompt = "Hello! I'm testing MindMelt's connection to Gemini AI. Please respond with 'MindMelt is ready to help you learn CS!' and nothing else.";
   
   try {
-    await makeApiCall(testPrompt, apiKey, { 
-      temperature: 0.1, 
-      max_tokens: 20 
+    await makeGeminiCall(testPrompt, apiKey, { 
+      generationConfig: {
+        temperature: 0.1, 
+        maxOutputTokens: 20 
+      }
     });
     
     return { 
       success: true, 
-      message: '🎉 AI API key is working perfectly with MindMelt!' 
+      message: '🎉 Gemini API key is working perfectly with MindMelt!' 
     };
   } catch (error) {
     return { 
@@ -231,15 +196,17 @@ async function generateDailySummary(sessionsData, apiKey) {
   const summaryPrompt = createDailySummaryPrompt(sessionsData);
 
   try {
-    const summaryText = await makeApiCall(summaryPrompt, apiKey, {
-      temperature: 0.7,
-      max_tokens: 300
+    const summaryText = await makeGeminiCall(summaryPrompt, apiKey, {
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 300
+      }
     });
     
     console.log('✅ MindMelt Backend: Daily summary generated successfully');
     return summaryText;
   } catch (error) {
-    throw handleApiError(error);
+    throw handleGeminiError(error);
   }
 }
 
@@ -383,9 +350,11 @@ Respond with ONLY a number from 0-100, followed by a brief assessment like:
 Keep the assessment to one line only.`;
 
   try {
-    const assessmentText = await makeApiCall(assessmentPrompt, apiKey, {
-      temperature: 0.3,
-      max_tokens: 50
+    const assessmentText = await makeGeminiCall(assessmentPrompt, apiKey, {
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 50
+      }
     });
     
     const scoreMatch = assessmentText.match(/(\d+)/);
@@ -431,16 +400,18 @@ Search: "${query.trim()}"
 JSON (exactly 5):`;
 
   try {
-    console.log('🔍 Backend Fast AI Search:', query.trim());
+    console.log('🔍 Backend Fast Gemini Search:', query.trim());
     
-    const responseText = await makeApiCall(searchPrompt, apiKey, {
-      temperature: 0.4,
-      max_tokens: 800,
-      top_k: 20,
-      top_p: 0.8
+    const responseText = await makeGeminiCall(searchPrompt, apiKey, {
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 800,
+        topK: 20,
+        topP: 0.8
+      }
     });
 
-    console.log('🤖 Backend AI Response received');
+    console.log('🤖 Backend Gemini Response received');
 
     let cleanResponse = responseText.trim();
     cleanResponse = cleanResponse.replace(/```json\s*|\s*```/g, '');
@@ -480,7 +451,7 @@ JSON (exactly 5):`;
     return validTopics;
     
   } catch (error) {
-    console.error('Backend AI search failed:', error);
+    console.error('Backend Gemini search failed:', error);
     throw error;
   }
 }
@@ -507,9 +478,11 @@ Topic: "${topicName}"
 Response (JSON only):`;
 
   try {
-    const responseText = await makeApiCall(detailsPrompt, apiKey, {
-      temperature: 0.4,
-      max_tokens: 600
+    const responseText = await makeGeminiCall(detailsPrompt, apiKey, {
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 600
+      }
     });
 
     try {
@@ -522,7 +495,7 @@ Response (JSON only):`;
       );
 
       if (!hasAllFields) {
-        console.warn('AI topic details response missing required fields');
+        console.warn('Gemini topic details response missing required fields');
         return getDefaultTopicDetails(topicName);
       }
 
@@ -771,14 +744,16 @@ async function getHintResponse(concept, conversationContext, learningPath, quest
   const hintPrompt = createHintPrompt(concept, conversationContext, learningPath, questioningStyle);
 
   try {
-    const responseText = await makeApiCall(hintPrompt, apiKey, {
-      temperature: 0.7,
-      max_tokens: 200 // Shorter responses for hints
+    const responseText = await makeGeminiCall(hintPrompt, apiKey, {
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 200 // Shorter responses for hints
+      }
     });
     console.log('💡 MindMelt Backend: Hint generated successfully');
     return responseText;
   } catch (error) {
-    throw handleApiError(error);
+    throw handleGeminiError(error);
   }
 }
 
