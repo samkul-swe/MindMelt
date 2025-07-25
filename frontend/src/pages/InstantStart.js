@@ -11,21 +11,16 @@ import { useAuth } from '../contexts/AuthContext';
 
 const InstantStart = () => {
   const navigate = useNavigate();
-  const { createAnonymousUser, isRegistered } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const handleStartLearning = () => {
-    if (isRegistered) {
-      navigate('/dashboard');
-    } else {
-      createAnonymousUser('Anonymous Learner');
-      navigate('/dashboard');
-    }
+    navigate('/dashboard');
   };
 
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #fed7aa 100%)',
+      background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
       fontFamily: 'Inter, system-ui, sans-serif'
     },
     header: {
@@ -75,7 +70,7 @@ const InstantStart = () => {
       lineHeight: 1.1
     },
     heroHighlight: {
-      color: '#ea580c'
+      color: '#EA580C'
     },
     heroDescription: {
       fontSize: '1.5rem',
@@ -90,7 +85,7 @@ const InstantStart = () => {
       alignItems: 'center',
       gap: '0.75rem',
       padding: '1.5rem 3rem',
-      background: '#ea580c',
+      background: '#EA580C',
       color: 'white',
       border: 'none',
       borderRadius: '1rem',
@@ -118,7 +113,7 @@ const InstantStart = () => {
     featureIcon: {
       width: '64px',
       height: '64px',
-      background: 'linear-gradient(135deg, #ea580c, #f97316)',
+      background: 'linear-gradient(135deg, #EA580C, #F97316)',
       borderRadius: '50%',
       display: 'flex',
       alignItems: 'center',
@@ -150,7 +145,7 @@ const InstantStart = () => {
     statNumber: {
       fontSize: '3rem',
       fontWeight: '800',
-      color: '#ea580c',
+      color: '#EA580C',
       display: 'block',
       lineHeight: 1
     },
@@ -201,7 +196,7 @@ const InstantStart = () => {
       border: '2px solid #e5e7eb'
     },
     signupButton: {
-      background: '#ea580c',
+      background: '#EA580C',
       color: 'white',
       boxShadow: '0 4px 12px rgba(234,88,12,0.3)'
     }
@@ -222,11 +217,11 @@ const InstantStart = () => {
           transform: translateY(-2px);
         }
         .login-button:hover {
-          border-color: #ea580c;
-          color: #ea580c;
+          border-color: #EA580C;
+          color: #EA580C;
         }
         .signup-button:hover {
-          background: #dc2626;
+          background: #DC2626;
           box-shadow: 0 8px 20px rgba(234,88,12,0.4);
         }
         @media (max-width: 768px) {
@@ -241,7 +236,7 @@ const InstantStart = () => {
       <div style={styles.header}>
         <div style={styles.headerContent}>
           <div style={styles.logo}>
-            <Brain color="#ea580c" size={32} />
+            <Brain color="#EA580C" size={32} />
             <div>
               <h1 style={styles.logoTitle}>MindMelt</h1>
               <p style={styles.logoSubtitle}>Think Fast, Learn CS!</p>
@@ -313,6 +308,21 @@ const InstantStart = () => {
               We respect your time and attention span. Our focused learning sessions 
               are designed to keep you engaged for just 8 minutes or less.
             </p>
+          </div>
+        </div>
+
+        <div style={styles.stats}>
+          <div style={styles.stat}>
+            <span style={styles.statNumber}>6</span>
+            <span style={styles.statLabel}>Learning Roadmaps</span>
+          </div>
+          <div style={styles.stat}>
+            <span style={styles.statNumber}>80+</span>
+            <span style={styles.statLabel}>CS Topics</span>
+          </div>
+          <div style={styles.stat}>
+            <span style={styles.statNumber}>8</span>
+            <span style={styles.statLabel}>Minute Sessions</span>
           </div>
         </div>
 

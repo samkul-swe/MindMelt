@@ -1,0 +1,44 @@
+.ice-cream-button {
+  @apply px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all duration-200 hover:scale-105 active:scale-95;
+}
+
+.ice-cream-button:hover {
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.4);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.ice-cream-button:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.ice-cream-button--large {
+  @apply px-6 py-3 text-lg;
+}
+
+.ice-cream-button--small {
+  @apply px-3 py-1 text-sm;
+}
+
+.ice-cream-button--secondary {
+  @apply bg-orange-200 text-orange-800 hover:bg-orange-300;
+}
+
+.ice-cream-button--secondary:hover {
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.2);
+}
+
+.ice-cream-button--outline {
+  @apply bg-transparent border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white;
+}
+
+.ice-cream-button:disabled {
+  @apply bg-gray-300 text-gray-500 cursor-not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ice-cream-button:disabled:hover {
+  @apply bg-gray-300;
+  transform: none;
+  box-shadow: none;
+}

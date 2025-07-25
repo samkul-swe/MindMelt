@@ -5,30 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const { signup, loading, error, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
-  const [localLoading, setLocalLoading] = useState(false);
 
-  let authContext;
-  try {
-    authContext = useAuth();
-  } catch (error) {
-    console.error('Auth context error:', error);
-    authContext = {
-      signup: async () => { throw new Error('Auth service unavailable'); },
-      loading: false,
-      error: 'Authentication service is unavailable',
-      isRegistered: false
-    };
-  }
-
-  const { signup, loading, error, isRegistered } = authContext;
-
-  if (isRegistered) {
+  if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -71,7 +56,6 @@ const SignupPage = () => {
     }
 
     try {
-      setLocalLoading(true);
       console.log('SignupPage: Attempting signup with email:', formData.email);
       
       await signup(formData.email, formData.password, formData.email.split('@')[0]);
@@ -81,17 +65,13 @@ const SignupPage = () => {
     } catch (error) {
       console.error('SignupPage: Signup error:', error);
       setFormError(error.message || 'Signup failed. Please try again.');
-    } finally {
-      setLocalLoading(false);
     }
   };
-
-  const isLoading = loading || localLoading;
 
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #fed7aa 100%)',
+      background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
       fontFamily: 'Inter, system-ui, sans-serif',
       display: 'flex',
       alignItems: 'center',
@@ -110,7 +90,7 @@ const SignupPage = () => {
     },
     leftSide: {
       flex: 1,
-      background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
+      background: 'linear-gradient(135deg, #EA580C 0%, #DC2626 100%)',
       padding: '3rem',
       display: 'flex',
       flexDirection: 'column',
@@ -224,7 +204,7 @@ const SignupPage = () => {
       boxSizing: 'border-box'
     },
     inputFocus: {
-      borderColor: '#ea580c',
+      borderColor: '#EA580C',
       boxShadow: '0 0 0 3px rgba(234,88,12,0.1)'
     },
     passwordContainer: {
@@ -260,8 +240,8 @@ const SignupPage = () => {
       gap: '0.5rem'
     },
     benefitsSection: {
-      background: '#fff7ed',
-      border: '1px solid #fed7aa',
+      background: '#FFF7ED',
+      border: '1px solid #FDBA74',
       borderRadius: '0.75rem',
       padding: '1rem',
       marginBottom: '1rem'
@@ -275,7 +255,7 @@ const SignupPage = () => {
     benefitsTitle: {
       fontSize: '0.875rem',
       fontWeight: '600',
-      color: '#ea580c',
+      color: '#EA580C',
       margin: 0
     },
     benefitsGrid: {
@@ -288,7 +268,7 @@ const SignupPage = () => {
       alignItems: 'center',
       gap: '0.5rem',
       fontSize: '0.75rem',
-      color: '#9a3412'
+      color: '#9A3412'
     },
     submitButton: {
       display: 'flex',
@@ -296,7 +276,7 @@ const SignupPage = () => {
       justifyContent: 'center',
       gap: '0.5rem',
       padding: '1rem',
-      background: '#ea580c',
+      background: '#EA580C',
       color: 'white',
       border: 'none',
       borderRadius: '0.75rem',
@@ -330,7 +310,7 @@ const SignupPage = () => {
       margin: 0
     },
     footerLink: {
-      color: '#ea580c',
+      color: '#EA580C',
       fontWeight: '600',
       background: 'none',
       border: 'none',
@@ -351,16 +331,16 @@ const SignupPage = () => {
           background: rgba(255,255,255,0.3) !important;
           border-color: rgba(255,255,255,0.5) !important;
         }
-        .submit-button:hover {
-          background: #dc2626 !important;
+        .submit-button:hover:not(:disabled) {
+          background: #DC2626 !important;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(234,88,12,0.3);
         }
         .password-toggle:hover {
-          color: #ea580c !important;
+          color: #EA580C !important;
         }
         .footer-link:hover {
-          color: #dc2626 !important;
+          color: #DC2626 !important;
         }
         @media (max-width: 768px) {
           .content-wrapper {
@@ -395,20 +375,20 @@ const SignupPage = () => {
           </div>
           
           <h2 style={styles.welcomeText}>
-            Join thousands of learners mastering CS! 🚀
+            Join thousands of learners mastering CS!
           </h2>
           
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>📊</span>
+              <span style={styles.featureIcon}>Charts</span>
               <span>Track your learning progress over time</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>🎯</span>
+              <span style={styles.featureIcon}>Target</span>
               <span>Get personalized learning paths</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>🏆</span>
+              <span style={styles.featureIcon}>Trophy</span>
               <span>Earn achievements and badges</span>
             </div>
           </div>
@@ -442,7 +422,7 @@ const SignupPage = () => {
           <form onSubmit={handleSubmit} style={styles.form}>
             {(formError || error) && (
               <div style={styles.errorMessage}>
-                <span>⚠️</span>
+                <span>Warning</span>
                 <span>{formError || error}</span>
               </div>
             )}
@@ -461,7 +441,7 @@ const SignupPage = () => {
                   onChange={handleInputChange}
                   placeholder="Enter your email address"
                   style={styles.input}
-                  disabled={isLoading}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -485,7 +465,7 @@ const SignupPage = () => {
                       ...styles.input,
                       paddingRight: '3rem'
                     }}
-                    disabled={isLoading}
+                    disabled={loading}
                     required
                   />
                   <button
@@ -493,7 +473,7 @@ const SignupPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     style={styles.passwordToggle}
                     className="password-toggle"
-                    disabled={isLoading}
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -506,24 +486,24 @@ const SignupPage = () => {
 
             <div style={styles.benefitsSection}>
               <div style={styles.benefitsHeader}>
-                <Star size={16} color="#ea580c" />
+                <Star size={16} color="#EA580C" />
                 <h4 style={styles.benefitsTitle}>What you'll get:</h4>
               </div>
               <div style={styles.benefitsGrid}>
                 <div style={styles.benefitItem}>
-                  <div>📊</div>
+                  <div>Charts</div>
                   <span>Progress tracking</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>🎯</div>
+                  <div>Target</div>
                   <span>Personalized paths</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>🏆</div>
+                  <div>Trophy</div>
                   <span>Achievement badges</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>📈</div>
+                  <div>Graph</div>
                   <span>Learning analytics</span>
                 </div>
               </div>
@@ -533,12 +513,12 @@ const SignupPage = () => {
               type="submit"
               style={{
                 ...styles.submitButton,
-                ...(isLoading ? styles.submitButtonDisabled : {})
+                ...(loading ? styles.submitButtonDisabled : {})
               }}
               className="submit-button"
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <div style={styles.spinner}></div>
                   <span>Creating your account...</span>
@@ -559,7 +539,7 @@ const SignupPage = () => {
                 onClick={() => navigate('/login')}
                 style={styles.footerLink}
                 className="footer-link"
-                disabled={isLoading}
+                disabled={loading}
               >
                 Sign in here
               </button>

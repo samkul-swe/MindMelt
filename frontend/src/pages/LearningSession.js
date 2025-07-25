@@ -5,28 +5,21 @@ import {
   Play, 
   Pause, 
   RotateCcw, 
-  RefreshCw, 
   CheckCircle, 
   MessageCircle, 
   User, 
   Bot,
   Home,
   Info,
-  Settings,
   Lightbulb,
   Coffee,
   Code,
-  Mail,
-  Sparkles,
   Save,
   X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/authAPI';
-import { getSocraticResponse, getHintResponse, assessUnderstandingQuality } from '../services/aiService';
-import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
-import dataService from '../services/dataService';
 import '../styles/pages/learning-session.css'
 
 // Timer Constants
@@ -49,41 +42,21 @@ const HINT_CONSTANTS = {
   RESET_ON_NEW_TOPIC: true
 };
 
-// Anonymous user prompts - show after certain milestones
-const ANONYMOUS_PROMPTS = {
-  AFTER_EXCHANGES: [3, 8, 15], // Show after 3, 8, and 15 exchanges
-  SAVE_PROGRESS: {
-    title: "Save Your Progress? 💾",
-    message: "You're doing great! Want to save your learning progress and unlock advanced features?",
-    benefits: [
-      "📊 Track your learning analytics",
-      "🎯 Get personalized recommendations", 
-      "🏆 Earn achievement badges",
-      "📱 Access from any device"
-    ]
-  },
-  FINAL_REMINDER: {
-    title: "Don't Lose Your Progress! ⚠️",
-    message: "You've made excellent progress! Create an account to save everything you've learned.",
-    urgent: true
-  }
-};
-
 const learningPaths = {
   conceptual: { 
     name: "Conceptual Track", 
     description: "Deep understanding of core concepts - focus on the 'why'",
-    icon: "🧠"
+    icon: "Brain"
   },
   applied: { 
     name: "Applied Track", 
     description: "Practical implementation and real-world examples",
-    icon: "⚡"
+    icon: "Zap"
   },
   comprehensive: { 
     name: "Comprehensive Track", 
     description: "Complete mastery with theory and practice combined",
-    icon: "🎯"
+    icon: "Target"
   }
 };
 
@@ -91,22 +64,22 @@ const questioningStyles = {
   socratic: { 
     name: "Socratic Method", 
     description: "Guided discovery through strategic questions that build understanding step by step",
-    icon: "💭"
+    icon: "MessageCircle"
   },
   scenario: { 
     name: "Scenario-Based", 
     description: "Real-world problem scenarios and practical use cases to explore concepts",
-    icon: "🌍"
+    icon: "Globe"
   },
   puzzle: { 
     name: "Puzzle & Brain Teaser", 
     description: "Challenge-based learning with creative problem solving and logic puzzles",
-    icon: "🧩"
+    icon: "Puzzle"
   },
   analogy: { 
     name: "Analogy & Metaphor", 
     description: "Learn through comparisons, analogies, and familiar everyday examples",
-    icon: "🔗"
+    icon: "Link"
   }
 };
 
@@ -180,15 +153,10 @@ const useHints = (initialCount = HINT_CONSTANTS.MAX_HINTS) => {
   };
 };
 
-// Ice Cream Timer Component (keeping existing implementation)
+// Ice Cream Timer Component (simplified)
 const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const dripsRef = useRef([]);
-  const lastUpdateRef = useRef(0);
-  
   const percentage = useMemo(() => (timeLeft / totalTime) * 100, [timeLeft, totalTime]);
-  const meltLevel = useMemo(() => (100 - percentage) / 100, [percentage]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -203,141 +171,39 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
     canvas.style.height = '80px';
     ctx.scale(dpr, dpr);
 
-    class Drip {
-      constructor(x, y, color, size = 1.5) {
-        this.x = x;
-        this.y = y;
-        this.originalY = y;
-        this.color = color;
-        this.size = size;
-        this.speed = Math.random() * 0.4 + 0.2;
-        this.opacity = 0.8;
-        this.life = 1.0;
-      }
+    ctx.clearRect(0, 0, 60, 80);
+    
+    // Draw simple ice cream cone
+    ctx.fillStyle = '#d97706';
+    ctx.beginPath();
+    ctx.moveTo(18, 40);
+    ctx.lineTo(42, 40);
+    ctx.lineTo(30, 70);
+    ctx.closePath();
+    ctx.fill();
 
-      update() {
-        this.y += this.speed;
-        this.speed += 0.015;
-        this.life -= 0.006;
-        this.opacity = Math.max(0, this.life * 0.8);
-        
-        if (this.y > 75 || this.life <= 0) {
-          this.y = this.originalY;
-          this.life = 1.0;
-          this.opacity = 0.8;
-          this.speed = Math.random() * 0.4 + 0.2;
-        }
-      }
-
-      draw(ctx) {
-        if (this.opacity <= 0) return;
-        
-        ctx.save();
-        ctx.globalAlpha = this.opacity;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    const updateDrips = () => {
-      const targetDripCount = Math.floor(meltLevel * 6);
-      const colors = ['#fbbf24', '#f59e0b', '#f97316', '#ec4899'];
-      
-      while (dripsRef.current.length < targetDripCount) {
-        dripsRef.current.push(new Drip(
-          15 + Math.random() * 30,
-          32 + Math.random() * 8,
-          colors[Math.floor(Math.random() * colors.length)]
-        ));
-      }
-      
-      dripsRef.current = dripsRef.current.slice(0, targetDripCount);
-    };
-
-    const drawIceCream = (timestamp) => {
-      if (timestamp - lastUpdateRef.current < 33) {
-        if (isRunning || dripsRef.current.length > 0) {
-          animationRef.current = requestAnimationFrame(drawIceCream);
-        }
-        return;
-      }
-      lastUpdateRef.current = timestamp;
-
-      ctx.clearRect(0, 0, 60, 80);
-      
-      // Draw cone
-      const coneGradient = ctx.createLinearGradient(0, 40, 0, 70);
-      coneGradient.addColorStop(0, '#d97706');
-      coneGradient.addColorStop(1, '#92400e');
-      
-      ctx.fillStyle = coneGradient;
+    // Draw ice cream scoops based on time remaining
+    if (percentage > 0) {
+      ctx.fillStyle = '#f59e0b';
       ctx.beginPath();
-      ctx.moveTo(18, 40);
-      ctx.lineTo(42, 40);
-      ctx.lineTo(30, 70);
-      ctx.closePath();
+      ctx.arc(30, 32, 13, 0, Math.PI * 2);
       ctx.fill();
-
-      const meltSag = meltLevel * 10;
-      
-      const drawMeltingScoop = (centerX, centerY, radius, color, meltAmount) => {
-        const gradient = ctx.createRadialGradient(centerX - 3, centerY - 3, 0, centerX, centerY, radius);
-        gradient.addColorStop(0, color.light);
-        gradient.addColorStop(1, color.dark);
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY + meltAmount * 5, radius, 0, Math.PI * 2);
-        ctx.fill();
-      };
-
-      // Draw scoops with melting effects - always visible
-      if (percentage > -10) {
-        const opacity = Math.max(0.3, percentage / 100);
-        ctx.globalAlpha = opacity;
-        drawMeltingScoop(30, 32 + meltSag, 13, 
-          { light: '#fef3c7', dark: '#f59e0b' }, meltLevel);
-        ctx.globalAlpha = 1;
-      }
-      
-      if (percentage > -40) {
-        const opacity = Math.max(0.3, percentage / 100);
-        ctx.globalAlpha = opacity;
-        drawMeltingScoop(30, 22 + meltSag * 0.7, 11, 
-          { light: '#fce7f3', dark: '#ec4899' }, meltLevel * 0.8);
-        ctx.globalAlpha = 1;
-      }
-      
-      if (percentage > -70) {
-        const opacity = Math.max(0.3, percentage / 100);
-        ctx.globalAlpha = opacity;
-        drawMeltingScoop(30, 14 + meltSag * 0.5, 9, 
-          { light: '#fed7aa', dark: '#ea580c' }, meltLevel * 0.6);
-        ctx.globalAlpha = 1;
-      }
-
-      updateDrips();
-      dripsRef.current.forEach(drip => {
-        if (isRunning) drip.update();
-        drip.draw(ctx);
-      });
-
-      if (isRunning || dripsRef.current.length > 0) {
-        animationRef.current = requestAnimationFrame(drawIceCream);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(drawIceCream);
-
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [percentage, meltLevel, isRunning]);
+    }
+    
+    if (percentage > 33) {
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.arc(30, 22, 11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    if (percentage > 66) {
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.arc(30, 14, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, [percentage]);
 
   return (
     <canvas 
@@ -368,146 +234,6 @@ const createMessage = (type, content, options = {}) => ({
   content,
   timestamp: new Date(),
   ...options
-});
-
-// Anonymous User Progress Prompt Component
-const AnonymousProgressPrompt = React.memo(({ 
-  prompt, 
-  onSaveProgress, 
-  onDismiss, 
-  exchangeCount,
-  isVisible,
-  isUrgent = false
-}) => {
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      await onSaveProgress(email, name);
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (!isVisible) return null;
-
-  return (
-    <div className="anonymous-progress-prompt">
-      <div className="prompt-overlay" onClick={onDismiss} />
-      <div className={`prompt-card ${isUrgent ? 'urgent' : ''}`}>
-        <div className="prompt-header">
-          <div className="prompt-title">
-            <Sparkles size={24} />
-            <h3>{prompt.title}</h3>
-          </div>
-          <button 
-            className="prompt-close"
-            onClick={onDismiss}
-            title="Continue without saving"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="prompt-body">
-          <div className="progress-stats">
-            <div className="stat">
-              <span className="stat-number">{exchangeCount}</span>
-              <span className="stat-label">Questions Answered</span>
-            </div>
-            <div className="stat">
-              <span className="stat-number">{Math.floor(exchangeCount * 1.5)}</span>
-              <span className="stat-label">Minutes Learning</span>
-            </div>
-          </div>
-
-          <p className="prompt-message">{prompt.message}</p>
-
-          {prompt.benefits && (
-            <div className="prompt-benefits">
-              <h4>What you'll unlock:</h4>
-              <ul>
-                {prompt.benefits.map((benefit, index) => (
-                  <li key={index}>{benefit}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="prompt-form">
-            <div className="form-group">
-              <label htmlFor="prompt-name">
-                <User size={16} />
-                Your Name (optional)
-              </label>
-              <input
-                type="text"
-                id="prompt-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="What should we call you?"
-                className="form-input"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="prompt-email">
-                <Mail size={16} />
-                Email Address
-              </label>
-              <input
-                type="email"
-                id="prompt-email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email to save progress"
-                className="form-input"
-                disabled={isSubmitting}
-                required
-              />
-            </div>
-
-            <div className="prompt-actions">
-              <button
-                type="button"
-                onClick={onDismiss}
-                className="btn btn-secondary"
-                disabled={isSubmitting}
-              >
-                Continue Learning
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isSubmitting || !email.trim()}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="spinner" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    Save My Progress
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
 });
 
 // Message Component
@@ -578,38 +304,12 @@ const HintCounter = React.memo(({ hintsRemaining, onHintRequest, canUseHint, isR
   </div>
 ));
 
-// Exhausted Hints Actions Component
-const ExhaustedHintsActions = React.memo(({ onVisualize, onTakeBreak }) => (
-  <div className="exhausted-hints-actions">
-    <div className="exhausted-message">
-      <Lightbulb size={20} />
-      <span>No more hints available! Choose your next step:</span>
-    </div>
-    <div className="action-buttons">
-      <button className="action-btn visualize-btn" onClick={onVisualize}>
-        <Code size={18} />
-        Visualize with Code
-      </button>
-      <button className="action-btn break-btn" onClick={onTakeBreak}>
-        <Coffee size={18} />
-        Take a Break
-      </button>
-    </div>
-  </div>
-));
-
 // Main Learning Session Component
 const LearningSession = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const location = useLocation();
-  const { 
-    currentUser, 
-    isRegistered, 
-    isAnonymous, 
-    signupWithEmail, 
-    updateAnonymousUser 
-  } = useAuth();
+  const { currentUser, isAuthenticated, logout } = useAuth();
 
   // Session State
   const [sessionData, setSessionData] = useState(null);
@@ -620,53 +320,13 @@ const LearningSession = () => {
   const [correctStreak, setCorrectStreak] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [currentQuestioningStyle, setCurrentQuestioningStyle] = useState('socratic');
-  const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [isLoadingFirstQuestion, setIsLoadingFirstQuestion] = useState(true);
   const [sessionStartTime] = useState(Date.now());
-
-  // Anonymous user progress tracking
-  const [showProgressPrompt, setShowProgressPrompt] = useState(false);
-  const [promptDismissed, setPromptDismissed] = useState(false);
   const [exchangeCount, setExchangeCount] = useState(0);
 
   const timer = useTimer();
   const hints = useHints();
-  const apiKeyManager = useApiKey();
   const messageEndRef = useRef(null);
-  
-  // Refs for click-outside detection
-  const styleDropdownRef = useRef(null);
-  const styleBadgeRef = useRef(null);
-
-  // Click outside handler to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        showStyleSelector &&
-        styleDropdownRef.current &&
-        styleBadgeRef.current &&
-        !styleDropdownRef.current.contains(event.target) &&
-        !styleBadgeRef.current.contains(event.target)
-      ) {
-        setShowStyleSelector(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showStyleSelector]);
-
-  // Check if we should show progress prompt for anonymous users
-  useEffect(() => {
-    if (isAnonymous && !promptDismissed && !showProgressPrompt) {
-      const shouldShowPrompt = ANONYMOUS_PROMPTS.AFTER_EXCHANGES.includes(exchangeCount);
-      if (shouldShowPrompt) {
-        setShowProgressPrompt(true);
-      }
-    }
-  }, [exchangeCount, isAnonymous, promptDismissed, showProgressPrompt]);
 
   // Initialize session
   useEffect(() => {
@@ -676,97 +336,51 @@ const LearningSession = () => {
 
   const initializeSession = async () => {
     try {
-      console.log('🔄 Starting initializeSession...', { sessionId, locationState: location.state });
+      console.log('Starting initializeSession...', { sessionId, locationState: location.state });
       let sessionInfo = null;
 
       if (sessionId && sessionId !== 'new') {
-        console.log('📖 Loading existing session:', sessionId);
-        // Load existing session (only for registered users)
-        if (isRegistered) {
+        console.log('Loading existing session:', sessionId);
+        if (isAuthenticated) {
           try {
-            sessionInfo = await dataService.getLearningSession(sessionId);
-            console.log('✅ Loaded existing session:', sessionInfo);
-            setMessages(sessionInfo.messages || []);
-            setProgress(sessionInfo.progress || []);
-            setCorrectStreak(sessionInfo.correctStreak || 0);
-            setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
-            setExchangeCount(sessionInfo.exchangeCount || 0);
+            // Load existing session from backend
+            const sessions = await api.getLearningHistory();
+            sessionInfo = sessions.find(s => s.id === sessionId);
             
-            // Restore hint state
-            if (sessionInfo.hintsRemaining !== undefined) {
-              hints.setHintsRemaining(sessionInfo.hintsRemaining);
-            }
-            
-            // Restore timer state
-            if (sessionInfo.timerRemaining) {
-              timer.setTimeRemaining(sessionInfo.timerRemaining);
+            if (sessionInfo) {
+              console.log('Loaded existing session:', sessionInfo);
+              setMessages(sessionInfo.messages || []);
+              setProgress(sessionInfo.progress || []);
+              setCorrectStreak(sessionInfo.correctStreak || 0);
+              setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
+              setExchangeCount(sessionInfo.exchangeCount || 0);
             }
           } catch (error) {
-            console.error('❌ Failed to load session:', error);
-            // Don't navigate away, continue with new session instead
+            console.error('Failed to load session:', error);
             sessionInfo = location.state;
-            if (!sessionInfo?.isNewSession) {
-              console.log('⚠️ No location state, redirecting to dashboard');
-              navigate('/dashboard', { replace: true });
-              return;
-            }
           }
         } else {
-          console.log('👤 Anonymous user can\'t load existing sessions, checking location state');
-          // For anonymous users, check if we have location state for new session
           sessionInfo = location.state;
-          if (!sessionInfo?.isNewSession) {
-            console.log('⚠️ No valid session data for anonymous user, redirecting to start');
-            navigate('/start', { replace: true });
-            return;
-          }
         }
       } else {
-        console.log('🆕 Creating new session from location state');
-        // New session from location state
+        console.log('Creating new session from location state');
         sessionInfo = location.state;
-        if (!sessionInfo?.isNewSession || (!sessionInfo?.topicData && !sessionInfo?.selectedTopicData)) {
-          console.error('❌ Invalid session data for new session:', sessionInfo);
-          const redirectPath = isRegistered ? '/dashboard' : '/start';
-          console.log(`🔄 Redirecting to ${redirectPath}`);
+        
+        if (!sessionInfo?.isNewSession) {
+          console.error('Invalid session data for new session:', sessionInfo);
+          const redirectPath = isAuthenticated ? '/dashboard' : '/start';
           navigate(redirectPath, { replace: true });
           return;
         }
-        
-        console.log('✅ Valid new session data found:', sessionInfo);
-        
-        // Ensure we have proper topic data structure
-        if (!sessionInfo.topicData && sessionInfo.selectedTopicData) {
-          console.log('🔄 Copying selectedTopicData to topicData');
-          sessionInfo.topicData = sessionInfo.selectedTopicData;
-        }
-
-        // Create new session in backend only for registered users
-        if (isRegistered) {
-          try {
-            console.log('💾 Creating new session in Firebase...');
-            const newSession = await dataService.createLearningSession({
-              topicName: sessionInfo.topicData.name,
-              topicData: sessionInfo.topicData,
-              learningPath: sessionInfo.learningPath,
-              questioningStyle: sessionInfo.questioningStyle || 'socratic',
-              hintsRemaining: HINT_CONSTANTS.MAX_HINTS,
-              exchangeCount: 0
-            });
-            
-            console.log('✅ Session created with ID:', newSession.id);
-            // Update URL with new session ID but don't navigate away from learning
-            window.history.replaceState(null, '', `/learn/${newSession.id}`);
-          } catch (error) {
-            console.error('⚠️ Failed to create session in Firebase, continuing with local session:', error);
-            // Continue with local session - don't redirect
-          }
-        } else {
-          console.log('👤 Anonymous user - continuing with local session');
-        }
       }
 
-      console.log('🎯 Setting session data and starting session...', sessionInfo);
+      if (!sessionInfo) {
+        const redirectPath = isAuthenticated ? '/dashboard' : '/start';
+        navigate(redirectPath, { replace: true });
+        return;
+      }
+
+      console.log('Setting session data:', sessionInfo);
       setSessionData(sessionInfo);
       setCurrentQuestioningStyle(sessionInfo?.questioningStyle || 'socratic');
       
@@ -775,51 +389,40 @@ const LearningSession = () => {
       
       // Get first question if new session
       if (!sessionId || sessionId === 'new') {
-        console.log('❓ Getting first question...');
+        console.log('Getting first question...');
         await getFirstQuestion(sessionInfo);
       } else {
-        console.log('📚 Using existing session, skipping first question');
         setIsLoadingFirstQuestion(false);
       }
       
-      console.log('✅ Session initialization complete!');
+      console.log('Session initialization complete!');
 
     } catch (error) {
-      console.error('❌ Failed to initialize session:', error);
-      const redirectPath = isRegistered ? '/dashboard' : '/start';
-      console.log(`🔄 Error occurred, redirecting to ${redirectPath}`);
+      console.error('Failed to initialize session:', error);
+      const redirectPath = isAuthenticated ? '/dashboard' : '/start';
       navigate(redirectPath, { replace: true });
     }
   };
 
   const getFirstQuestion = useCallback(async (sessionInfo) => {
-    const apiKey = apiKeyManager.getCurrentApiKey();
-    if (!apiKey) {
-      setIsLoadingFirstQuestion(false);
-      return;
-    }
-
     try {
       setIsLoadingFirstQuestion(true);
       
       const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name || 'Unknown Topic';
       const learningPathName = learningPaths[sessionInfo.learningPath]?.name || 'Comprehensive Track';
       
-      const firstQuestion = await getSocraticResponse(
-        topicName,
-        `I'm ready to learn about ${topicName} using the ${learningPathName} approach. Let's begin!`,
-        sessionInfo.learningPath,
-        sessionInfo.questioningStyle || 'socratic',
-        apiKey
-      );
+      // Simulate AI response (replace with actual API call when backend AI is ready)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const firstQuestion = `Welcome to learning ${topicName}! Let's start with the ${learningPathName} approach. What's your current understanding of this topic?`;
       
       const firstMessage = createMessage(MESSAGE_TYPES.BOT, firstQuestion);
       setMessages([firstMessage]);
       
-      // Add welcome message for anonymous users
-      if (isAnonymous) {
+      // Add welcome message for non-authenticated users
+      if (!isAuthenticated) {
         const welcomeMessage = createMessage(MESSAGE_TYPES.SYSTEM, 
-          `🎉 Welcome to MindMelt! You're learning as an anonymous user. Your progress will be saved locally, but you can create an account anytime to save it permanently.`,
+          `Welcome to MindMelt! You're learning as a guest. Your progress will be saved locally, but you can create an account anytime to save it permanently.`,
           { isWelcome: true }
         );
         setMessages(prev => [welcomeMessage, ...prev]);
@@ -827,74 +430,25 @@ const LearningSession = () => {
       
     } catch (error) {
       console.error('Failed to get first question:', error);
-      const fallbackQuestion = `Welcome to learning ${sessionInfo?.topicData?.name || sessionInfo?.selectedTopicData?.name || 'this topic'}! 🧠 What would you like to explore first?`;
+      const fallbackQuestion = `Welcome to learning ${sessionInfo?.topicData?.name || 'this topic'}! What would you like to explore first?`;
       const fallbackMessage = createMessage(MESSAGE_TYPES.BOT, fallbackQuestion);
       setMessages([fallbackMessage]);
     } finally {
       setIsLoadingFirstQuestion(false);
     }
-  }, [apiKeyManager, isAnonymous]);
-
-  // Handle anonymous user progress saving
-  const handleSaveProgress = useCallback(async (email, name) => {
-    try {
-      await signupWithEmail(email, name);
-      
-      // Show success message
-      const successMessage = createMessage(MESSAGE_TYPES.SYSTEM,
-        `🎉 Account created successfully! Your progress is now saved. Welcome to MindMelt, ${name || 'learner'}!`,
-        { isBonus: true }
-      );
-      setMessages(prev => [...prev, successMessage]);
-      
-      setShowProgressPrompt(false);
-      setPromptDismissed(true);
-      
-      // Navigate to dashboard after a brief delay
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Failed to save progress:', error);
-      const errorMessage = createMessage(MESSAGE_TYPES.SYSTEM,
-        `❌ Failed to create account: ${error.message}`,
-        { isError: true }
-      );
-      setMessages(prev => [...prev, errorMessage]);
-    }
-  }, [signupWithEmail, navigate]);
-
-  const handleDismissProgressPrompt = useCallback(() => {
-    setShowProgressPrompt(false);
-    setPromptDismissed(true);
-  }, []);
+  }, [isAuthenticated]);
 
   // Request hint function
   const handleHintRequest = useCallback(async () => {
     if (!hints.canUseHint || !sessionData) return;
     
-    const currentApiKey = apiKeyManager.getCurrentApiKey();
-    if (!currentApiKey) {
-      return;
-    }
-    
     hints.setIsRequestingHint(true);
     
     try {
-      const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
-      const recentMessages = messages.slice(-6); // Get last 6 messages for context
-      const conversationContext = recentMessages.map(msg => 
-        `${msg.type === MESSAGE_TYPES.USER ? 'Student' : 'Tutor'}: ${msg.content}`
-      ).join('\n');
+      // Simulate hint response (replace with actual API call when backend AI is ready)
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const hintResponse = await getHintResponse(
-        topicName,
-        conversationContext,
-        sessionData.learningPath,
-        currentQuestioningStyle,
-        currentApiKey
-      );
+      const hintResponse = "Think about the fundamental concepts we've discussed. What patterns do you notice?";
       
       const hintMessage = createMessage(MESSAGE_TYPES.HINT, hintResponse, { isHint: true });
       setMessages(prev => [...prev, hintMessage]);
@@ -903,19 +457,19 @@ const LearningSession = () => {
       
     } catch (error) {
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
-        `❌ Hint Error: ${error.message}`,
+        `Hint Error: ${error.message}`,
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       hints.setIsRequestingHint(false);
     }
-  }, [hints, sessionData, apiKeyManager, messages, currentQuestioningStyle]);
+  }, [hints, sessionData]);
 
   // Handle visualization action
   const handleVisualize = useCallback(() => {
     const visualizationMessage = createMessage(MESSAGE_TYPES.BOT,
-      "🎨 Let's create a visualization! Try writing some code to represent what you've learned about this topic. You can use pseudocode, diagrams, or actual code snippets.",
+      "Let's create a visualization! Try writing some code to represent what you've learned about this topic.",
       { isBonus: true }
     );
     setMessages(prev => [...prev, visualizationMessage]);
@@ -925,7 +479,7 @@ const LearningSession = () => {
   const handleTakeBreak = useCallback(() => {
     timer.togglePause();
     const breakMessage = createMessage(MESSAGE_TYPES.BOT,
-      "☕ Taking a break is important for learning! Your timer is paused. When you're ready, feel free to continue our discussion or return to the dashboard.",
+      "Taking a break is important for learning! Your timer is paused. When you're ready, feel free to continue our discussion.",
       { isBonus: true }
     );
     setMessages(prev => [...prev, breakMessage]);
@@ -944,7 +498,7 @@ const LearningSession = () => {
           if (t <= 1) {
             clearInterval(interval);
             setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
-              "🍦💧 Time's up! Your ice cream has melted. Great learning session though!",
+              "Time's up! Your ice cream has melted. Great learning session though!",
               { isTimeUp: true }
             )]);
             return 0;
@@ -956,50 +510,8 @@ const LearningSession = () => {
     }
   }, [timer.timerActive, timer.timerPaused, timer.timeRemaining, timer.setTimeRemaining]);
 
-  // Save session periodically (only for registered users)
-  useEffect(() => {
-    if (!sessionData || !sessionId || sessionId === 'new' || !isRegistered) return;
-
-    const saveSession = async () => {
-      try {
-        await dataService.updateLearningSession(sessionId, {
-          messages,
-          progress,
-          correctStreak,
-          questioningStyle: currentQuestioningStyle,
-          timerRemaining: timer.timeRemaining,
-          hintsRemaining: hints.hintsRemaining,
-          exchangeCount,
-          duration: Math.floor((Date.now() - sessionStartTime) / 1000),
-          lastActivity: new Date().toISOString()
-        });
-      } catch (error) {
-        console.error('Failed to save session:', error);
-      }
-    };
-
-    const saveInterval = setInterval(saveSession, 30000); // Save every 30 seconds
-    return () => clearInterval(saveInterval);
-  }, [sessionData, sessionId, isRegistered, messages, progress, correctStreak, currentQuestioningStyle, timer.timeRemaining, hints.hintsRemaining, exchangeCount, sessionStartTime]);
-
-  // Update anonymous user progress in localStorage
-  useEffect(() => {
-    if (isAnonymous && currentUser) {
-      updateAnonymousUser({
-        sessionCount: exchangeCount,
-        lastActivity: new Date().toISOString(),
-        totalQuestions: exchangeCount
-      });
-    }
-  }, [exchangeCount, isAnonymous, currentUser, updateAnonymousUser]);
-
   const handleSubmit = useCallback(async () => {
     if (!userInput.trim() || isThinking || timer.timeRemaining <= 0 || !sessionData) return;
-    
-    const currentApiKey = apiKeyManager.getCurrentApiKey();
-    if (!currentApiKey) {
-      return;
-    }
     
     setIsThinking(true);
     
@@ -1007,14 +519,11 @@ const LearningSession = () => {
     setMessages(prev => [...prev, userMessage]);
     
     try {
+      // Simulate AI response (replace with actual API call when backend AI is ready)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
-      const botReply = await getSocraticResponse(
-        topicName, 
-        userInput, 
-        sessionData.learningPath, 
-        currentQuestioningStyle,
-        currentApiKey
-      );
+      const botReply = `That's an interesting perspective on ${topicName}! Can you elaborate on what you think happens next?`;
       
       const botMessage = createMessage(MESSAGE_TYPES.BOT, botReply);
       setMessages(prev => [...prev, botMessage]);
@@ -1033,36 +542,28 @@ const LearningSession = () => {
         timer.increaseTimer();
         setCorrectStreak(prev => prev + 1);
         setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
-          "🍦✨ Great progress! Your ice cream is refreezing - you've earned more focus time!",
+          "Great progress! Your ice cream is refreezing - you've earned more focus time!",
           { isBonus: true }
         )]);
         
-        // Update topic progress in Firebase
-        if (isRegistered && sessionData.topicData) {
+        // Update progress in backend if authenticated
+        if (isAuthenticated && sessionData.roadmapId) {
           try {
             const newProgress = Math.min(progress.length * 10, 100);
-            await dataService.updateTopicProgress(
-              sessionData.roadmapId || sessionData.topicData.roadmapId,
-              sessionData.topicData.id,
-              {
-                progress: newProgress,
-                unlocked: true,
-                started: true,
-                canAdvance: newProgress >= 70,
-                questionsAnswered: progress.length + 1,
-                correctAnswers: correctStreak,
-                timeSpent: Math.floor((Date.now() - sessionStartTime) / 1000)
-              }
+            await api.updateUserProgress(
+              sessionData.roadmapId,
+              sessionData.topicData?.id || 'topic1',
+              newProgress
             );
           } catch (error) {
-            console.error('Error updating topic progress:', error);
+            console.error('Error updating progress:', error);
           }
         }
       }
       
     } catch (error) {
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
-        `❌ Error: ${error.message}`,
+        `Error: ${error.message}`,
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
@@ -1070,15 +571,15 @@ const LearningSession = () => {
       setIsThinking(false);
       setUserInput('');
     }
-  }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress, currentQuestioningStyle]);
+  }, [userInput, isThinking, timer, sessionData, progress, isAuthenticated]);
 
   const handleBackToDashboard = useCallback(() => {
-    if (isRegistered) {
+    if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
     } else {
       navigate('/start', { replace: true });
     }
-  }, [navigate, isRegistered]);
+  }, [navigate, isAuthenticated]);
 
   const handleInfoClick = useCallback(() => {
     if (timer.timerActive && !timer.timerPaused) {
@@ -1094,48 +595,11 @@ const LearningSession = () => {
     }
   }, [timer]);
 
-  const restartWithNewQuestioningStyle = useCallback(async (newQuestioningStyle) => {
-    if (!sessionData) return;
-    
-    const updatedSessionData = {
-      ...sessionData,
-      questioningStyle: newQuestioningStyle
-    };
-    
-    setSessionData(updatedSessionData);
-    setCurrentQuestioningStyle(newQuestioningStyle);
-    setMessages([]);
-    setProgress([]);
-    setCorrectStreak(0);
-    setExchangeCount(0);
-    setUserInput('');
-    setIsThinking(false);
-    
-    // Reset hints when restarting
-    hints.resetHints();
-    
-    timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
-    timer.setTimerActive(true);
-    
-    const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
-      `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle]?.name || 'New Style'}! Starting fresh with new questions and full hints restored.`, 
-      { isBonus: true }
-    );
-    setMessages([restartMessage]);
-    
-    setTimeout(() => {
-      getFirstQuestion(updatedSessionData);
-    }, 1000);
-    
-  }, [sessionData, timer, hints, getFirstQuestion]);
-
   if (!sessionData) {
-    console.log('SessionData is null/undefined');
     return <LoadingSpinner message="Loading your learning session..." />;
   }
   
   if (!sessionData.topicData && !sessionData.selectedTopicData) {
-    console.error('SessionData missing topic data:', sessionData);
     return (
       <div className="error-container" style={{ padding: '2rem', textAlign: 'center' }}>
         <h2>Session Error</h2>
@@ -1148,15 +612,6 @@ const LearningSession = () => {
   }
 
   const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
-  const topicIcon = sessionData?.topicData?.icon || sessionData?.selectedTopicData?.icon || '📚';
-  
-  // Debug: Log the critical values to help identify the issue
-  console.log('LearningSession render values:', {
-    learningPath: sessionData.learningPath,
-    currentQuestioningStyle,
-    learningPathExists: !!learningPaths[sessionData.learningPath],
-    questioningStyleExists: !!questioningStyles[currentQuestioningStyle]
-  });
 
   return (
     <div className="learning-session-page">
@@ -1168,7 +623,7 @@ const LearningSession = () => {
                 <button
                   onClick={handleBackToDashboard}
                   className="back-btn"
-                  title={isRegistered ? "Back to Dashboard" : "Back to Start"}
+                  title={isAuthenticated ? "Back to Dashboard" : "Back to Start"}
                 >
                   <Home size={20} />
                 </button>
@@ -1179,56 +634,20 @@ const LearningSession = () => {
               </div>
               <div className="session-meta">
                 <div className="path-badge">
-                  {learningPaths[sessionData.learningPath]?.icon || '🎯'} {learningPaths[sessionData.learningPath]?.name || 'Learning Path'}
+                  {learningPaths[sessionData.learningPath]?.name || 'Learning Path'}
                 </div>
 
-                <div className="style-selector-container">
-                  <button 
-                    ref={styleBadgeRef}
-                    className="style-badge clickable enhanced"
-                    onClick={() => setShowStyleSelector(!showStyleSelector)}
-                    title="Click to change questioning style (restarts session)"
-                  >
-                    {questioningStyles[currentQuestioningStyle]?.icon || '💭'} {questioningStyles[currentQuestioningStyle]?.name || 'Questioning Style'}
-                    <span className="dropdown-arrow">🔄</span>
-                  </button>
-                  
-                  {showStyleSelector && (
-                    <>
-                      <div className="dropdown-overlay" />
-                      <div ref={styleDropdownRef} className="style-dropdown enhanced">
-                        <div className="dropdown-header enhanced">
-                          <h4>💭 Change Questioning Style</h4>
-                          <p>⚠️ This will restart your session with fresh questions</p>
-                        </div>
-                        {Object.entries(questioningStyles).map(([key, style]) => (
-                          <button
-                            key={key}
-                            className={`style-option concise ${currentQuestioningStyle === key ? 'active' : ''}`}
-                            onClick={() => {
-                              if (key !== currentQuestioningStyle) {
-                                restartWithNewQuestioningStyle(key);
-                              }
-                              setShowStyleSelector(false);
-                            }}
-                          >
-                            <span className="style-option-icon">{style?.icon || '💭'}</span>
-                            <span className="style-option-name">{style?.name || 'Unknown Style'}</span>
-                            {currentQuestioningStyle === key && <span className="current-badge">Current</span>}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
+                <div className="style-badge">
+                  {questioningStyles[currentQuestioningStyle]?.name || 'Questioning Style'}
                 </div>
 
                 <button 
-                  className="info-btn enhanced"
+                  className="info-btn"
                   onClick={handleInfoClick}
-                  title="Session Information (Auto-pauses timer)"
+                  title="Session Information"
                 >
                   <Info size={18} />
-                  <span className="info-text">Info</span>
+                  Info
                 </button>
               </div>
             </div>
@@ -1246,7 +665,7 @@ const LearningSession = () => {
                   </div>
                   <div className="timer-label">
                     Focus Time • Max: {Math.floor(timer.maxTime / 60)}min
-                    {showInfo && <span className="paused-label"> • Paused</span>}
+                    {timer.timerPaused && <span className="paused-label"> • Paused</span>}
                   </div>
                 </div>
               </div>
@@ -1274,7 +693,7 @@ const LearningSession = () => {
             {isLoadingFirstQuestion ? (
               <div className="loading-first-question">
                 <div className="loading-spinner"></div>
-                <p>🧠 Preparing your {learningPaths[sessionData.learningPath]?.name?.toLowerCase() || 'learning'} question...</p>
+                <p>Preparing your {learningPaths[sessionData.learningPath]?.name?.toLowerCase() || 'learning'} question...</p>
               </div>
             ) : (
               <>
@@ -1307,32 +726,23 @@ const LearningSession = () => {
 
           <div className="input-area">
             <div className="input-container">
-            <input
-              className="message-input"
-              placeholder={
-                isLoadingFirstQuestion ? "Loading your first question..." :
-                timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
-                "Type your response..."
-              }
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
+              <input
+                className="message-input"
+                placeholder={
+                  isLoadingFirstQuestion ? "Loading your first question..." :
+                  timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted" : 
+                  "Type your response..."
                 }
-              }}
-              onPaste={(e) => {
-                e.preventDefault();
-                // Show a brief message to the user
-                const pasteWarning = createMessage(MESSAGE_TYPES.BOT,
-                  "🚫 Pasting is disabled to encourage authentic learning. Please type your thoughts and responses!",
-                  { isError: true }
-                );
-                setMessages(prev => [...prev, pasteWarning]);
-              }}
-              disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
-            />
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
+              />
               <button 
                 className="send-btn"
                 onClick={handleSubmit}
@@ -1352,63 +762,59 @@ const LearningSession = () => {
                   isRequestingHint={hints.isRequestingHint}
                 />
               ) : (
-                <ExhaustedHintsActions
-                  onVisualize={handleVisualize}
-                  onTakeBreak={handleTakeBreak}
-                />
+                <div className="exhausted-hints-actions">
+                  <div className="exhausted-message">
+                    <Lightbulb size={20} />
+                    <span>No more hints available! Choose your next step:</span>
+                  </div>
+                  <div className="action-buttons">
+                    <button className="action-btn visualize-btn" onClick={handleVisualize}>
+                      <Code size={18} />
+                      Visualize with Code
+                    </button>
+                    <button className="action-btn break-btn" onClick={handleTakeBreak}>
+                      <Coffee size={18} />
+                      Take a Break
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
             
             <div className="session-controls">
               <div className="progress-info">
                 <CheckCircle size={16} className="progress-icon" />
-                <span>{exchangeCount} exchanges • Streak: {correctStreak} 🔥</span>
-                {isAnonymous && (
+                <span>{exchangeCount} exchanges • Streak: {correctStreak}</span>
+                {!isAuthenticated && (
                   <>
                     <span className="separator">•</span>
-                    <span className="anonymous-indicator">Anonymous Session</span>
+                    <span className="anonymous-indicator">Guest Session</span>
                   </>
                 )}
               </div>
               
               <button onClick={handleBackToDashboard} className="btn btn-secondary btn-sm">
                 <Home size={16} />
-                {isRegistered ? 'Dashboard' : 'Start Page'}
+                {isAuthenticated ? 'Dashboard' : 'Start Page'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Anonymous Progress Prompt */}
-        {isAnonymous && (
-          <AnonymousProgressPrompt
-            prompt={
-              exchangeCount >= 15 
-                ? ANONYMOUS_PROMPTS.FINAL_REMINDER
-                : ANONYMOUS_PROMPTS.SAVE_PROGRESS
-            }
-            onSaveProgress={handleSaveProgress}
-            onDismiss={handleDismissProgressPrompt}
-            exchangeCount={exchangeCount}
-            isVisible={showProgressPrompt}
-            isUrgent={exchangeCount >= 15}
-          />
-        )}
-
-        {/* Info Modal - keeping existing implementation */}
+        {/* Info Modal */}
         {showInfo && (
           <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
             <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header simplified">
                 <div className="modal-title">
-                  <span className="modal-icon">🧠</span>
+                  <span className="modal-icon">Learning Session Info</span>
                   <div>
                     <h2>Learning Session Info</h2>
                     <div className="modal-badges">
                       <span className="category-badge">{sessionData.topicData?.category || 'Computer Science'}</span>
                       <span className="difficulty-badge">{sessionData.topicData?.difficulty || 'Intermediate'}</span>
-                      <span className="timer-badge">⏸️ Timer Paused</span>
-                      {isAnonymous && <span className="user-badge">👤 Anonymous</span>}
+                      <span className="timer-badge">Timer Paused</span>
+                      {!isAuthenticated && <span className="user-badge">Guest Session</span>}
                     </div>
                   </div>
                 </div>
@@ -1421,18 +827,18 @@ const LearningSession = () => {
               <div className="modal-body simplified">
                 <div className="info-content">
                   <div className="welcome-text">
-                    <p>🧠 You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
-                    <p>🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
-                    <p>💡 Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
-                    <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
-                    <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
-                    {isAnonymous && (
-                      <p>👤 <strong>Anonymous Session:</strong> Your progress is saved locally. Create an account to save it permanently and unlock advanced features!</p>
+                    <p>You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
+                    <p>Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
+                    <p>Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
+                    <p>I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
+                    <p>Take your time to think through each question and explain your reasoning for the best learning experience!</p>
+                    {!isAuthenticated && (
+                      <p><strong>Guest Session:</strong> Your progress is saved locally. Create an account to save it permanently and unlock advanced features!</p>
                     )}
                   </div>
                   
                   <div className="current-session-info">
-                    <h3>📚 Current Session</h3>
+                    <h3>Current Session</h3>
                     <div className="session-summary">
                       <div className="summary-item">
                         <strong>Topic:</strong> {topicName}
@@ -1450,26 +856,8 @@ const LearningSession = () => {
                         <strong>Hints:</strong> {hints.hintsRemaining} remaining
                       </div>
                       <div className="summary-item">
-                        <strong>User Type:</strong> {isAnonymous ? 'Anonymous' : 'Registered'}
+                        <strong>User Type:</strong> {isAuthenticated ? 'Registered' : 'Guest'}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="questioning-styles-info">
-                    <h3>💭 Available Questioning Styles</h3>
-                    <p className="styles-intro">You can change your questioning style anytime. Each style offers a different approach:</p>
-                    
-                    <div className="styles-info-list">
-                      {Object.entries(questioningStyles).map(([key, style]) => (
-                        <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
-                          <div className="style-info-header">
-                            <span className="style-info-icon">{style?.icon || '💭'}</span>
-                            <span className="style-info-name">{style?.name || 'Unknown Style'}</span>
-                            {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
-                          </div>
-                          <p className="style-info-desc">{style?.description || 'No description available'}</p>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 </div>
@@ -1478,7 +866,7 @@ const LearningSession = () => {
               <div className="modal-footer simplified">
                 <button onClick={handleInfoClose} className="btn btn-primary">
                   <Play size={16} />
-                  Resume Learning 🚀
+                  Resume Learning
                 </button>
               </div>
             </div>

@@ -9,7 +9,6 @@ export const ProtectedRoute = ({
 }) => {
   const { 
     isAuthenticated, 
-    isRegistered,
     loading 
   } = useAuth();
 
@@ -17,12 +16,8 @@ export const ProtectedRoute = ({
     return <LoadingSpinner message="Loading MindMelt..." />;
   }
 
-  if (allowAnonymous && isAuthenticated) {
+  if (allowAnonymous) {
     return children;
-  }
-
-  if (!allowAnonymous && !isRegistered) {
-    return <Navigate to={redirectTo || "/login"} replace />;
   }
 
   if (!isAuthenticated) {

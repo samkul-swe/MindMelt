@@ -2,16 +2,16 @@
 class ApiService {
   constructor() {
     this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    this.token = localStorage.getItem('mindmelt_token');
+    this.token = localStorage.getItem('authToken'); // Match authAPI token key
   }
 
   // Set authentication token
   setToken(token) {
     this.token = token;
     if (token) {
-      localStorage.setItem('mindmelt_token', token);
+      localStorage.setItem('authToken', token);
     } else {
-      localStorage.removeItem('mindmelt_token');
+      localStorage.removeItem('authToken');
     }
   }
 
@@ -85,22 +85,7 @@ class ApiService {
       username,
     });
     
-    if (response.data.token) {
-      this.setToken(response.data.token);
-    }
-    
-    return response.data;
-  }
-
-  async login(email, password) {
-    // For now, we'll simulate login - in a real app you'd have a login endpoint
-    // Or you'd use Firebase client SDK to get an ID token and send it to your backend
-    const response = await this.post('/api/auth/login', {
-      email,
-      password,
-    });
-    
-    if (response.data.token) {
+    if (response.data?.token) {
       this.setToken(response.data.token);
     }
     
@@ -112,7 +97,7 @@ class ApiService {
       idToken,
     });
     
-    if (response.data.token) {
+    if (response.data?.token) {
       this.setToken(response.data.token);
     }
     
@@ -129,33 +114,33 @@ class ApiService {
     return response.data;
   }
 
-  async updateProgress(courseId, topicId, percentage) {
+  async updateProgress(roadmapId, topicId, percentage) {
     const response = await this.post('/api/auth/progress', {
-      courseId,
+      roadmapId,  // Updated from courseId
       topicId,
       percentage,
     });
     return response.data;
   }
 
-  async recordSession(sessionData) {
-    const response = await this.post('/api/auth/session', sessionData);
+  async deleteAccount() {
+    const response = await this.delete('/api/auth/account');
     return response.data;
   }
 
-  // Data methods
-  async getCourses() {
-    const response = await this.get('/api/data/courses');
+  // Data methods (updated for roadmaps)
+  async getRoadmaps() {
+    const response = await this.get('/api/data/roadmaps');
     return response.data;
   }
 
-  async getCourse(courseId) {
-    const response = await this.get(`/api/data/courses/${courseId}`);
+  async getRoadmap(roadmapId) {
+    const response = await this.get(`/api/data/roadmaps/${roadmapId}`);
     return response.data;
   }
 
-  async getTopicsForCourse(courseId) {
-    const response = await this.get(`/api/data/courses/${courseId}/topics`);
+  async getTopicsForRoadmap(roadmapId) {
+    const response = await this.get(`/api/data/roadmaps/${roadmapId}/topics`);
     return response.data;
   }
 
@@ -164,16 +149,65 @@ class ApiService {
     return response.data;
   }
 
-  async searchCourses(query) {
-    const response = await this.get(`/api/data/search/courses?q=${encodeURIComponent(query)}`);
+  async getRoadmapStats(roadmapId) {
+    const response = await this.get(`/api/data/roadmaps/${roadmapId}/stats`);
     return response.data;
   }
 
-  async searchTopics(query, courseId = null) {
-    const url = courseId 
-      ? `/api/data/search/topics?q=${encodeURIComponent(query)}&courseId=${courseId}`
-      : `/api/data/search/topics?q=${encodeURIComponent(query)}`;
-    const response = await this.get(url);
+  // AI service methods (for when backend AI is ready)
+  async getSocraticResponse(concept, userResponse, learningPath, questioningStyle) {
+    const response = await this.post('/api/ai/chat', {
+      concept,
+      userResponse,
+      learningPath,
+      questioningStyle
+    });
+    return response.data;
+  }
+
+  async getHint(concept, conversationContext, learningPath, questioningStyle) {
+    const response = await this.post('/api/ai/hint', {
+      concept,
+      conversationContext,
+      learningPath,
+      questioningStyle
+    });
+    return response.data;
+  }
+
+  async assessUnderstanding(concept, userResponse) {
+    const response = await this.post('/api/ai/assess', {
+      concept,
+      userResponse
+    });
+    return response.data;
+  }
+
+  async generateDailySummary(sessionsData) {
+    const response = await this.post('/api/ai/summary', {
+      sessionsData
+    });
+    return response.data;
+  }
+
+  // Learning session methods (for future use)
+  async createLearningSession(sessionData) {
+    const response = await this.post('/api/sessions/create', sessionData);
+    return response.data;
+  }
+
+  async updateLearningSession(sessionId, updates) {
+    const response = await this.put(`/api/sessions/${sessionId}`, updates);
+    return response.data;
+  }
+
+  async getLearningSession(sessionId) {
+    const response = await this.get(`/api/sessions/${sessionId}`);
+    return response.data;
+  }
+
+  async getLearningHistory() {
+    const response = await this.get('/api/sessions/history');
     return response.data;
   }
 
@@ -187,6 +221,19 @@ class ApiService {
   logout() {
     this.setToken(null);
     localStorage.removeItem('mindmelt_user');
+  }
+
+  // Legacy method aliases for backward compatibility
+  async getCourses() {
+    return this.getRoadmaps();
+  }
+
+  async getCourse(courseId) {
+    return this.getRoadmap(courseId);
+  }
+
+  async getTopicsForCourse(courseId) {
+    return this.getTopicsForRoadmap(courseId);
   }
 }
 

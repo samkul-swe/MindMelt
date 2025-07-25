@@ -159,6 +159,15 @@ const userStorage = {
       });
       throw error;
     }
+  },
+
+  async delete(id) {
+    try {
+      await db.collection('users').doc(id).delete();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
   }
 };
 

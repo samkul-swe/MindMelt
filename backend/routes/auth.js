@@ -4,6 +4,42 @@ const { authenticateToken } = require('../utils/middleware');
 
 const router = express.Router();
 
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    const user = await authService.loginUser(email, password);
+    const token = authService.createCustomToken(user);
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          id: user.uid,
+          email: user.email,
+          username: user.username,
+          currentProgress: user.currentProgress || {}
+        },
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(401).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 router.post('/register', async (req, res) => {
   try {
     const { email, password, username } = req.body;

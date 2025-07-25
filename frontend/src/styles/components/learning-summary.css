@@ -1,5 +1,3 @@
-/* src/styles/components/learning-summary.css */
-
 .learning-summary {
   background: var(--color-white);
   border-radius: var(--border-radius-lg);
@@ -120,7 +118,6 @@
   font-style: italic;
 }
 
-/* Responsive design */
 @media (max-width: 768px) {
   .learning-summary {
     padding: var(--spacing-lg);
@@ -141,7 +138,6 @@
   }
 }
 
-/* Animation for content updates */
 .learning-summary__text {
   animation: fadeIn 0.5s ease-in-out;
 }

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, loading, error, isRegistered } = useAuth();
+  const { login, loading, error, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -13,7 +13,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
 
-  if (isRegistered) {
+  if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -46,7 +46,7 @@ const LoginPage = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #fed7aa 100%)',
+      background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
       fontFamily: 'Inter, system-ui, sans-serif',
       display: 'flex',
       alignItems: 'center',
@@ -65,7 +65,7 @@ const LoginPage = () => {
     },
     leftSide: {
       flex: 1,
-      background: 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)',
+      background: 'linear-gradient(135deg, #EA580C 0%, #DC2626 100%)',
       padding: '3rem',
       display: 'flex',
       flexDirection: 'column',
@@ -179,7 +179,7 @@ const LoginPage = () => {
       boxSizing: 'border-box'
     },
     inputFocus: {
-      borderColor: '#ea580c',
+      borderColor: '#EA580C',
       boxShadow: '0 0 0 3px rgba(234,88,12,0.1)'
     },
     passwordContainer: {
@@ -215,7 +215,7 @@ const LoginPage = () => {
       justifyContent: 'center',
       gap: '0.5rem',
       padding: '1rem',
-      background: '#ea580c',
+      background: '#EA580C',
       color: 'white',
       border: 'none',
       borderRadius: '0.75rem',
@@ -249,7 +249,7 @@ const LoginPage = () => {
       margin: 0
     },
     footerLink: {
-      color: '#ea580c',
+      color: '#EA580C',
       fontWeight: '600',
       background: 'none',
       border: 'none',
@@ -270,16 +270,16 @@ const LoginPage = () => {
           background: rgba(255,255,255,0.3) !important;
           border-color: rgba(255,255,255,0.5) !important;
         }
-        .submit-button:hover {
-          background: #dc2626 !important;
+        .submit-button:hover:not(:disabled) {
+          background: #DC2626 !important;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(234,88,12,0.3);
         }
         .password-toggle:hover {
-          color: #ea580c !important;
+          color: #EA580C !important;
         }
         .footer-link:hover {
-          color: #dc2626 !important;
+          color: #DC2626 !important;
         }
         @media (max-width: 768px) {
           .content-wrapper {
@@ -311,20 +311,20 @@ const LoginPage = () => {
           </div>
           
           <h2 style={styles.welcomeText}>
-            Welcome back to your CS learning journey! 🧠
+            Welcome back to your CS learning journey!
           </h2>
           
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>🤖</span>
+              <span style={styles.featureIcon}>AI</span>
               <span>AI-powered learning that adapts to you</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>⏱️</span>
+              <span style={styles.featureIcon}>Timer</span>
               <span>Quick 8-minute focused sessions</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>🏆</span>
+              <span style={styles.featureIcon}>Trophy</span>
               <span>Track your progress and achievements</span>
             </div>
           </div>
@@ -358,7 +358,7 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} style={styles.form}>
             {(formError || error) && (
               <div style={styles.errorMessage}>
-                <span>⚠️</span>
+                <span>Warning</span>
                 <span>{formError || error}</span>
               </div>
             )}

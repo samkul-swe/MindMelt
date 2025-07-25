@@ -10,14 +10,14 @@
     <meta name="author" content="MindMelt Learning Platform" />
 
     <meta property="og:title" content="MindMelt - CS Learning Platform" />
-    <meta property="og:description" content="🧠🍦 Train your brain before your ice cream melts! Master CS fundamentals through AI-powered Socratic questioning." />
+    <meta property="og:description" content="Train your brain before your ice cream melts! Master CS fundamentals through AI-powered Socratic questioning." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="%PUBLIC_URL%" />
     <meta property="og:image" content="%PUBLIC_URL%/mindmelt-og-image.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MindMelt - Train Your Brain Before Your Ice Cream Melts!" />
-    <meta name="twitter:description" content="🧠🍦 Adaptive CS learning with AI tutoring and melting ice cream timer. Master algorithms, data structures, and more!" />
+    <meta name="twitter:description" content="Adaptive CS learning with AI tutoring and melting ice cream timer. Master algorithms, data structures, and more!" />
     <meta name="twitter:image" content="%PUBLIC_URL%/mindmelt-twitter-card.png" />
     
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
@@ -140,7 +140,6 @@
     <noscript>
       <div style="text-align: center; padding: 50px; font-family: 'Inter', Arial, sans-serif; background: linear-gradient(135deg, #F4E4BC 0%, #E8B86D 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center;">
         <div style="background: white; padding: 3rem; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); max-width: 500px;">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">🍦🧠</div>
           <h1 style="color: #D2691E; margin-bottom: 1rem;">JavaScript Required for MindMelt</h1>
           <p style="color: #6b7280; margin-bottom: 1rem;">You need to enable JavaScript to use MindMelt's interactive learning features.</p>
           <p style="color: #8B4513; font-size: 0.9rem;">MindMelt uses AI-powered tutoring and real-time ice cream animations that require JavaScript to function properly.</p>
@@ -202,12 +201,12 @@
           const loadTime = navigation ? navigation.loadEventEnd - navigation.loadEventStart : 0;
 
           if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.log('🍦 MindMelt Performance Metrics:');
+            console.log('MindMelt Performance Metrics:');
             console.log('  Page load time:', loadTime + 'ms');
             console.log('  DOM content loaded:', navigation ? (navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart) + 'ms' : 'N/A');
 
             if (loadTime > 3000) {
-              console.warn('⚠️ MindMelt: Slow loading detected. This might affect the ice cream timer experience.');
+              console.warn('Warning: Slow loading detected. This might affect the ice cream timer experience.');
             }
           }
 
@@ -223,7 +222,7 @@
 
       if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         document.documentElement.style.setProperty('--animation-duration', '0ms');
-        console.log('🎯 MindMelt: Reduced motion preferences detected - animations disabled for accessibility');
+        console.log('MindMelt: Reduced motion preferences detected - animations disabled for accessibility');
       }
     </script>
   </body>

@@ -1,23 +1,9 @@
-import { 
-  db,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-  increment
-} from './firebase/firebaseService';
+// Backend API URL - adjust based on your setup
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class DataService {
   constructor() {
-    this.coursesCache = new Map();
+    this.roadmapsCache = new Map();
     this.topicsCache = new Map();
     this.currentUserId = null;
   }
@@ -27,81 +13,111 @@ class DataService {
     this.currentUserId = userId;
   }
 
-  // Get all courses
-  async getCourses() {
+  // Helper method to make authenticated requests
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = localStorage.getItem('authToken');
+    
+    const defaultOptions = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers
+      }
+    };
+
+    const response = await fetch(url, {
+      ...defaultOptions,
+      ...options
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // Get all roadmaps
+  async getRoadmaps() {
     try {
-      if (this.coursesCache.size > 0) {
-        return Array.from(this.coursesCache.values());
+      if (this.roadmapsCache.size > 0) {
+        return Array.from(this.roadmapsCache.values());
       }
 
-      const coursesRef = collection(db, 'courses');
-      const snapshot = await getDocs(coursesRef);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps`);
       
-      const courses = [];
-      snapshot.forEach(doc => {
-        const course = { id: doc.id, ...doc.data() };
-        this.coursesCache.set(doc.id, course);
-        courses.push(course);
+      if (!response.ok) {
+        throw new Error('Failed to fetch roadmaps');
+      }
+
+      const result = await response.json();
+      const roadmaps = result.data || result;
+      
+      // Cache the roadmaps
+      roadmaps.forEach(roadmap => {
+        this.roadmapsCache.set(roadmap.id, roadmap);
       });
 
-      console.log(`✅ Retrieved ${courses.length} courses from Firestore`);
-      return courses;
+      console.log(`Retrieved ${roadmaps.length} roadmaps from backend`);
+      return roadmaps;
     } catch (error) {
-      console.error('❌ Error fetching courses:', error);
+      console.error('Error fetching roadmaps:', error);
       throw error;
     }
   }
 
-  // Get a specific course by ID
-  async getCourse(courseId) {
+  // Get a specific roadmap by ID
+  async getRoadmap(roadmapId) {
     try {
-      if (this.coursesCache.has(courseId)) {
-        return this.coursesCache.get(courseId);
+      if (this.roadmapsCache.has(roadmapId)) {
+        return this.roadmapsCache.get(roadmapId);
       }
 
-      const courseRef = doc(db, 'courses', courseId);
-      const courseDoc = await getDoc(courseRef);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}`);
       
-      if (courseDoc.exists()) {
-        const course = { id: courseDoc.id, ...courseDoc.data() };
-        this.coursesCache.set(courseId, course);
-        return course;
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to fetch roadmap');
       }
+
+      const result = await response.json();
+      const roadmap = result.data || result;
       
-      return null;
+      // Cache the roadmap
+      this.roadmapsCache.set(roadmapId, roadmap);
+      return roadmap;
     } catch (error) {
-      console.error(`❌ Error fetching course ${courseId}:`, error);
+      console.error(`Error fetching roadmap ${roadmapId}:`, error);
       throw error;
     }
   }
 
-  // Get all topics for a specific course
-  async getTopicsForCourse(courseId) {
+  // Get all topics for a specific roadmap
+  async getRoadmapTopics(roadmapId) {
     try {
-      const cacheKey = `course_${courseId}`;
+      const cacheKey = `roadmap_${roadmapId}`;
       if (this.topicsCache.has(cacheKey)) {
         return this.topicsCache.get(cacheKey);
       }
 
-      const topicsRef = collection(db, 'topics');
-      const q = query(
-        topicsRef,
-        where('courseId', '==', courseId),
-        orderBy('order', 'asc')
-      );
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/topics`);
       
-      const snapshot = await getDocs(q);
-      const topics = [];
-      
-      snapshot.forEach(doc => {
-        topics.push({ id: doc.id, ...doc.data() });
-      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch roadmap topics');
+      }
 
+      const result = await response.json();
+      const topics = result.data || result;
+
+      // Cache the topics
       this.topicsCache.set(cacheKey, topics);
-      console.log(`✅ Retrieved ${topics.length} topics for course ${courseId}`);
+      console.log(`Retrieved ${topics.length} topics for roadmap ${roadmapId}`);
       return topics;
     } catch (error) {
-      console.error(`❌ Error fetching topics for course ${courseId}:`, error);
+      console.error(`Error fetching topics for roadmap ${roadmapId}:`, error);
       throw error;
     }
   }
@@ -109,251 +125,287 @@ class DataService {
   // Get a specific topic by ID
   async getTopic(topicId) {
     try {
-      const topicRef = doc(db, 'topics', topicId);
-      const topicDoc = await getDoc(topicRef);
+      const response = await fetch(`${API_BASE_URL}/data/topics/${topicId}`);
       
-      if (topicDoc.exists()) {
-        return { id: topicDoc.id, ...topicDoc.data() };
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to fetch topic');
       }
-      
-      return null;
+
+      const result = await response.json();
+      return result.data || result;
     } catch (error) {
-      console.error(`❌ Error fetching topic ${topicId}:`, error);
+      console.error(`Error fetching topic ${topicId}:`, error);
       throw error;
     }
   }
 
-  // Get user progress for a specific course
-  async getUserCourseProgress(userId, courseId) {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const currentProgress = userData.currentProgress || {};
-        return currentProgress[courseId] || {
-          percentage: 0,
-          topics: {}
-        };
-      }
-      
-      return { percentage: 0, topics: {} };
-    } catch (error) {
-      console.error(`❌ Error fetching user progress for course ${courseId}:`, error);
-      throw error;
-    }
-  }
-
-  // Get all user progress
-  async getAllUserProgress(userId) {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        return userData.currentProgress || {};
-      }
-      
-      return {};
-    } catch (error) {
-      console.error(`❌ Error fetching all user progress:`, error);
-      throw error;
-    }
-  }
-
-  // Update user progress for a topic
-  async updateTopicProgress(userId, courseId, topicId, percentage) {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      
-      let currentProgress = {};
-      if (userDoc.exists()) {
-        currentProgress = userDoc.data().currentProgress || {};
-      }
-
-      // Initialize course progress if it doesn't exist
-      if (!currentProgress[courseId]) {
-        currentProgress[courseId] = {
-          percentage: 0,
-          topics: {}
-        };
-      }
-
-      // Update topic progress
-      currentProgress[courseId].topics[topicId] = {
-        percentage: percentage,
-        completed: percentage >= 100,
-        lastUpdated: serverTimestamp()
-      };
-
-      // Calculate overall course progress
-      const topics = currentProgress[courseId].topics;
-      const topicKeys = Object.keys(topics);
-      const totalPercentage = topicKeys.reduce((sum, key) => sum + topics[key].percentage, 0);
-      currentProgress[courseId].percentage = topicKeys.length > 0 ? Math.round(totalPercentage / topicKeys.length) : 0;
-
-      // Update user document
-      await updateDoc(userRef, {
-        currentProgress: currentProgress,
-        updatedAt: serverTimestamp()
-      });
-
-      console.log(`✅ Updated progress for topic ${topicId} in course ${courseId}: ${percentage}%`);
-      return currentProgress[courseId];
-    } catch (error) {
-      console.error(`❌ Error updating topic progress:`, error);
-      throw error;
-    }
-  }
-
-  // Mark topic as completed
-  async markTopicCompleted(userId, courseId, topicId) {
-    return await this.updateTopicProgress(userId, courseId, topicId, 100);
-  }
-
-  // Get user statistics
-  async getUserStats(userId) {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const currentProgress = userData.currentProgress || {};
-        
-        // Calculate statistics
-        const totalCourses = Object.keys(currentProgress).length;
-        const completedCourses = Object.values(currentProgress).filter(course => course.percentage === 100).length;
-        
-        let totalTopics = 0;
-        let completedTopics = 0;
-        
-        Object.values(currentProgress).forEach(courseProgress => {
-          const topics = courseProgress.topics || {};
-          totalTopics += Object.keys(topics).length;
-          completedTopics += Object.values(topics).filter(topic => topic.completed).length;
-        });
-
-        return {
-          totalLearningTime: userData.totalLearningTime || 0,
-          completedSessions: userData.completedSessions || 0,
-          totalCourses,
-          completedCourses,
-          totalTopics,
-          completedTopics,
-          joinedAt: userData.joinedAt,
-          lastActiveAt: userData.lastActiveAt
-        };
-      }
-      
-      return {
-        totalLearningTime: 0,
-        completedSessions: 0,
-        totalCourses: 0,
-        completedCourses: 0,
-        totalTopics: 0,
-        completedTopics: 0
-      };
-    } catch (error) {
-      console.error(`❌ Error fetching user stats:`, error);
-      throw error;
-    }
-  }
-
-  // Search courses by name or category
-  async searchCourses(searchTerm) {
-    try {
-      const courses = await this.getCourses();
-      const searchLower = searchTerm.toLowerCase();
-      
-      return courses.filter(course => 
-        course.name.toLowerCase().includes(searchLower) ||
-        course.description.toLowerCase().includes(searchLower) ||
-        course.category.toLowerCase().includes(searchLower)
-      );
-    } catch (error) {
-      console.error('❌ Error searching courses:', error);
-      throw error;
-    }
-  }
-
-  // Search topics by name
-  async searchTopics(searchTerm, courseId = null) {
-    try {
-      let topics = [];
-      
-      if (courseId) {
-        topics = await this.getTopicsForCourse(courseId);
-      } else {
-        // Get all topics (this might be expensive for large datasets)
-        const topicsRef = collection(db, 'topics');
-        const snapshot = await getDocs(topicsRef);
-        snapshot.forEach(doc => {
-          topics.push({ id: doc.id, ...doc.data() });
-        });
-      }
-      
-      const searchLower = searchTerm.toLowerCase();
-      return topics.filter(topic => 
-        topic.name.toLowerCase().includes(searchLower) ||
-        topic.description.toLowerCase().includes(searchLower)
-      );
-    } catch (error) {
-      console.error('❌ Error searching topics:', error);
-      throw error;
-    }
-  }
-
-  // Clear cache (call this when data might have changed)
-  clearCache() {
-    this.coursesCache.clear();
-    this.topicsCache.clear();
-  }
-
-  // Legacy methods for backward compatibility with existing code
-  async getRoadmap(roadmapId) {
-    return await this.getCourse(roadmapId);
-  }
-
-  async getRoadmapTopics(roadmapId) {
-    return await this.getTopicsForCourse(roadmapId);
-  }
-
+  // Get user progress for a specific roadmap
   async getUserProgress(roadmapId) {
     if (!this.currentUserId) {
       return { topics: {} };
     }
     
-    const progress = await this.getUserCourseProgress(this.currentUserId, roadmapId);
-    return { topics: progress.topics || {} };
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const user = result.data || result;
+      
+      if (user && user.currentProgress && user.currentProgress[roadmapId]) {
+        return { topics: user.currentProgress[roadmapId] };
+      }
+      
+      return { topics: {} };
+    } catch (error) {
+      console.error(`Error fetching user progress for roadmap ${roadmapId}:`, error);
+      return { topics: {} };
+    }
   }
 
-  async enrollUserInRoadmap(roadmapId, userId) {
-    // Initialize empty progress for the roadmap
-    const userRef = doc(db, 'users', userId);
-    const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      const currentProgress = userData.currentProgress || {};
-      
-      if (!currentProgress[roadmapId]) {
-        currentProgress[roadmapId] = {
-          percentage: 0,
-          topics: {}
-        };
-        
-        await updateDoc(userRef, {
-          currentProgress: currentProgress,
-          updatedAt: serverTimestamp()
-        });
-      }
+  // Get all user progress
+  async getAllUserProgress() {
+    if (!this.currentUserId) {
+      return {};
     }
     
-    return true;
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const user = result.data || result;
+      
+      return user?.currentProgress || {};
+    } catch (error) {
+      console.error('Error fetching all user progress:', error);
+      return {};
+    }
+  }
+
+  // Update user progress for a topic
+  async updateTopicProgress(roadmapId, topicId, progressData) {
+    if (!this.currentUserId) {
+      console.warn('No authenticated user - cannot update progress');
+      return null;
+    }
+    
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
+        method: 'POST',
+        body: JSON.stringify({
+          roadmapId,
+          topicId,
+          percentage: progressData.progress || progressData.percentage || 0
+        })
+      });
+
+      console.log(`Updated progress for topic ${topicId} in roadmap ${roadmapId}`);
+      return result.data || result;
+    } catch (error) {
+      console.error('Error updating topic progress:', error);
+      throw error;
+    }
+  }
+
+  // Mark topic as completed
+  async markTopicCompleted(roadmapId, topicId) {
+    return await this.updateTopicProgress(roadmapId, topicId, { progress: 100 });
+  }
+
+  // Get user statistics
+  async getUserStats() {
+    if (!this.currentUserId) {
+      return {
+        totalLearningTime: 0,
+        completedSessions: 0,
+        totalRoadmaps: 0,
+        completedRoadmaps: 0,
+        totalTopics: 0,
+        completedTopics: 0
+      };
+    }
+    
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const user = result.data || result;
+      
+      if (!user) {
+        return {
+          totalLearningTime: 0,
+          completedSessions: 0,
+          totalRoadmaps: 0,
+          completedRoadmaps: 0,
+          totalTopics: 0,
+          completedTopics: 0
+        };
+      }
+
+      const currentProgress = user.currentProgress || {};
+      
+      // Calculate statistics
+      const totalRoadmaps = Object.keys(currentProgress).length;
+      let completedRoadmaps = 0;
+      let totalTopics = 0;
+      let completedTopics = 0;
+      
+      Object.values(currentProgress).forEach(roadmapProgress => {
+        const topics = Object.values(roadmapProgress);
+        totalTopics += topics.length;
+        
+        const roadmapCompletedTopics = topics.filter(topic => topic.completed || topic.percentage >= 100).length;
+        completedTopics += roadmapCompletedTopics;
+        
+        // Consider roadmap completed if all topics are completed
+        if (topics.length > 0 && roadmapCompletedTopics === topics.length) {
+          completedRoadmaps++;
+        }
+      });
+
+      return {
+        totalLearningTime: user.totalLearningTime || 0,
+        completedSessions: user.completedSessions || 0,
+        totalRoadmaps,
+        completedRoadmaps,
+        totalTopics,
+        completedTopics,
+        joinedAt: user.createdAt || user.joinedAt,
+        lastActiveAt: user.updatedAt || user.lastActiveAt
+      };
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      throw error;
+    }
+  }
+
+  // Get roadmap statistics
+  async getRoadmapStats(roadmapId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/stats`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch roadmap stats');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching roadmap stats for ${roadmapId}:`, error);
+      // Return basic stats as fallback
+      const topics = await this.getRoadmapTopics(roadmapId);
+      return {
+        totalTopics: topics.length,
+        topicsByDifficulty: this.groupTopicsByDifficulty(topics)
+      };
+    }
+  }
+
+  // Helper method to group topics by difficulty
+  groupTopicsByDifficulty(topics) {
+    const grouped = {};
+    topics.forEach(topic => {
+      const difficulty = topic.difficulty || 'Unknown';
+      if (!grouped[difficulty]) {
+        grouped[difficulty] = 0;
+      }
+      grouped[difficulty]++;
+    });
+    return grouped;
+  }
+
+  // Clear cache (call this when data might have changed)
+  clearCache() {
+    this.roadmapsCache.clear();
+    this.topicsCache.clear();
+  }
+
+  // Learning session methods (for future use when AI backend is ready)
+  async createLearningSession(sessionData) {
+    if (!this.currentUserId) {
+      console.warn('No authenticated user - cannot create session');
+      return { id: 'local_session_' + Date.now() };
+    }
+    
+    try {
+      // This would call your backend to create a learning session
+      // For now, return a mock session
+      return {
+        id: 'session_' + Date.now(),
+        ...sessionData,
+        userId: this.currentUserId,
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error creating learning session:', error);
+      throw error;
+    }
+  }
+
+  async updateLearningSession(sessionId, updates) {
+    if (!this.currentUserId) {
+      console.warn('No authenticated user - cannot update session');
+      return null;
+    }
+    
+    try {
+      // This would call your backend to update a learning session
+      console.log('Would update session:', sessionId, 'with:', updates);
+      return { id: sessionId, ...updates };
+    } catch (error) {
+      console.error('Error updating learning session:', error);
+      throw error;
+    }
+  }
+
+  async getLearningSession(sessionId) {
+    if (!this.currentUserId) {
+      console.warn('No authenticated user - cannot get session');
+      return null;
+    }
+    
+    try {
+      // This would call your backend to get a learning session
+      console.log('Would get session:', sessionId);
+      return null; // Return null to fall back to new session
+    } catch (error) {
+      console.error('Error getting learning session:', error);
+      return null;
+    }
+  }
+
+  // Enroll user in roadmap (initialize progress)
+  async enrollUserInRoadmap(roadmapId, userId) {
+    if (!userId) {
+      console.warn('No user ID provided for enrollment');
+      return false;
+    }
+    
+    try {
+      // This would initialize the user's progress for the roadmap
+      console.log('Would enroll user', userId, 'in roadmap', roadmapId);
+      return true;
+    } catch (error) {
+      console.error('Error enrolling user in roadmap:', error);
+      return false;
+    }
+  }
+
+  // Legacy method aliases for backward compatibility
+  async getCourses() {
+    return this.getRoadmaps();
+  }
+
+  async getCourse(courseId) {
+    return this.getRoadmap(courseId);
+  }
+
+  async getTopicsForCourse(courseId) {
+    return this.getRoadmapTopics(courseId);
+  }
+
+  async getUserCourseProgress(userId, courseId) {
+    const progress = await this.getUserProgress(courseId);
+    return {
+      percentage: 0, // Calculate from topics
+      topics: progress.topics || {}
+    };
   }
 }
 

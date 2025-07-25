@@ -14,60 +14,35 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [anonymousUser, setAnonymousUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Listen to Firebase auth state changes
-    const unsubscribe = api.onAuthStateChange((user) => {
-      if (user) {
-        if (user.isAnonymous) {
-          // Handle anonymous user
-          setAnonymousUser(user);
-          setCurrentUser(user);
-        } else {
-          // Handle authenticated user
-          setCurrentUser(user);
-          setAnonymousUser(null);
-          dataService.setUser(user.id);
+    // Check for existing JWT token on app start
+    const checkAuthState = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // Verify token with backend
+          const user = await api.verifyToken(token);
+          if (user) {
+            setCurrentUser(user);
+            dataService.setUser(user.id);
+          } else {
+            // Token invalid, remove it
+            localStorage.removeItem('authToken');
+          }
         }
-      } else {
-        // User is signed out
-        setCurrentUser(null);
-        setAnonymousUser(null);
+      } catch (error) {
+        console.error('Auth state check failed:', error);
+        localStorage.removeItem('authToken');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return unsubscribe;
+    checkAuthState();
   }, []);
-
-  const createAnonymousUser = async () => {
-    try {
-      setLoading(true);
-      const user = await api.signInAnonymously();
-      return user;
-    } catch (error) {
-      console.error('Error creating anonymous user:', error);
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateAnonymousUser = async (updates) => {
-    if (!currentUser || !currentUser.isAnonymous) return;
-    
-    try {
-      const updatedUser = await api.updateProfile(updates);
-      return updatedUser;
-    } catch (error) {
-      console.error('Error updating anonymous user:', error);
-      throw error;
-    }
-  };
 
   const login = async (email, password) => {
     try {
@@ -76,12 +51,15 @@ export const AuthProvider = ({ children }) => {
       
       console.log('AuthContext: Login attempt for:', email);
       
-      const user = await api.signIn(email, password);
+      const response = await api.signIn(email, password);
+      const { user, token } = response;
       
-      // Handle anonymous data migration if needed
-      if (anonymousUser) {
-        await migrateAnonymousProgress(user);
-      }
+      // Store JWT token
+      localStorage.setItem('authToken', token);
+      
+      // Set user state
+      setCurrentUser(user);
+      dataService.setUser(user.id);
       
       console.log('AuthContext: Login successful');
       return user;
@@ -99,12 +77,15 @@ export const AuthProvider = ({ children }) => {
       setError('');
       setLoading(true);
       
-      const user = await api.signUp(email, password, username);
+      const response = await api.signUp(email, password, username);
+      const { user, token } = response;
 
-      // Handle anonymous data migration if needed
-      if (anonymousUser) {
-        await migrateAnonymousProgress(user);
-      }
+      // Store JWT token
+      localStorage.setItem('authToken', token);
+      
+      // Set user state
+      setCurrentUser(user);
+      dataService.setUser(user.id);
       
       console.log('AuthContext: Signup successful');
       return user;
@@ -117,62 +98,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signupWithEmail = async (email, username = null) => {
-    // For backward compatibility - generate a temporary password
-    const tempPassword = 'temp_' + Math.random().toString(36).substr(2, 12) + '!A1';
-    return await signup(email, tempPassword, username);
-  };
-
-  const migrateAnonymousProgress = async (newUser) => {
-    try {
-      if (anonymousUser) {
-        console.log('Migrating anonymous progress to authenticated user');
-        
-        // Get any stored anonymous data
-        const anonymousProgress = localStorage.getItem('mindmelt_anonymous_progress');
-        const anonymousSessions = localStorage.getItem('mindmelt_anonymous_sessions');
-        
-        if (anonymousProgress || anonymousSessions) {
-          const progressData = anonymousProgress ? JSON.parse(anonymousProgress) : {};
-          const sessionsData = anonymousSessions ? JSON.parse(anonymousSessions) : [];
-          
-          console.log('Migrating anonymous progress:', {
-            sessions: sessionsData.length,
-            progress: progressData
-          });
-          
-          // Record the migration as a learning session
-          await api.recordLearningSession({
-            migratedData: {
-              sessions: sessionsData,
-              progress: progressData,
-              anonymousUser: anonymousUser
-            },
-            createRecord: true,
-            duration: 0
-          });
-        }
-        
-        // Clean up anonymous data
-        localStorage.removeItem('mindmelt_anonymous_progress');
-        localStorage.removeItem('mindmelt_anonymous_sessions');
-      }
-    } catch (error) {
-      console.error('Progress migration failed:', error);
-    }
-  };
-
   const logout = async () => {
     try {
       setLoading(true);
-      await api.signOut();
       
-      // Clean up local storage
-      localStorage.removeItem('mindmelt_anonymous_progress');
-      localStorage.removeItem('mindmelt_anonymous_sessions');
+      // Remove JWT token
+      localStorage.removeItem('authToken');
       
       setCurrentUser(null);
-      setAnonymousUser(null);
       
       console.log('AuthContext: Logout successful');
     } catch (error) {
@@ -188,7 +121,9 @@ export const AuthProvider = ({ children }) => {
     if (!currentUser) return;
     
     try {
-      const updatedUser = await api.updateProfile(profileUpdates);
+      const response = await api.updateProfile(profileUpdates);
+      const updatedUser = response.user || response;
+      setCurrentUser(updatedUser);
       return updatedUser;
     } catch (error) {
       console.error('AuthContext: Profile update failed:', error);
@@ -201,41 +136,17 @@ export const AuthProvider = ({ children }) => {
     return userData.username || userData.name || userData.email?.split('@')[0] || 'User';
   };
 
-  const isRegistered = () => {
-    return !!(currentUser && !currentUser.isAnonymous);
-  };
-
-  const isAnonymous = () => {
-    return !!(currentUser && currentUser.isAnonymous);
-  };
-
-  const canAccessFeature = (feature) => {
-    if (feature === 'learning') return true;
-    if (feature === 'progress_tracking') return isRegistered();
-    if (feature === 'learning_analytics') return isRegistered();
-    if (feature === 'profile_settings') return isRegistered();
-    return false;
-  };
-
   const value = {
-    user: isRegistered() ? currentUser : null,
-    anonymousUser: isAnonymous() ? currentUser : null,
+    user: currentUser,
     currentUser,
     loading,
     error,
     login,
     signup,
-    signupWithEmail,
     logout,
     updateUser,
     getDisplayName,
-    createAnonymousUser,
-    updateAnonymousUser,
-    isAuthenticated: !!currentUser,
-    isRegistered: isRegistered(),
-    isAnonymous: isAnonymous(),
-    canAccessFeature,
-    migrateAnonymousProgress
+    isAuthenticated: !!currentUser
   };
 
   return (

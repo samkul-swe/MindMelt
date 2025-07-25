@@ -1,309 +1,175 @@
-import { 
-  auth, 
-  db,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  signInAnonymously,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-  addDoc,
-  serverTimestamp,
-  increment
-} from './firebase/firebaseService';
+// Backend API URL - adjust based on your setup
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class AuthAPI {
   constructor() {
     this.currentUser = null;
     this.isAuthenticated = false;
-    this.authStateChangeListeners = [];
   }
 
-  // Listen to authentication state changes
-  onAuthStateChange(callback) {
-    this.authStateChangeListeners.push(callback);
+  // Helper method to make authenticated requests
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = localStorage.getItem('authToken');
     
-    return onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          // Get user data from Firestore
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            this.currentUser = {
-              id: user.uid,
-              email: user.email,
-              isAnonymous: user.isAnonymous,
-              ...userDoc.data()
-            };
-          } else {
-            // If user document doesn't exist, create it
-            await this.createUserDocument(user);
-          }
-          this.isAuthenticated = true;
-        } catch (error) {
-          console.error('Error fetching user data:', error);
-          this.currentUser = {
-            id: user.uid,
-            email: user.email,
-            username: user.displayName || user.email?.split('@')[0] || 'User',
-            isAnonymous: user.isAnonymous
-          };
-          this.isAuthenticated = true;
-        }
-      } else {
-        this.currentUser = null;
-        this.isAuthenticated = false;
+    const defaultOptions = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers
       }
-      
-      // Notify all listeners
-      this.authStateChangeListeners.forEach(listener => listener(this.currentUser));
-      callback(this.currentUser);
+    };
+
+    const response = await fetch(url, {
+      ...defaultOptions,
+      ...options
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
   }
 
-  // Create user document in Firestore
-  async createUserDocument(user, additionalData = {}) {
-    if (!user) return;
+  // Verify JWT token with backend
+  async verifyToken(token) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
-    const userRef = doc(db, 'users', user.uid);
-    const userDoc = await getDoc(userRef);
-
-    if (!userDoc.exists()) {
-      const { username, email } = additionalData;
-      
-      try {
-        const userData = {
-          username: username || user.displayName || user.email?.split('@')[0] || 'User',
-          email: user.email,
-          isAnonymous: user.isAnonymous || false,
-          joinedAt: serverTimestamp(),
-          currentProgress: {}, // Will store course progress
-          totalLearningTime: 0,
-          completedSessions: 0,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        };
-
-        await setDoc(userRef, userData);
-        
-        this.currentUser = {
-          id: user.uid,
-          email: user.email,
-          isAnonymous: user.isAnonymous,
-          ...userData
-        };
-
-        console.log('✅ User document created successfully');
-        return this.currentUser;
-      } catch (error) {
-        console.error('❌ Error creating user document:', error);
-        throw error;
+      if (response.ok) {
+        const result = await response.json();
+        return result.data || result.user || result;
       }
+      return null;
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      return null;
     }
   }
 
   // Sign up with email and password
   async signUp(email, password, username = null) {
     try {
-      // Check if username is already taken
-      if (username) {
-        const isUsernameTaken = await this.checkUsernameExists(username);
-        if (isUsernameTaken) {
-          throw new Error('Username is already taken');
-        }
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
       }
 
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await response.json();
       
-      // Update display name if username provided
-      if (username) {
-        await updateProfile(user, { displayName: username });
+      // Store the JWT token
+      if (result.data?.token) {
+        localStorage.setItem('authToken', result.data.token);
       }
 
-      // Create user document
-      await this.createUserDocument(user, { username, email });
-      
-      return this.currentUser;
+      return {
+        user: result.data?.user || result.user,
+        token: result.data?.token || result.token
+      };
     } catch (error) {
-      console.error('❌ Sign up error:', error);
+      console.error('Sign up error:', error);
       throw error;
     }
   }
 
-  // Sign in with email and password
+  // Sign in with email and password (direct backend login)
   async signIn(email, password) {
     try {
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists()) {
-        this.currentUser = {
-          id: user.uid,
-          email: user.email,
-          isAnonymous: user.isAnonymous,
-          ...userDoc.data()
-        };
-      }
-      
-      return this.currentUser;
-    } catch (error) {
-      console.error('❌ Sign in error:', error);
-      throw error;
-    }
-  }
-
-  // Sign in anonymously
-  async signInAnonymously() {
-    try {
-      const { user } = await signInAnonymously(auth);
-      
-      // Create anonymous user document
-      await this.createUserDocument(user, {
-        username: 'Anonymous Learner',
-        email: null
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
       });
-      
-      return this.currentUser;
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const result = await response.json();
+
+      if (result.data?.token) {
+        localStorage.setItem('authToken', result.data.token);
+      }
+
+      return {
+        user: result.data?.user || result.user,
+        token: result.data?.token || result.token
+      };
     } catch (error) {
-      console.error('❌ Anonymous sign in error:', error);
+      console.error('Sign in error:', error);
       throw error;
     }
   }
 
-  // Sign out
-  async signOut() {
-    try {
-      await signOut(auth);
-      this.currentUser = null;
-      this.isAuthenticated = false;
-      return true;
-    } catch (error) {
-      console.error('❌ Sign out error:', error);
-      throw error;
-    }
-  }
 
-  // Check if username exists
-  async checkUsernameExists(username) {
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('username', '==', username));
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
-    } catch (error) {
-      console.error('❌ Error checking username:', error);
-      return false;
-    }
-  }
 
   // Update user profile
   async updateProfile(updates) {
-    if (!this.currentUser) {
-      throw new Error('No authenticated user');
-    }
-
     try {
-      const userRef = doc(db, 'users', this.currentUser.id);
-      const updateData = {
-        ...updates,
-        updatedAt: serverTimestamp()
-      };
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
 
-      await updateDoc(userRef, updateData);
-      
-      // Update Firebase Auth profile if username changed
-      if (updates.username) {
-        await updateProfile(auth.currentUser, {
-          displayName: updates.username
-        });
-      }
-      
-      // Update local user data
-      this.currentUser = {
-        ...this.currentUser,
-        ...updates
-      };
-
-      return this.currentUser;
+      return result.data || result.user || result;
     } catch (error) {
-      console.error('❌ Error updating profile:', error);
+      console.error('Error updating profile:', error);
       throw error;
     }
   }
 
-  // Update user progress for a specific course and topic
-  async updateUserProgress(courseId, topicId, percentage) {
-    if (!this.currentUser) {
-      throw new Error('No authenticated user');
-    }
-
+  // Update user progress for a specific roadmap and topic
+  async updateUserProgress(roadmapId, topicId, percentage) {
     try {
-      const userRef = doc(db, 'users', this.currentUser.id);
-      const userDoc = await getDoc(userRef);
-      
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const currentProgress = userData.currentProgress || {};
-        
-        // Initialize course progress if it doesn't exist
-        if (!currentProgress[courseId]) {
-          currentProgress[courseId] = {
-            percentage: 0,
-            topics: {}
-          };
-        }
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
+        method: 'POST',
+        body: JSON.stringify({
+          roadmapId,
+          topicId,
+          percentage
+        })
+      });
 
-        // Update topic progress
-        currentProgress[courseId].topics[topicId] = {
-          percentage: percentage,
-          completed: percentage >= 100,
-          lastUpdated: serverTimestamp()
-        };
-
-        // Calculate overall course progress
-        const topics = currentProgress[courseId].topics;
-        const topicKeys = Object.keys(topics);
-        const totalPercentage = topicKeys.reduce((sum, key) => sum + topics[key].percentage, 0);
-        currentProgress[courseId].percentage = topicKeys.length > 0 ? Math.round(totalPercentage / topicKeys.length) : 0;
-
-        // Update in Firestore
-        await updateDoc(userRef, {
-          currentProgress: currentProgress,
-          updatedAt: serverTimestamp()
-        });
-
-        // Update local user data
-        this.currentUser.currentProgress = currentProgress;
-        
-        return currentProgress;
-      }
+      return result.data || result;
     } catch (error) {
-      console.error('❌ Error updating user progress:', error);
+      console.error('Error updating user progress:', error);
       throw error;
     }
   }
 
-  // Get user progress for a specific course
-  getUserProgress(courseId) {
+  // Get user progress for a specific roadmap
+  getUserProgress(roadmapId) {
     if (!this.currentUser || !this.currentUser.currentProgress) {
       return null;
     }
     
-    return this.currentUser.currentProgress[courseId] || null;
+    return this.currentUser.currentProgress[roadmapId] || null;
   }
 
-  // Get all courses progress
+  // Get all roadmaps progress
   getAllProgress() {
     if (!this.currentUser) {
       return {};
@@ -314,38 +180,48 @@ class AuthAPI {
 
   // Record learning session completion
   async recordLearningSession(sessionData) {
-    if (!this.currentUser) {
-      throw new Error('No authenticated user');
-    }
-
     try {
-      const userRef = doc(db, 'users', this.currentUser.id);
-      
-      // Update user statistics
-      await updateDoc(userRef, {
-        totalLearningTime: increment(sessionData.duration || 0),
-        completedSessions: increment(1),
-        lastActiveAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/session`, {
+        method: 'POST',
+        body: JSON.stringify(sessionData)
       });
 
-      // Update progress if course and topic provided
-      if (sessionData.courseId && sessionData.topicId && sessionData.progress !== undefined) {
-        await this.updateUserProgress(sessionData.courseId, sessionData.topicId, sessionData.progress);
-      }
+      return result.data || result;
+    } catch (error) {
+      console.error('Error recording learning session:', error);
+      throw error;
+    }
+  }
 
-      // Create session record if requested
-      if (sessionData.createRecord) {
-        await addDoc(collection(db, 'sessions'), {
-          userId: this.currentUser.id,
-          ...sessionData,
-          createdAt: serverTimestamp()
-        });
-      }
+  // Delete user account
+  async deleteAccount() {
+    try {
+      await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/account`, {
+        method: 'DELETE'
+      });
+
+      // Clear local storage
+      localStorage.removeItem('authToken');
+      this.currentUser = null;
+      this.isAuthenticated = false;
 
       return true;
     } catch (error) {
-      console.error('❌ Error recording learning session:', error);
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  }
+
+  // Sign out
+  async signOut() {
+    try {
+      // Remove JWT token
+      localStorage.removeItem('authToken');
+      this.currentUser = null;
+      this.isAuthenticated = false;
+      return true;
+    } catch (error) {
+      console.error('Sign out error:', error);
       throw error;
     }
   }
@@ -360,30 +236,36 @@ class AuthAPI {
     return this.isAuthenticated && this.currentUser !== null;
   }
 
-  // Legacy methods for backward compatibility
+  // Get learning history
   async getLearningHistory() {
-    if (!this.currentUser) return [];
-    
     try {
-      const sessionsRef = collection(db, 'sessions');
-      const q = query(
-        sessionsRef, 
-        where('userId', '==', this.currentUser.id),
-        orderBy('createdAt', 'desc'),
-        limit(50)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const sessions = [];
-      
-      querySnapshot.forEach((doc) => {
-        sessions.push({ id: doc.id, ...doc.data() });
-      });
-      
-      return sessions;
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/history`);
+      return result.data || result.sessions || [];
     } catch (error) {
-      console.error('❌ Error fetching learning history:', error);
+      console.error('Error fetching learning history:', error);
       return [];
+    }
+  }
+
+  // Check if username exists (for validation)
+  async checkUsernameExists(username) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/check-username`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        return result.exists || false;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking username:', error);
+      return false;
     }
   }
 }
