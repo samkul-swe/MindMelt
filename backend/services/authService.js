@@ -2,7 +2,6 @@ const { admin, userStorage } = require('../config/firebase');
 const jwt = require('jsonwebtoken');
 
 class AuthService {
-  // Create a custom JWT token for the user
   createCustomToken(user) {
     const payload = {
       uid: user.uid || user.id,
@@ -15,10 +14,8 @@ class AuthService {
     });
   }
 
-  // Login user with email and password
   async loginUser(email, password) {
     try {
-      // Verify user credentials with Firebase Auth
       const userRecord = await admin.auth().getUserByEmail(email);
       
       if (!userRecord) {
@@ -100,7 +97,7 @@ class AuthService {
         currentProgress: {}
       };
 
-      const user = await userStorage.create(userData);
+      const user = await userStorage.create(userRecord.uid, userData);
 
       return {
         uid: userRecord.uid,

@@ -1,4 +1,3 @@
-// Backend API URL - adjust based on your setup
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class AuthAPI {
@@ -7,7 +6,6 @@ class AuthAPI {
     this.isAuthenticated = false;
   }
 
-  // Helper method to make authenticated requests
   async makeAuthenticatedRequest(url, options = {}) {
     const token = localStorage.getItem('authToken');
     
@@ -32,7 +30,6 @@ class AuthAPI {
     return response.json();
   }
 
-  // Verify JWT token with backend
   async verifyToken(token) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
@@ -52,7 +49,6 @@ class AuthAPI {
     }
   }
 
-  // Sign up with email and password
   async signUp(email, password, username = null) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -73,8 +69,7 @@ class AuthAPI {
       }
 
       const result = await response.json();
-      
-      // Store the JWT token
+
       if (result.data?.token) {
         localStorage.setItem('authToken', result.data.token);
       }
@@ -89,7 +84,6 @@ class AuthAPI {
     }
   }
 
-  // Sign in with email and password (direct backend login)
   async signIn(email, password) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -124,9 +118,6 @@ class AuthAPI {
     }
   }
 
-
-
-  // Update user profile
   async updateProfile(updates) {
     try {
       const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`, {
@@ -141,7 +132,6 @@ class AuthAPI {
     }
   }
 
-  // Update user progress for a specific roadmap and topic
   async updateUserProgress(roadmapId, topicId, percentage) {
     try {
       const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
@@ -160,7 +150,6 @@ class AuthAPI {
     }
   }
 
-  // Get user progress for a specific roadmap
   getUserProgress(roadmapId) {
     if (!this.currentUser || !this.currentUser.currentProgress) {
       return null;
@@ -169,7 +158,6 @@ class AuthAPI {
     return this.currentUser.currentProgress[roadmapId] || null;
   }
 
-  // Get all roadmaps progress
   getAllProgress() {
     if (!this.currentUser) {
       return {};
@@ -178,7 +166,6 @@ class AuthAPI {
     return this.currentUser.currentProgress || {};
   }
 
-  // Record learning session completion
   async recordLearningSession(sessionData) {
     try {
       const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/session`, {
@@ -193,14 +180,12 @@ class AuthAPI {
     }
   }
 
-  // Delete user account
   async deleteAccount() {
     try {
       await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/account`, {
         method: 'DELETE'
       });
 
-      // Clear local storage
       localStorage.removeItem('authToken');
       this.currentUser = null;
       this.isAuthenticated = false;
@@ -212,10 +197,8 @@ class AuthAPI {
     }
   }
 
-  // Sign out
   async signOut() {
     try {
-      // Remove JWT token
       localStorage.removeItem('authToken');
       this.currentUser = null;
       this.isAuthenticated = false;
@@ -226,17 +209,14 @@ class AuthAPI {
     }
   }
 
-  // Get current user
   getCurrentUser() {
     return this.currentUser;
   }
 
-  // Check if user is authenticated
   isUserAuthenticated() {
     return this.isAuthenticated && this.currentUser !== null;
   }
 
-  // Get learning history
   async getLearningHistory() {
     try {
       const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/history`);
@@ -247,7 +227,6 @@ class AuthAPI {
     }
   }
 
-  // Check if username exists (for validation)
   async checkUsernameExists(username) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/check-username`, {
@@ -270,6 +249,5 @@ class AuthAPI {
   }
 }
 
-// Create and export singleton instance
 const api = new AuthAPI();
 export { api };

@@ -114,7 +114,7 @@ const userStorage = {
     }
   },
 
-  async create(userData) {
+  async create(userID, userData) {
     try {
       const processedUserData = {
         ...userData,
@@ -122,7 +122,8 @@ const userStorage = {
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       };
       
-      const docRef = await db.collection('users').add(processedUserData);
+      const docRef = await db.collection('users').doc(userID);
+      await docRef.set(processedUserData);
       
       const doc = await docRef.get();
       return { id: doc.id, ...doc.data() };

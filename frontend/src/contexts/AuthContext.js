@@ -18,18 +18,15 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Check for existing JWT token on app start
     const checkAuthState = async () => {
       try {
         const token = localStorage.getItem('authToken');
         if (token) {
-          // Verify token with backend
           const user = await api.verifyToken(token);
           if (user) {
             setCurrentUser(user);
             dataService.setUser(user.id);
           } else {
-            // Token invalid, remove it
             localStorage.removeItem('authToken');
           }
         }
@@ -53,11 +50,9 @@ export const AuthProvider = ({ children }) => {
       
       const response = await api.signIn(email, password);
       const { user, token } = response;
-      
-      // Store JWT token
+
       localStorage.setItem('authToken', token);
-      
-      // Set user state
+
       setCurrentUser(user);
       dataService.setUser(user.id);
       
@@ -80,10 +75,8 @@ export const AuthProvider = ({ children }) => {
       const response = await api.signUp(email, password, username);
       const { user, token } = response;
 
-      // Store JWT token
       localStorage.setItem('authToken', token);
-      
-      // Set user state
+
       setCurrentUser(user);
       dataService.setUser(user.id);
       
@@ -101,8 +94,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setLoading(true);
-      
-      // Remove JWT token
+
       localStorage.removeItem('authToken');
       
       setCurrentUser(null);

@@ -1,6 +1,5 @@
 const { admin, app, db } = require('../config/firebase');
 
-// Roadmap data
 const roadmaps = [
   {
     id: 'dsa-fundamentals',
@@ -46,7 +45,6 @@ const roadmaps = [
   }
 ];
 
-// Topics data organized by roadmap
 const topicsByRoadmap = {
   'dsa-fundamentals': [
     { id: 1, name: "Arrays & Strings", difficulty: "Beginner", description: "Master array manipulation and string algorithms" },
@@ -148,7 +146,6 @@ async function initializeFirestoreData() {
   console.log('🚀 Starting Firestore data initialization...');
   
   try {
-    // Initialize roadmaps collection
     console.log('🗺️ Creating roadmaps collection...');
     const batch = db.batch();
     
@@ -159,8 +156,7 @@ async function initializeFirestoreData() {
     
     await batch.commit();
     console.log('✅ Roadmaps collection created successfully');
-    
-    // Initialize topics collection
+
     console.log('📖 Creating topics collection...');
     const topicsBatch = db.batch();
     
@@ -193,7 +189,6 @@ async function initializeFirestoreData() {
   }
 }
 
-// Run the initialization
 if (require.main === module) {
   initializeFirestoreData()
     .then(() => process.exit(0))
