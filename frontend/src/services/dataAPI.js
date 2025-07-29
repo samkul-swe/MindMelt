@@ -1,6 +1,5 @@
 class DataAPI{
-  constructor(API_BASE_URL) {
-    const API_BASE_URL = API_BASE_URL;
+  constructor() {
     this.roadmapsCache = new Map();
     this.topicsCache = new Map();
     this.currentUserId = null;
@@ -40,7 +39,7 @@ class DataAPI{
         return Array.from(this.roadmapsCache.values());
       }
 
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmaps');
@@ -68,7 +67,7 @@ class DataAPI{
         return this.roadmapsCache.get(roadmapId);
       }
 
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -95,7 +94,7 @@ class DataAPI{
         return this.topicsCache.get(cacheKey);
       }
 
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/topics`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}/topics`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmap topics');
@@ -114,10 +113,9 @@ class DataAPI{
     }
   }
 
-  // Get a specific topic by ID
   async getTopic(topicId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/data/topics/${topicId}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/topics/${topicId}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -134,14 +132,13 @@ class DataAPI{
     }
   }
 
-  // Get user progress for a specific roadmap
   async getUserProgress(roadmapId) {
     if (!this.currentUserId) {
       return { topics: {} };
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
       const user = result.data || result;
       
       if (user && user.currentProgress && user.currentProgress[roadmapId]) {
@@ -155,14 +152,13 @@ class DataAPI{
     }
   }
 
-  // Get all user progress
   async getAllUserProgress() {
     if (!this.currentUserId) {
       return {};
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
       const user = result.data || result;
       
       return user?.currentProgress || {};
@@ -172,7 +168,6 @@ class DataAPI{
     }
   }
 
-  // Update user progress for a topic
   async updateTopicProgress(roadmapId, topicId, progressData) {
     if (!this.currentUserId) {
       console.warn('No authenticated user - cannot update progress');
@@ -180,7 +175,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
+      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/progress`, {
         method: 'POST',
         body: JSON.stringify({
           roadmapId,
@@ -197,12 +192,10 @@ class DataAPI{
     }
   }
 
-  // Mark topic as completed
   async markTopicCompleted(roadmapId, topicId) {
     return await this.updateTopicProgress(roadmapId, topicId, { progress: 100 });
   }
 
-  // Get user statistics
   async getUserStats() {
     if (!this.currentUserId) {
       return {
@@ -216,7 +209,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
       const user = result.data || result;
       
       if (!user) {
@@ -231,8 +224,7 @@ class DataAPI{
       }
 
       const currentProgress = user.currentProgress || {};
-      
-      // Calculate statistics
+
       const totalRoadmaps = Object.keys(currentProgress).length;
       let completedRoadmaps = 0;
       let totalTopics = 0;
@@ -244,8 +236,7 @@ class DataAPI{
         
         const roadmapCompletedTopics = topics.filter(topic => topic.completed || topic.percentage >= 100).length;
         completedTopics += roadmapCompletedTopics;
-        
-        // Consider roadmap completed if all topics are completed
+
         if (topics.length > 0 && roadmapCompletedTopics === topics.length) {
           completedRoadmaps++;
         }
@@ -267,10 +258,9 @@ class DataAPI{
     }
   }
 
-  // Get roadmap statistics
   async getRoadmapStats(roadmapId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/stats`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}/stats`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmap stats');
@@ -280,7 +270,6 @@ class DataAPI{
       return result.data || result;
     } catch (error) {
       console.error(`Error fetching roadmap stats for ${roadmapId}:`, error);
-      // Return basic stats as fallback
       const topics = await this.getRoadmapTopics(roadmapId);
       return {
         totalTopics: topics.length,
@@ -289,7 +278,6 @@ class DataAPI{
     }
   }
 
-  // Helper method to group topics by difficulty
   groupTopicsByDifficulty(topics) {
     const grouped = {};
     topics.forEach(topic => {
@@ -302,13 +290,11 @@ class DataAPI{
     return grouped;
   }
 
-  // Clear cache (call this when data might have changed)
   clearCache() {
     this.roadmapsCache.clear();
     this.topicsCache.clear();
   }
 
-  // Learning session methods (for future use when AI backend is ready)
   async createLearningSession(sessionData) {
     if (!this.currentUserId) {
       console.warn('No authenticated user - cannot create session');
@@ -316,8 +302,6 @@ class DataAPI{
     }
     
     try {
-      // This would call your backend to create a learning session
-      // For now, return a mock session
       return {
         id: 'session_' + Date.now(),
         ...sessionData,
@@ -337,7 +321,6 @@ class DataAPI{
     }
     
     try {
-      // This would call your backend to update a learning session
       console.log('Would update session:', sessionId, 'with:', updates);
       return { id: sessionId, ...updates };
     } catch (error) {
@@ -353,16 +336,14 @@ class DataAPI{
     }
     
     try {
-      // This would call your backend to get a learning session
       console.log('Would get session:', sessionId);
-      return null; // Return null to fall back to new session
+      return null;
     } catch (error) {
       console.error('Error getting learning session:', error);
       return null;
     }
   }
 
-  // Enroll user in roadmap (initialize progress)
   async enrollUserInRoadmap(roadmapId, userId) {
     if (!userId) {
       console.warn('No user ID provided for enrollment');
@@ -370,7 +351,6 @@ class DataAPI{
     }
     
     try {
-      // This would initialize the user's progress for the roadmap
       console.log('Would enroll user', userId, 'in roadmap', roadmapId);
       return true;
     } catch (error) {
@@ -379,7 +359,6 @@ class DataAPI{
     }
   }
 
-  // Legacy method aliases for backward compatibility
   async getCourses() {
     return this.getRoadmaps();
   }
@@ -395,11 +374,11 @@ class DataAPI{
   async getUserCourseProgress(userId, courseId) {
     const progress = await this.getUserProgress(courseId);
     return {
-      percentage: 0, // Calculate from topics
+      percentage: 0,
       topics: progress.topics || {}
     };
   }
 }
 
-const dataAPI = new DataAPI(process.env.REACT_APP_API_URL);
+const dataAPI = new DataAPI();
 export default dataAPI;

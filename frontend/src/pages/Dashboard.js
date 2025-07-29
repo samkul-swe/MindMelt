@@ -13,7 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../services/authAPI';
+import authAPI from '../services/authAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
 
@@ -106,7 +106,7 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-      const sessions = await api.getLearningHistory();
+      const sessions = await authAPI.getLearningHistory();
       setLearningSessions(sessions || []);
     } catch (error) {
       console.error('Failed to fetch learning sessions:', error);
@@ -139,7 +139,7 @@ const Dashboard = () => {
     
     setSavingUsername(true);
     try {
-      const updatedUser = await api.updateProfile({ username: newUsername.trim() });
+      const updatedUser = await authAPI.updateProfile({ username: newUsername.trim() });
       
       if (updateUser && updatedUser) {
         updateUser(updatedUser);

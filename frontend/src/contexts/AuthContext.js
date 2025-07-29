@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
           const user = await authAPI.verifyToken(token);
           if (user) {
             setCurrentUser(user);
-            dataService.setUser(user.id);
+            dataAPI.setUser(user.id);
           } else {
             localStorage.removeItem('authToken');
           }
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('authToken', token);
 
       setCurrentUser(user);
-      dataService.setUser(user.id);
+      dataAPI.setUser(user.id);
       
       console.log('AuthContext: Login successful');
       return user;
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('authToken', token);
 
       setCurrentUser(user);
-      dataService.setUser(user.id);
+      dataAPI.setUser(user.id);
       
       console.log('AuthContext: Signup successful');
       return user;

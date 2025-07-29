@@ -18,7 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { api } from '../services/authAPI';
+import authAPI from '../services/authAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/learning-session.css'
 
@@ -343,7 +343,7 @@ const LearningSession = () => {
         console.log('Loading existing session:', sessionId);
         if (isAuthenticated) {
           try {
-            const sessions = await api.getLearningHistory();
+            const sessions = await authAPI.getLearningHistory();
             sessionInfo = sessions.find(s => s.id === sessionId);
             
             if (sessionInfo) {
@@ -547,7 +547,7 @@ const LearningSession = () => {
         if (isAuthenticated && sessionData.roadmapId) {
           try {
             const newProgress = Math.min(progress.length * 10, 100);
-            await api.updateUserProgress(
+            await authAPI.updateUserProgress(
               sessionData.roadmapId,
               sessionData.topicData?.id || 'topic1',
               newProgress
