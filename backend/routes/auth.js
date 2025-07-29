@@ -44,9 +44,10 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     
-    // Handle specific Firebase auth errors
-    let errorMessage = 'Login failed';
-    if (error.code === 'auth/user-not-found') {
+    let errorMessage = '';
+    if (error.code == 'auth/invalid-credential') {
+      errorMessage = 'Invalid credentials. Please check your username/password';
+    } else if (error.code === 'auth/user-not-found') {
       errorMessage = 'No user found with this email';
     } else if (error.code === 'auth/wrong-password') {
       errorMessage = 'Incorrect password';
@@ -56,6 +57,8 @@ router.post('/login', async (req, res) => {
       errorMessage = 'Too many failed attempts. Please try again later';
     } else if (error.code === 'auth/user-disabled') {
       errorMessage = 'This account has been disabled';
+    } else {
+      errorMessage = 'Login failed';
     }
     
     res.status(401).json({
@@ -205,7 +208,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
       data: {
         id: user.uid,
         email: user.email,
-        username: user.username
+        username: user.username,
+        createdAt: user.createdAt
       }
     });
   } catch (error) {

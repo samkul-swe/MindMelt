@@ -343,7 +343,6 @@ const LearningSession = () => {
         console.log('Loading existing session:', sessionId);
         if (isAuthenticated) {
           try {
-            // Load existing session from backend
             const sessions = await api.getLearningHistory();
             sessionInfo = sessions.find(s => s.id === sessionId);
             
@@ -384,10 +383,8 @@ const LearningSession = () => {
       setSessionData(sessionInfo);
       setCurrentQuestioningStyle(sessionInfo?.questioningStyle || 'socratic');
       
-      // Start timer
       timer.setTimerActive(true);
-      
-      // Get first question if new session
+
       if (!sessionId || sessionId === 'new') {
         console.log('Getting first question...');
         await getFirstQuestion(sessionInfo);

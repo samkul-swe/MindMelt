@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Brain, 
@@ -6,12 +6,10 @@ import {
   User, 
   LogOut, 
   Plus,
-  Calendar,
   Target,
   BookOpen,
   Clock,
   Save,
-  ArrowLeft,
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +17,6 @@ import { api } from '../services/authAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
 
-// Mock user progress data - replace with API call later
 const getUserProgress = (roadmapId) => {
   const mockProgress = {
     "dsa-fundamentals": {
@@ -34,7 +31,6 @@ const getUserProgress = (roadmapId) => {
   return mockProgress[roadmapId] || {};
 };
 
-// Roadmap topics data
 const roadmapTopics = {
   "dsa-fundamentals": [
     { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
@@ -45,7 +41,6 @@ const roadmapTopics = {
   ]
 };
 
-// Generate motivational tech puns without emojis
 const getTechPunPersistent = () => {
   const puns = [
     { text: "Time to Debug Your Potential!", subtitle: "Let's squash some knowledge gaps together" },
@@ -83,7 +78,6 @@ const getTechPunPersistent = () => {
   }
 };
 
-// Format member since date
 const formatMemberSinceDate = (timestamp) => {
   if (!timestamp) return 'N/A';
   
@@ -128,7 +122,6 @@ const Dashboard = () => {
   const [dailyPun, setDailyPun] = useState(null);
   const [userProgress, setUserProgress] = useState({});
 
-  // Fetch user's learning sessions (only for authenticated users)
   const fetchLearningSessions = useCallback(async () => {
     if (!isAuthenticated) {
       setLoading(false);
@@ -147,7 +140,6 @@ const Dashboard = () => {
     }
   }, [isAuthenticated]);
 
-  // Clear username form when user updates
   useEffect(() => {
     if (usernameUpdateSuccess) {
       setNewUsername('');
@@ -157,8 +149,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchLearningSessions();
     setDailyPun(getTechPunPersistent());
-    
-    // Initialize user progress for all roadmaps
+
     const allProgress = {};
     Object.keys(roadmapTopics).forEach(roadmapId => {
       allProgress[roadmapId] = getUserProgress(roadmapId);
@@ -219,7 +210,6 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container-no-sidebar">
-      {/* Header */}
       <div className="dashboard-header">
         <div className="header-left">
           <div className="logo-container">
@@ -269,12 +259,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="dashboard-main-content">
-        {/* Welcome Card */}
         <div className="welcome-card">
           <div className="welcome-header">
-            <Brain size={48} className="welcome-icon" />
+            <Brain className="welcome-icon" />
             <div>
               <h2>{dailyPun?.text || "Welcome to MindMelt!"}</h2>
               <p>{dailyPun?.subtitle || "Your AI-powered learning companion"}</p>
@@ -282,15 +270,12 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Roadmap Selection */}
         <div className="activity-overview">
           <h3>Choose Your Learning Roadmap</h3>
           <div className="simple-activity">
             <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
               <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Select a structured learning path:</h4>
               <div className="roadmap-grid">
-                
-                {/* DSA Fundamentals Roadmap */}
                 <div 
                   className="roadmap-card dsa-fundamentals"
                   onClick={() => {
@@ -372,10 +357,7 @@ const Dashboard = () => {
                     <Target size={12} />
                     Beginner to Advanced
                   </div>
-                </div>
-
-                {/* More roadmap cards... */}
-                
+                </div> 
               </div>
             </div>
             
@@ -397,7 +379,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Last Session Display - Only for authenticated users */}
         {isAuthenticated && learningSessions.length > 0 && (
           <div className="last-session-section">
             <h3>Continue Your Journey</h3>
@@ -431,7 +412,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Activity Overview - Only show if user is authenticated and has sessions */}
         {isAuthenticated && learningSessions.length > 0 && (
           <div className="activity-overview">
             <h3>Recent Learning Activity</h3>
@@ -452,13 +432,11 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Profile Modal - Only for authenticated users */}
       {showProfile && isAuthenticated && (
         <div className="modal-overlay" onClick={() => setShowProfile(false)}>
           <div className="modal-content profile-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
-                <span className="modal-icon">Profile</span>
                 <div>
                   <h2>Profile Settings</h2>
                   <p>Manage your MindMelt account</p>

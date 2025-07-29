@@ -207,6 +207,7 @@ const LoginPage = () => {
       fontSize: '0.875rem',
       display: 'flex',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: '0.5rem'
     },
     submitButton: {
@@ -358,7 +359,6 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} style={styles.form}>
             {(formError || error) && (
               <div style={styles.errorMessage}>
-                <span>Warning</span>
                 <span>{formError || error}</span>
               </div>
             )}
