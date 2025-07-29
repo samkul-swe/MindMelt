@@ -17,30 +17,6 @@ import { api } from '../services/authAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
 
-const getUserProgress = (roadmapId) => {
-  const mockProgress = {
-    "dsa-fundamentals": {
-      1: { completed: false, progress: 75, unlocked: true, started: true, canAdvance: true },
-      2: { completed: false, progress: 35, unlocked: true, started: true, canAdvance: false },
-      3: { completed: false, progress: 0, unlocked: true, started: false, canAdvance: false },
-      4: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-      5: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false }
-    }
-  };
-  
-  return mockProgress[roadmapId] || {};
-};
-
-const roadmapTopics = {
-  "dsa-fundamentals": [
-    { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
-    { id: 2, name: "Linked Lists", difficulty: "Beginner", duration: "2-3 hours", description: "Understand pointer concepts and list operations" },
-    { id: 3, name: "Stacks & Queues", difficulty: "Beginner", duration: "2-3 hours", description: "Learn LIFO and FIFO data structures" },
-    { id: 4, name: "Trees & Binary Trees", difficulty: "Intermediate", duration: "4-5 hours", description: "Explore hierarchical data structures" },
-    { id: 5, name: "Binary Search Trees", difficulty: "Intermediate", duration: "3-4 hours", description: "Efficient searching and sorting with BSTs" }
-  ]
-};
-
 const getTechPunPersistent = () => {
   const puns = [
     { text: "Time to Debug Your Potential!", subtitle: "Let's squash some knowledge gaps together" },
@@ -317,7 +293,6 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Web Development Roadmap */}
                 <div 
                   className="roadmap-card web-development"
                   onClick={() => {

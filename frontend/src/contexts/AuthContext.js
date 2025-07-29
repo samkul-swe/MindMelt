@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/authAPI';
-import dataService from '../services/dataService';
+import authAPI from '../services/authAPI';
+import dataAPI from '../services/dataAPI';
 
 const AuthContext = createContext();
 
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('authToken');
         if (token) {
-          const user = await api.verifyToken(token);
+          const user = await authAPI.verifyToken(token);
           if (user) {
             setCurrentUser(user);
             dataService.setUser(user.id);
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       
       console.log('AuthContext: Login attempt for:', email);
       
-      const response = await api.signIn(email, password);
+      const response = await authAPI.signIn(email, password);
       const { user, token } = response;
 
       localStorage.setItem('authToken', token);
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       setError('');
       setLoading(true);
       
-      const response = await api.signUp(email, password, username);
+      const response = await authAPI.signUp(email, password, username);
       const { user, token } = response;
 
       localStorage.setItem('authToken', token);
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     if (!currentUser) return;
     
     try {
-      const response = await api.updateProfile(profileUpdates);
+      const response = await authAPI.updateProfile(profileUpdates);
       const updatedUser = response.user || response;
       setCurrentUser(updatedUser);
       return updatedUser;

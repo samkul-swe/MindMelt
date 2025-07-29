@@ -1,4 +1,4 @@
-class AuthAPI {
+class AIAPI {
   constructor(API_BASE_URL) {
     const API_BASE_URL = API_BASE_URL;
     this.currentUser = null;
@@ -248,5 +248,5 @@ class AuthAPI {
   }
 }
 
-const authAPI = new AuthAPI(process.env.REACT_APP_API_URL);
-export default authAPI;
+const aiAPI = new AIAPI(process.env.REACT_APP_API_URL);
+export default aiAPI;

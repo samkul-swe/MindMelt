@@ -1,19 +1,15 @@
-// Backend API URL - adjust based on your setup
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
-class DataService {
-  constructor() {
+class DataAPI{
+  constructor(API_BASE_URL) {
+    const API_BASE_URL = API_BASE_URL;
     this.roadmapsCache = new Map();
     this.topicsCache = new Map();
     this.currentUserId = null;
   }
 
-  // Set current user (call this when user authenticates)
   setUser(userId) {
     this.currentUserId = userId;
   }
 
-  // Helper method to make authenticated requests
   async makeAuthenticatedRequest(url, options = {}) {
     const token = localStorage.getItem('authToken');
     
@@ -38,7 +34,6 @@ class DataService {
     return response.json();
   }
 
-  // Get all roadmaps
   async getRoadmaps() {
     try {
       if (this.roadmapsCache.size > 0) {
@@ -54,7 +49,6 @@ class DataService {
       const result = await response.json();
       const roadmaps = result.data || result;
       
-      // Cache the roadmaps
       roadmaps.forEach(roadmap => {
         this.roadmapsCache.set(roadmap.id, roadmap);
       });
@@ -67,7 +61,7 @@ class DataService {
     }
   }
 
-  // Get a specific roadmap by ID
+
   async getRoadmap(roadmapId) {
     try {
       if (this.roadmapsCache.has(roadmapId)) {
@@ -85,8 +79,7 @@ class DataService {
 
       const result = await response.json();
       const roadmap = result.data || result;
-      
-      // Cache the roadmap
+
       this.roadmapsCache.set(roadmapId, roadmap);
       return roadmap;
     } catch (error) {
@@ -95,7 +88,6 @@ class DataService {
     }
   }
 
-  // Get all topics for a specific roadmap
   async getRoadmapTopics(roadmapId) {
     try {
       const cacheKey = `roadmap_${roadmapId}`;
@@ -112,7 +104,7 @@ class DataService {
       const result = await response.json();
       const topics = result.data || result;
 
-      // Cache the topics
+
       this.topicsCache.set(cacheKey, topics);
       console.log(`Retrieved ${topics.length} topics for roadmap ${roadmapId}`);
       return topics;
@@ -409,6 +401,5 @@ class DataService {
   }
 }
 
-// Create and export singleton instance
-const dataService = new DataService();
-export default dataService;
+const dataAPI = new DataAPI(process.env.REACT_APP_API_URL);
+export default dataAPI;
