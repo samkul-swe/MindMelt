@@ -1,17 +1,18 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
 
-const authRoutes = require('./routes/auth');
-const dataRoutes = require('./routes/data');
+import authRoutes from './routes/auth.js';
+import dataRoutes from './routes/data.js';
 
-const {
-  _,
+import {
   requestLogger,
   errorHandler,
   rateLimit
-} = require('./utils/middleware');
+} from './utils/middleware.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -71,6 +72,7 @@ app.use('*', (req, res) => {
       'GET /',
       'GET /health',
       'POST /api/auth/register',
+      'POST /api/auth/login',
       'POST /api/auth/authenticate',
       'GET /api/auth/profile',
       'PUT /api/auth/profile',
@@ -126,4 +128,4 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-module.exports = app;
+export default app;

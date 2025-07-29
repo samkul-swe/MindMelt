@@ -1,6 +1,8 @@
-const express = require('express');
-const authService = require('../services/authService');
-const { authenticateToken } = require('../utils/middleware');
+import express from 'express';
+import authService from '../services/authService.js';
+import { authenticateToken } from '../utils/middleware.js';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from '../config/firebase.js';
 
 const router = express.Router();
 
@@ -15,27 +17,50 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = await authService.loginUser(email, password);
-    const token = authService.createCustomToken(user);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
+
+    const user = await authService.getUser(firebaseUser.uid);
+
+    const token = authService.createCustomToken(user || {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email
+    });
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          id: user.uid,
-          email: user.email,
-          username: user.username,
-          currentProgress: user.currentProgress || {}
+          id: user?.uid || firebaseUser.uid,
+          email: user?.email || firebaseUser.email,
+          username: user?.username,
+          currentProgress: user?.currentProgress || {},
+          createdAt: user?.createdAt || {}
         },
         token
       }
     });
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Handle specific Firebase auth errors
+    let errorMessage = 'Login failed';
+    if (error.code === 'auth/user-not-found') {
+      errorMessage = 'No user found with this email';
+    } else if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Incorrect password';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many failed attempts. Please try again later';
+    } else if (error.code === 'auth/user-disabled') {
+      errorMessage = 'This account has been disabled';
+    }
+    
     res.status(401).json({
       success: false,
-      message: error.message
+      message: errorMessage
     });
   }
 });
@@ -51,7 +76,21 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const user = await authService.createUser(email, password, username);
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+
+    // Create user in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
+
+    // Create user record in your system
+    const user = await authService.createUser(firebaseUser.uid, email, username);
+    
+    // Create custom token
     const token = authService.createCustomToken(user);
 
     res.status(201).json({
@@ -66,11 +105,25 @@ router.post('/register', async (req, res) => {
         token
       }
     });
+
   } catch (error) {
     console.error('Registration error:', error);
+    
+    // Handle specific Firebase auth errors
+    let errorMessage = 'Registration failed';
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = 'An account with this email already exists';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address';
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = 'Password is too weak';
+    } else if (error.code === 'auth/operation-not-allowed') {
+      errorMessage = 'Email registration is not enabled';
+    }
+    
     res.status(400).json({
       success: false,
-      message: error.message
+      message: errorMessage
     });
   }
 });
@@ -213,4 +266,4 @@ router.delete('/account', authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

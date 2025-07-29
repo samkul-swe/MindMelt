@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -24,7 +24,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-const optionalAuth = (req, res, next) => {
+export const optionalAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -39,7 +39,7 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
-const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
+export const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   const requests = new Map();
   
   return (req, res, next) => {
@@ -72,7 +72,7 @@ const rateLimit = (windowMs = 15 * 60 * 1000, max = 100) => {
   };
 };
 
-const corsMiddleware = (req, res, next) => {
+export const corsMiddleware = (req, res, next) => {
   const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
     process.env.ALLOWED_ORIGINS.split(',') : 
     ['http://localhost:3000', 'http://localhost:3001'];
@@ -94,7 +94,7 @@ const corsMiddleware = (req, res, next) => {
   }
 };
 
-const requestLogger = (req, _, next) => {
+export const requestLogger = (req, _, next) => {
   const timestamp = new Date().toISOString();
   const method = req.method;
   const url = req.url;
@@ -105,7 +105,7 @@ const requestLogger = (req, _, next) => {
   next();
 };
 
-const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
 
   if (err.code && err.code.startsWith('auth/')) {
@@ -149,7 +149,7 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-const getFirebaseErrorMessage = (errorCode) => {
+export const getFirebaseErrorMessage = (errorCode) => {
   const messages = {
     'auth/email-already-in-use': 'Email address is already registered',
     'auth/invalid-email': 'Invalid email address',
@@ -165,14 +165,4 @@ const getFirebaseErrorMessage = (errorCode) => {
   };
   
   return messages[errorCode] || 'Authentication error occurred';
-};
-
-module.exports = {
-  authenticateToken,
-  optionalAuth,
-  rateLimit,
-  corsMiddleware,
-  requestLogger,
-  errorHandler,
-  getFirebaseErrorMessage
 };

@@ -1,6 +1,18 @@
-require('dotenv').config();
-const admin = require('firebase-admin');
-const path = require('path');
+import dotenv from 'dotenv';
+import admin from 'firebase-admin';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+
+// Import Firebase Client SDK for authentication
+import { initializeApp as initializeClientApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+
+dotenv.config();
+
+// Get __dirname equivalent in ES6
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function loadServiceAccount() {
   if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
@@ -10,7 +22,10 @@ function loadServiceAccount() {
   try {
     console.log('🔧 Loading Firebase service account from file...');
     const serviceAccountPath = path.join(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    return require(serviceAccountPath);
+    
+    // Use fs.readFileSync to read JSON file in ES6
+    const serviceAccountData = readFileSync(serviceAccountPath, 'utf8');
+    return JSON.parse(serviceAccountData);
   } catch (fileError) {
     throw new Error(`Failed to load service account file: ${fileError.message}`);
   }
@@ -45,15 +60,66 @@ function initializeFirebase() {
   }
 }
 
+function initializeFirebaseClient() {
+  try {
+    // Firebase Client SDK configuration
+    const firebaseClientConfig = {
+      apiKey: process.env.FIREBASE_API_KEY,
+      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.FIREBASE_APP_ID
+    };
+
+    // Validate required client config
+    const requiredClientVars = [
+      'FIREBASE_API_KEY',
+      'FIREBASE_AUTH_DOMAIN', 
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_APP_ID'
+    ];
+    
+    const missingVars = requiredClientVars.filter(varName => !process.env[varName]);
+    if (missingVars.length > 0) {
+      throw new Error(`Missing required Firebase client environment variables: ${missingVars.join(', ')}`);
+    }
+
+    // Initialize Firebase Client App
+    const clientApp = initializeClientApp(firebaseClientConfig);
+    console.log('🔥 Firebase Client initialized successfully');
+    
+    return clientApp;
+    
+  } catch (error) {
+    console.error('❌ Firebase Client initialization failed:', error.message);
+    console.error('');
+    console.error('🔧 Setup:');
+    console.error('Add these environment variables to your .env file:');
+    console.error('FIREBASE_API_KEY=your-api-key');
+    console.error('FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com');
+    console.error('FIREBASE_PROJECT_ID=your-project-id');
+    console.error('FIREBASE_STORAGE_BUCKET=your-project.appspot.com');
+    console.error('FIREBASE_MESSAGING_SENDER_ID=123456789');
+    console.error('FIREBASE_APP_ID=your-app-id');
+    console.error('');
+    console.error('💡 Get these values from Firebase Console > Project Settings > General > Your apps');
+    process.exit(1);
+  }
+}
+
+// Initialize both Admin and Client SDKs
 const app = initializeFirebase();
+const clientApp = initializeFirebaseClient();
 const db = admin.firestore();
+
+// Initialize Firebase Authentication (Client SDK)
+export const auth = getAuth(clientApp);
 
 async function initializeFirestore() {
   try {
     console.log('🔧 Initializing Firestore...');
-
     console.log('📊 Ensuring Firestore indexes...');
-    
     console.log('✅ Firestore initialized successfully');
   } catch (error) {
     console.error('❌ Firestore initialization error:', error);
@@ -141,7 +207,6 @@ const userStorage = {
       };
 
       await db.collection('users').doc(id).update(updateData);
-
       await new Promise(resolve => setTimeout(resolve, 100));
 
       const doc = await db.collection('users').doc(id).get();
@@ -150,7 +215,6 @@ const userStorage = {
       }
       
       const userData = { id: doc.id, ...doc.data() };
-      
       return userData;
     } catch (error) {
       console.error('Error updating user:', {
@@ -250,9 +314,10 @@ const sessionStorage = {
   }
 };
 
-module.exports = {
+export {
   admin,
   app,
+  clientApp,
   db,
   initializeFirestore,
   userStorage,

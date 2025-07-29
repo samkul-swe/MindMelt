@@ -1,5 +1,5 @@
-const { admin, userStorage } = require('../config/firebase');
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
+import { admin, userStorage } from '../config/firebase.js';
 
 class AuthService {
   createCustomToken(user) {
@@ -22,12 +22,6 @@ class AuthService {
         throw new Error('No user found with this email address');
       }
 
-      // Note: Firebase Admin SDK doesn't verify passwords directly
-      // In production, you'd want to use Firebase Client SDK on frontend
-      // or implement your own password verification
-      
-      // For now, we'll trust that the frontend verified the password
-      // and get the user data from Firestore
       let user = await userStorage.findById(userRecord.uid);
       
       if (!user) {
@@ -38,7 +32,7 @@ class AuthService {
           currentProgress: {}
         };
         
-        user = await userStorage.create(userData);
+        user = await userStorage.create(userRecord.uid, userData);
         user.uid = userRecord.uid;
       } else {
         user.uid = userRecord.uid;
@@ -52,6 +46,7 @@ class AuthService {
       throw new Error(`Login failed: ${error.message}`);
     }
   }
+
   async authenticateUser(idToken) {
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
@@ -68,7 +63,7 @@ class AuthService {
           currentProgress: {}
         };
         
-        user = await userStorage.create({ ...userData });
+        user = await userStorage.create(uid, userData);
         user.uid = uid; // Add uid for consistency
       } else {
         user.uid = uid; // Add uid for consistency
@@ -80,16 +75,9 @@ class AuthService {
     }
   }
 
-  // Create user with email and password
-  async createUser(email, password, username) {
+  // Create user with Firebase UID and user data
+  async createUser(uid, email, username) {
     try {
-      // Create Firebase user
-      const userRecord = await admin.auth().createUser({
-        email,
-        password,
-        displayName: username
-      });
-
       // Create user document in Firestore using userStorage
       const userData = {
         email,
@@ -97,10 +85,10 @@ class AuthService {
         currentProgress: {}
       };
 
-      const user = await userStorage.create(userRecord.uid, userData);
+      const user = await userStorage.create(uid, userData);
 
       return {
-        uid: userRecord.uid,
+        uid: uid,
         ...user
       };
     } catch (error) {
@@ -193,4 +181,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

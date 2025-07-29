@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+import { db } from '../config/firebase.js';
 
 class DataService {
   constructor() {
@@ -128,4 +128,4 @@ class DataService {
   }
 }
 
-module.exports = new DataService();
+export default new DataService();

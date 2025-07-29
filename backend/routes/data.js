@@ -1,5 +1,5 @@
-const express = require('express');
-const dataService = require('../services/dataService');
+import express from 'express';
+import dataService from '../services/dataService.js';
 
 const router = express.Router();
 
@@ -106,4 +106,4 @@ router.get('/roadmaps/:roadmapId/stats', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
