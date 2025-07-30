@@ -3,14 +3,11 @@ import admin from 'firebase-admin';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync } from 'fs';
-
-// Import Firebase Client SDK for authentication
 import { initializeApp as initializeClientApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 
 dotenv.config();
 
-// Get __dirname equivalent in ES6
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,8 +19,6 @@ function loadServiceAccount() {
   try {
     console.log('🔧 Loading Firebase service account from file...');
     const serviceAccountPath = path.join(__dirname, '..', process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    
-    // Use fs.readFileSync to read JSON file in ES6
     const serviceAccountData = readFileSync(serviceAccountPath, 'utf8');
     return JSON.parse(serviceAccountData);
   } catch (fileError) {
@@ -34,17 +29,13 @@ function loadServiceAccount() {
 function initializeFirebase() {
   try {
     const serviceAccount = loadServiceAccount();
-    
     const app = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: serviceAccount.project_id
     });
-    
     console.log('🔥 Firebase Admin initialized successfully');
     console.log(`📊 Connected to project: ${serviceAccount.project_id}`);
-    
     return app;
-    
   } catch (error) {
     console.error('❌ Firebase initialization failed:', error.message);
     console.error('');
@@ -62,17 +53,13 @@ function initializeFirebase() {
 
 function initializeFirebaseClient() {
   try {
-    // Firebase Client SDK configuration
     const firebaseClientConfig = {
       apiKey: process.env.FIREBASE_API_KEY,
       authDomain: process.env.FIREBASE_AUTH_DOMAIN,
       projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
       appId: process.env.FIREBASE_APP_ID
     };
 
-    // Validate required client config
     const requiredClientVars = [
       'FIREBASE_API_KEY',
       'FIREBASE_AUTH_DOMAIN', 
@@ -85,7 +72,6 @@ function initializeFirebaseClient() {
       throw new Error(`Missing required Firebase client environment variables: ${missingVars.join(', ')}`);
     }
 
-    // Initialize Firebase Client App
     const clientApp = initializeClientApp(firebaseClientConfig);
     console.log('🔥 Firebase Client initialized successfully');
     
@@ -99,22 +85,12 @@ function initializeFirebaseClient() {
     console.error('FIREBASE_API_KEY=your-api-key');
     console.error('FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com');
     console.error('FIREBASE_PROJECT_ID=your-project-id');
-    console.error('FIREBASE_STORAGE_BUCKET=your-project.appspot.com');
-    console.error('FIREBASE_MESSAGING_SENDER_ID=123456789');
     console.error('FIREBASE_APP_ID=your-app-id');
     console.error('');
     console.error('💡 Get these values from Firebase Console > Project Settings > General > Your apps');
     process.exit(1);
   }
 }
-
-// Initialize both Admin and Client SDKs
-const app = initializeFirebase();
-const clientApp = initializeFirebaseClient();
-const db = admin.firestore();
-
-// Initialize Firebase Authentication (Client SDK)
-export const auth = getAuth(clientApp);
 
 async function initializeFirestore() {
   try {
@@ -127,17 +103,8 @@ async function initializeFirestore() {
   }
 }
 
+// user collection in firestore
 const userStorage = {
-  async getAll() {
-    try {
-      const snapshot = await db.collection('users').get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      console.error('Error getting all users:', error);
-      throw error;
-    }
-  },
-
   async findById(id) {
     try {
       const doc = await db.collection('users').doc(id).get();
@@ -148,39 +115,7 @@ const userStorage = {
     }
   },
 
-  async findByEmail(email) {
-    try {
-      const snapshot = await db.collection('users')
-        .where('email', '==', email)
-        .limit(1)
-        .get();
-      
-      if (snapshot.empty) return null;
-      const doc = snapshot.docs[0];
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      console.error('Error finding user by email:', error);
-      throw error;
-    }
-  },
-
-  async findByUsername(username) {
-    try {
-      const snapshot = await db.collection('users')
-        .where('username', '==', username.toLowerCase())
-        .limit(1)
-        .get();
-      
-      if (snapshot.empty) return null;
-      const doc = snapshot.docs[0];
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      console.error('Error finding user by username:', error);
-      throw error;
-    }
-  },
-
-  async create(userID, userData) {
+  async create(id, userData) {
     try {
       const processedUserData = {
         ...userData,
@@ -188,7 +123,7 @@ const userStorage = {
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       };
       
-      const docRef = await db.collection('users').doc(userID);
+      const docRef = await db.collection('users').doc(id);
       await docRef.set(processedUserData);
       
       const doc = await docRef.get();
@@ -236,13 +171,14 @@ const userStorage = {
   }
 };
 
+// session collection in firestore
 const sessionStorage = {
-  async getAll() {
+  async findById(id) {
     try {
-      const snapshot = await db.collection('sessions').get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const doc = await db.collection('sessions').doc(id).get();
+      return doc.exists ? { id: doc.id, ...doc.data() } : null;
     } catch (error) {
-      console.error('Error getting all sessions:', error);
+      console.error('Error finding session by ID:', error);
       throw error;
     }
   },
@@ -251,22 +187,12 @@ const sessionStorage = {
     try {
       const snapshot = await db.collection('sessions')
         .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
+        .orderBy('createdAt')
         .get();
       
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error finding sessions by user ID:', error);
-      throw error;
-    }
-  },
-
-  async findById(id) {
-    try {
-      const doc = await db.collection('sessions').doc(id).get();
-      return doc.exists ? { id: doc.id, ...doc.data() } : null;
-    } catch (error) {
-      console.error('Error finding session by ID:', error);
       throw error;
     }
   },
@@ -314,6 +240,41 @@ const sessionStorage = {
   }
 };
 
+// roadmaps collection in firestore
+const roadmapStorage = {
+  async findById(id) {
+    try {
+      const doc = await db.collection('roadmaps').doc(id).get();
+      return doc.exists ? { id: doc.id, ...doc.data() } : null;
+    } catch (error) {
+      console.error('Error finding roadmap by ID:', error);
+      throw error;
+    }
+  }
+};
+
+// topics collection in firestore
+const topicStorage = {
+  async findAllTopicsByRoadmapId(id) {
+    try {
+      const snapshot = await db.collection('topics')
+        .where('roadmapId', '==', id)
+        .orderBy('id')
+        .get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('Error finding topics for roadmap id ' + id + ' : ', error);
+      throw error;
+    }
+  }
+};
+
+
+const app = initializeFirebase();
+const clientApp = initializeFirebaseClient();
+const db = admin.firestore();
+export const auth = getAuth(clientApp);
+
 export {
   admin,
   app,
@@ -321,5 +282,7 @@ export {
   db,
   initializeFirestore,
   userStorage,
-  sessionStorage
+  sessionStorage,
+  roadmapStorage,
+  topicStorage
 };

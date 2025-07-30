@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { admin, userStorage } from '../config/firebase.js';
+import { admin, userStorage, sessionStorage } from '../config/firebase.js';
 
 class AuthService {
   createCustomToken(user) {
@@ -8,55 +8,46 @@ class AuthService {
       email: user.email,
       username: user.username
     };
+
+    let expiresIn = user.createdAt.toDate().getDate() + 7;
     
-    return jwt.sign(payload, process.env.JWT_SECRET, {
+    let jwtToken = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d'
     });
+
+    let uid = user.uid;
+    const userSessionData = {
+      uid,
+      jwtToken,
+      expiresIn
+    }
+    let sessionDoc = sessionStorage.create(userSessionData);
+    return sessionDoc.jwtToken;
   }
 
-  async loginUser(email, password) {
-    try {
-      const userRecord = await admin.auth().getUserByEmail(email);
-      
-      if (!userRecord) {
-        throw new Error('No user found with this email address');
-      }
+  async getUserToken(user) {
+    let token = sessionStorage.findByUserId(user.uid);
+    const expirationDate = new Date(token.JWT_EXPIRES_IN);
+    const now = new Date();
+    const isExpired = now > expirationDate;
 
-      let user = await userStorage.findById(userRecord.uid);
-      
-      if (!user) {
-        // Create user document if it doesn't exist
-        const userData = {
-          email: userRecord.email,
-          username: userRecord.displayName || userRecord.email?.split('@')[0] || 'User',
-          currentProgress: {}
-        };
-        
-        user = await userStorage.create(userRecord.uid, userData);
-        user.uid = userRecord.uid;
-      } else {
-        user.uid = userRecord.uid;
-      }
-      
-      return user;
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        throw new Error('No account found with this email address');
-      }
-      throw new Error(`Login failed: ${error.message}`);
+    if (isExpired) {
+      console.log("Token is expired");
+      // create a new token
+      return this.createCustomToken(user);
     }
+    console.log("Token is still valid");
+    return token;
   }
 
   async authenticateUser(idToken) {
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       const uid = decodedToken.uid;
-      
-      // Get user data from Firestore using userStorage
+
       let user = await userStorage.findById(uid);
       
       if (!user) {
-        // Create user document if it doesn't exist
         const userData = {
           email: decodedToken.email || null,
           username: decodedToken.name || decodedToken.email?.split('@')[0] || 'User',
@@ -64,9 +55,9 @@ class AuthService {
         };
         
         user = await userStorage.create(uid, userData);
-        user.uid = uid; // Add uid for consistency
+        user.uid = uid;
       } else {
-        user.uid = uid; // Add uid for consistency
+        user.uid = uid;
       }
       
       return user;
@@ -75,10 +66,8 @@ class AuthService {
     }
   }
 
-  // Create user with Firebase UID and user data
   async createUser(uid, email, username) {
     try {
-      // Create user document in Firestore using userStorage
       const userData = {
         email,
         username: username || email.split('@')[0],
@@ -96,12 +85,11 @@ class AuthService {
     }
   }
 
-  // Get user by ID
   async getUser(uid) {
     try {
       const user = await userStorage.findById(uid);
       if (user) {
-        user.uid = uid; // Add uid for consistency
+        user.uid = uid;
       }
       return user;
     } catch (error) {
@@ -109,26 +97,23 @@ class AuthService {
     }
   }
 
-  // Update user profile
   async updateUserProfile(uid, updates) {
     try {
       const user = await userStorage.update(uid, updates);
 
-      // Also update Firebase Auth profile if username changed
       if (updates.username) {
         await admin.auth().updateUser(uid, {
           displayName: updates.username
         });
       }
 
-      user.uid = uid; // Add uid for consistency
+      user.uid = uid;
       return user;
     } catch (error) {
       throw new Error(`Profile update failed: ${error.message}`);
     }
   }
 
-  // Update user progress for a roadmap topic
   async updateUserProgress(uid, roadmapId, topicId, percentage) {
     try {
       const user = await userStorage.findById(uid);
@@ -139,19 +124,16 @@ class AuthService {
 
       let currentProgress = user.currentProgress || {};
 
-      // Initialize roadmap progress if it doesn't exist
       if (!currentProgress[roadmapId]) {
         currentProgress[roadmapId] = {};
       }
 
-      // Update topic progress
       currentProgress[roadmapId][topicId] = {
         percentage: percentage,
         completed: percentage >= 100,
         lastUpdated: admin.firestore.FieldValue.serverTimestamp()
       };
 
-      // Update user document
       await userStorage.update(uid, {
         currentProgress: currentProgress
       });
@@ -162,13 +144,10 @@ class AuthService {
     }
   }
 
-  // Delete user account
   async deleteUser(uid) {
     try {
-      // Delete from Firebase Auth
       await admin.auth().deleteUser(uid);
-      
-      // Delete user document from Firestore using userStorage
+
       const user = await userStorage.findById(uid);
       if (user) {
         await userStorage.delete(uid);

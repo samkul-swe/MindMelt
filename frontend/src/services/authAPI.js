@@ -1,3 +1,5 @@
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 class AuthAPI {
   constructor() {
     this.currentUser = null;
@@ -30,7 +32,7 @@ class AuthAPI {
 
   async verifyToken(token) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -49,7 +51,7 @@ class AuthAPI {
 
   async signUp(email, password, username = null) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -84,7 +86,7 @@ class AuthAPI {
 
   async signIn(email, password) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -118,7 +120,7 @@ class AuthAPI {
 
   async updateProfile(updates) {
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`, {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         body: JSON.stringify(updates)
       });
@@ -132,7 +134,7 @@ class AuthAPI {
 
   async updateUserProgress(roadmapId, topicId, percentage) {
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/progress`, {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
         method: 'POST',
         body: JSON.stringify({
           roadmapId,
@@ -166,7 +168,7 @@ class AuthAPI {
 
   async recordLearningSession(sessionData) {
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/session`, {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/session`, {
         method: 'POST',
         body: JSON.stringify(sessionData)
       });
@@ -180,7 +182,7 @@ class AuthAPI {
 
   async deleteAccount() {
     try {
-      await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/account`, {
+      await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/account`, {
         method: 'DELETE'
       });
 
@@ -217,7 +219,7 @@ class AuthAPI {
 
   async getLearningHistory() {
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/history`);
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/history`);
       return result.data || result.sessions || [];
     } catch (error) {
       console.error('Error fetching learning history:', error);
@@ -227,7 +229,7 @@ class AuthAPI {
 
   async checkUsernameExists(username) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/check-username`, {
+      const response = await fetch(`${API_BASE_URL}/auth/check-username`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

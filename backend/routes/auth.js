@@ -17,15 +17,11 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // logs in user using firebase authentication
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
-    const user = await authService.getUser(firebaseUser.uid);
-
-    const token = authService.createCustomToken(user || {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email
-    });
+    const token = await authService.getUserToken(firebaseUser);
 
     res.json({
       success: true,
@@ -86,14 +82,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Create user in Firebase Auth
+    // create user in firebase authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
-    // Create user record in your system
     const user = await authService.createUser(firebaseUser.uid, email, username);
-    
-    // Create custom token
+
     const token = authService.createCustomToken(user);
 
     res.status(201).json({
@@ -111,8 +105,7 @@ router.post('/register', async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
-    
-    // Handle specific Firebase auth errors
+
     let errorMessage = 'Registration failed';
     if (error.code === 'auth/email-already-in-use') {
       errorMessage = 'An account with this email already exists';

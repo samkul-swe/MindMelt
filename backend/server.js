@@ -47,8 +47,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/data', dataRoutes);
+app.use('/auth', authRoutes);
+app.use('/data', dataRoutes);
 
 app.get('/', (req, res) => {
   res.json({

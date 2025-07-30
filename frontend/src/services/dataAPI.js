@@ -1,3 +1,5 @@
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 class DataAPI{
   constructor() {
     this.roadmapsCache = new Map();
@@ -39,7 +41,7 @@ class DataAPI{
         return Array.from(this.roadmapsCache.values());
       }
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps`);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmaps');
@@ -67,7 +69,7 @@ class DataAPI{
         return this.roadmapsCache.get(roadmapId);
       }
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}`);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -94,7 +96,7 @@ class DataAPI{
         return this.topicsCache.get(cacheKey);
       }
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}/topics`);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/topics`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmap topics');
@@ -115,7 +117,7 @@ class DataAPI{
 
   async getTopic(topicId) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/topics/${topicId}`);
+      const response = await fetch(`${API_BASE_URL}/data/topics/${topicId}`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -138,7 +140,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
       const user = result.data || result;
       
       if (user && user.currentProgress && user.currentProgress[roadmapId]) {
@@ -158,7 +160,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
       const user = result.data || result;
       
       return user?.currentProgress || {};
@@ -175,7 +177,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/progress`, {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/progress`, {
         method: 'POST',
         body: JSON.stringify({
           roadmapId,
@@ -209,7 +211,7 @@ class DataAPI{
     }
     
     try {
-      const result = await this.makeAuthenticatedRequest(`${process.env.REACT_APP_API_URL}/auth/profile`);
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
       const user = result.data || result;
       
       if (!user) {
@@ -260,7 +262,7 @@ class DataAPI{
 
   async getRoadmapStats(roadmapId) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/data/roadmaps/${roadmapId}/stats`);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/stats`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmap stats');

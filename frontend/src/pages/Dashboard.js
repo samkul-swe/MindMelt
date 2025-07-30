@@ -14,8 +14,41 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import authAPI from '../services/authAPI';
+import dataAPI from '../services/dataAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
+
+const getRoadmapTopics = () => {
+  const roadmapTopics = [
+    { text: "Time to Debug Your Potential!", subtitle: "Let's squash some knowledge gaps together" },
+    { text: "Ready to Compile Some Brilliance?", subtitle: "Your brain is the best IDE for learning" },
+    { text: "Let's Cache Some Knowledge!", subtitle: "Store these concepts in your long-term memory" },
+    { text: "Time to Push Your Limits!", subtitle: "Git ready for an amazing learning session" },
+    { text: "Ready to Parse Some Wisdom?", subtitle: "Breaking down complex topics into digestible bits" },
+    { text: "Let's Refactor Your Understanding!", subtitle: "Clean code, clean mind, clean learning" },
+    { text: "Time to Optimize Your Brain!", subtitle: "Maximum learning efficiency loading..." },
+    { text: "Ready to Stack Some Skills?", subtitle: "Building your knowledge data structure" },
+    { text: "Let's Initialize Your Growth!", subtitle: "constructor() { this.knowledge = new Map(); }" }
+  ];
+  
+  try {
+    const roadmapData = await dataAPI.getRoadmaps();
+
+  } catch (error) {
+    console.warn('localStorage not available, using random pun:', error);
+    return puns[Math.floor(Math.random() * puns.length)];
+  }
+};
+
+const roadmapTopics = {
+  "dsa-fundamentals": [
+    { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
+    { id: 2, name: "Linked Lists", difficulty: "Beginner", duration: "2-3 hours", description: "Understand pointer concepts and list operations" },
+    { id: 3, name: "Stacks & Queues", difficulty: "Beginner", duration: "2-3 hours", description: "Learn LIFO and FIFO data structures" },
+    { id: 4, name: "Trees & Binary Trees", difficulty: "Intermediate", duration: "4-5 hours", description: "Explore hierarchical data structures" },
+    { id: 5, name: "Binary Search Trees", difficulty: "Intermediate", duration: "3-4 hours", description: "Efficient searching and sorting with BSTs" }
+  ]
+};
 
 const getTechPunPersistent = () => {
   const puns = [
