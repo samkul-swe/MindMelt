@@ -173,21 +173,10 @@ const userStorage = {
 
 // session collection in firestore
 const sessionStorage = {
-  async findById(id) {
-    try {
-      const doc = await db.collection('sessions').doc(id).get();
-      return doc.exists ? { id: doc.id, ...doc.data() } : null;
-    } catch (error) {
-      console.error('Error finding session by ID:', error);
-      throw error;
-    }
-  },
-
   async findByUserId(userId) {
     try {
       const snapshot = await db.collection('sessions')
-        .where('userId', '==', userId)
-        .orderBy('createdAt')
+        .where('sessionMetaData.uid', '==', userId)
         .get();
       
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -250,6 +239,16 @@ const roadmapStorage = {
       console.error('Error finding roadmap by ID:', error);
       throw error;
     }
+  },
+
+  async getAllRoadmaps() {
+    try {
+      const snapshot = await db.collection('roadmaps').get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      console.error('Error finding roadmaps: ', error);
+      throw error;
+    }
   }
 };
 
@@ -258,9 +257,9 @@ const topicStorage = {
   async findAllTopicsByRoadmapId(id) {
     try {
       const snapshot = await db.collection('topics')
-        .where('roadmapId', '==', id)
-        .orderBy('id')
+        .where('topicMetaData.roadmapId', '==', id)
         .get();
+      
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
       console.error('Error finding topics for roadmap id ' + id + ' : ', error);

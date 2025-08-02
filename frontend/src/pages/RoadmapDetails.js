@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Brain, 
+import {
   ArrowLeft,
   Clock,
   Target,
@@ -14,6 +13,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import dataAPI from '../services/dataAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/roadmap-details.css';
 
@@ -30,45 +30,6 @@ const getUserProgress = (roadmapId) => {
   };
   
   return mockProgress[roadmapId] || {};
-};
-
-// Mock roadmap data - replace with API call later
-const mockRoadmapData = {
-  "dsa-fundamentals": {
-    id: "dsa-fundamentals",
-    name: "Data Structures & Algorithms Fundamentals",
-    description: "Master the core concepts of DSA from basics to advanced topics",
-    category: "Programming Fundamentals",
-    difficulty: "Beginner to Advanced",
-    color: "#FF6B35",
-    gradient: "linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)",
-    duration: "8-12 weeks"
-  },
-  "web-development": {
-    id: "web-development",
-    name: "Complete Web Development",
-    description: "From HTML basics to full-stack web applications",
-    category: "Web Development",
-    difficulty: "Beginner to Advanced",
-    color: "#4ECDC4",
-    gradient: "linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)",
-    duration: "12-16 weeks"
-  }
-};
-
-// Mock topics data - replace with API call later
-const mockTopicsData = {
-  "dsa-fundamentals": [
-    { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
-    { id: 2, name: "Linked Lists", difficulty: "Beginner", duration: "2-3 hours", description: "Understand pointer concepts and list operations" },
-    { id: 3, name: "Stacks & Queues", difficulty: "Beginner", duration: "2-3 hours", description: "Learn LIFO and FIFO data structures" },
-    { id: 4, name: "Trees & Binary Trees", difficulty: "Intermediate", duration: "4-5 hours", description: "Explore hierarchical data structures" },
-    { id: 5, name: "Binary Search Trees", difficulty: "Intermediate", duration: "3-4 hours", description: "Efficient searching and sorting with BSTs" }
-  ],
-  "web-development": [
-    { id: 1, name: "HTML Fundamentals", difficulty: "Beginner", duration: "2-3 hours", description: "Structure and semantic markup" },
-    { id: 2, name: "CSS Styling & Layout", difficulty: "Beginner", duration: "4-5 hours", description: "Visual design and responsive layouts" }
-  ]
 };
 
 // Calculate overall roadmap progress
@@ -98,11 +59,8 @@ const RoadmapDetails = () => {
     try {
       setLoading(true);
       
-      // Mock API calls - replace with actual backend calls when ready
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const roadmap = mockRoadmapData[roadmapId];
-      const roadmapTopics = mockTopicsData[roadmapId] || [];
+      const roadmap = await dataAPI.getRoadmapTopics(roadmapId);
+      const roadmapTopics = roadmap.topics;
       const progress = getUserProgress(roadmapId);
       
       if (!roadmap) {
@@ -110,7 +68,7 @@ const RoadmapDetails = () => {
         return;
       }
       
-      setRoadmapData(roadmap);
+      setRoadmapData(roadmap.details);
       setTopics(roadmapTopics);
       setUserProgress(progress);
       
@@ -143,8 +101,7 @@ const RoadmapDetails = () => {
         console.error('Error updating topic progress:', error);
       }
     }
-    
-    // Determine initial difficulty based on progress
+
     let initialDifficulty = 'beginner';
     let questioningStyle = 'socratic';
     
@@ -159,7 +116,6 @@ const RoadmapDetails = () => {
       questioningStyle = 'supportive';
     }
 
-    // Create navigation state for LearningSession
     const navigationState = {
       isNewSession: true,
       roadmapId: roadmapId,
@@ -181,15 +137,13 @@ const RoadmapDetails = () => {
     };
 
     console.log('Navigating to /learn with state:', navigationState);
-    
-    // Validate navigation state
+
     if (!navigationState.topicData || !navigationState.topicData.name) {
       console.error('Invalid navigation state - missing topic data:', navigationState);
       alert('Error: Invalid topic data. Please try again.');
       return;
     }
 
-    // Start learning session
     navigate('/learn', {
       state: navigationState
     });
@@ -269,7 +223,6 @@ const RoadmapDetails = () => {
 
   return (
     <div className="roadmap-details">
-      {/* Header */}
       <div className="roadmap-header">
         <div className="header-navigation">
           <button 
@@ -335,7 +288,6 @@ const RoadmapDetails = () => {
         </div>
       </div>
 
-      {/* Progress Statistics */}
       <div className="progress-stats-section">
         <div className="stats-grid">
           <div className="stat-card completed">
@@ -380,7 +332,6 @@ const RoadmapDetails = () => {
         </div>
       </div>
 
-      {/* Topics List */}
       <div className="topics-section">
         <div className="section-header">
           <h2>Learning Path</h2>
@@ -398,20 +349,17 @@ const RoadmapDetails = () => {
                 key={topic.id}
                 className={`topic-item ${status} ${!isClickable ? 'disabled' : ''}`}
               >
-                {/* Topic Number */}
                 <div 
                   className="topic-number" 
                   style={{ background: status === 'locked' ? '#9CA3AF' : getStatusColor(status) }}
                 >
                   {status === 'locked' ? <Shield size={16} /> : index + 1}
                 </div>
-                
-                {/* Topic Icon */}
+
                 <div className="topic-icon">
                   <BookOpen size={24} />
                 </div>
-                
-                {/* Main Content */}
+
                 <div className="topic-main">
                   <div className="topic-header">
                     <h3 className="topic-title">{topic.name}</h3>
@@ -419,8 +367,7 @@ const RoadmapDetails = () => {
                   </div>
                   
                   <p className="topic-description">{topic.description}</p>
-                  
-                  {/* Progress Bar - only for unlocked topics */}
+
                   {status !== 'locked' && (
                     <div className="topic-progress">
                       <div className="progress-bar">
@@ -437,8 +384,7 @@ const RoadmapDetails = () => {
                       </span>
                     </div>
                   )}
-                  
-                  {/* Meta Information */}
+
                   <div className="topic-meta">
                     <span 
                       className="difficulty-tag"
@@ -456,7 +402,6 @@ const RoadmapDetails = () => {
                   </div>
                 </div>
                 
-                {/* Action Button */}
                 <div className="topic-action-container">
                   {status === 'locked' ? (
                     <div className="topic-action locked-action">
@@ -519,7 +464,6 @@ const RoadmapDetails = () => {
         </div>
       </div>
 
-      {/* Progress encouragement section */}
       {overallProgress > 0 && (
         <div className="encouragement-section" style={{
           padding: '2rem',

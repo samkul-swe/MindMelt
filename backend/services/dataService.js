@@ -1,4 +1,4 @@
-import { db } from '../config/firebase.js';
+import { db, roadmapStorage, topicStorage } from '../config/firebase.js';
 
 class DataService {
   constructor() {
@@ -12,11 +12,11 @@ class DataService {
         return Array.from(this.roadmapsCache.values());
       }
 
-      const roadmapsSnapshot = await db.collection('roadmaps').get();
+      const roadmapsSnapshot = await roadmapStorage.getAllRoadmaps();
       const roadmaps = [];
-      
+
       roadmapsSnapshot.forEach(doc => {
-        const roadmap = { id: doc.id, ...doc.data() };
+        const roadmap = { id: doc.id, ...doc };
         this.roadmapsCache.set(doc.id, roadmap);
         roadmaps.push(roadmap);
       });
@@ -35,10 +35,10 @@ class DataService {
         return this.roadmapsCache.get(roadmapId);
       }
 
-      const roadmapDoc = await db.collection('roadmaps').doc(roadmapId).get();
+      const roadmapDoc = await roadmapStorage.findById(roadmapId);
       
-      if (roadmapDoc.exists()) {
-        const roadmap = { id: roadmapDoc.id, ...roadmapDoc.data() };
+      if (roadmapDoc != null) {
+        const roadmap = { id: roadmapDoc.id, ...roadmapDoc };
         this.roadmapsCache.set(roadmapId, roadmap);
         return roadmap;
       }
@@ -50,26 +50,19 @@ class DataService {
     }
   }
 
-  async getTopicsForRoadmap(roadmapId) {
+  async getRoadmapTopics(roadmapId) {
     try {
       const cacheKey = `roadmap_${roadmapId}`;
       if (this.topicsCache.has(cacheKey)) {
         return this.topicsCache.get(cacheKey);
       }
 
-      const topicsSnapshot = await db.collection('topics')
-        .where('roadmapId', '==', roadmapId)
-        .get();
+      const topicsSnapshot = await topicStorage.findAllTopicsByRoadmapId(roadmapId);
+      console.log("TOPIC SNAPSHOT :" + topicsSnapshot);
       
       const topics = [];
       topicsSnapshot.forEach(doc => {
         topics.push({ id: doc.id, ...doc.data() });
-      });
-
-      topics.sort((a, b) => {
-        const aNum = parseInt(a.topicId.split('_').pop());
-        const bNum = parseInt(b.topicId.split('_').pop());
-        return aNum - bNum;
       });
 
       this.topicsCache.set(cacheKey, topics);
@@ -81,50 +74,9 @@ class DataService {
     }
   }
 
-  async getTopic(topicId) {
-    try {
-      const topicDoc = await db.collection('topics').doc(topicId).get();
-      
-      if (topicDoc.exists()) {
-        return { id: topicDoc.id, ...topicDoc.data() };
-      }
-      
-      return null;
-    } catch (error) {
-      console.error(`❌ Error fetching topic ${topicId}:`, error);
-      throw new Error(`Failed to fetch topic: ${error.message}`);
-    }
-  }
-
   clearCache() {
     this.roadmapsCache.clear();
     this.topicsCache.clear();
-  }
-
-  async getRoadmapStats(roadmapId) {
-    try {
-      const topics = await this.getTopicsForRoadmap(roadmapId);
-      
-      return {
-        totalTopics: topics.length,
-        topicsByDifficulty: this.groupTopicsByDifficulty(topics)
-      };
-    } catch (error) {
-      console.error(`❌ Error fetching roadmap stats for ${roadmapId}:`, error);
-      throw new Error(`Failed to fetch roadmap stats: ${error.message}`);
-    }
-  }
-
-  groupTopicsByDifficulty(topics) {
-    const grouped = {};
-    topics.forEach(topic => {
-      const difficulty = topic.difficulty || 'Unknown';
-      if (!grouped[difficulty]) {
-        grouped[difficulty] = 0;
-      }
-      grouped[difficulty]++;
-    });
-    return grouped;
   }
 }
 

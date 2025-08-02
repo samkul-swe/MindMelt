@@ -758,32 +758,6 @@
   opacity: 1;
 }
 
-.roadmap-card.dsa-fundamentals {
-  background: linear-gradient(135deg, #FFF7ED 0%, #ffffff 100%);
-}
-
-.roadmap-card.dsa-fundamentals::before {
-  background: linear-gradient(90deg, #EA580C 0%, #F97316 100%);
-}
-
-.roadmap-card.dsa-fundamentals:hover {
-  border-color: #EA580C;
-  box-shadow: 0 12px 40px rgba(234, 88, 12, 0.15);
-}
-
-.roadmap-card.web-development {
-  background: linear-gradient(135deg, #F0FDF4 0%, #ffffff 100%);
-}
-
-.roadmap-card.web-development::before {
-  background: linear-gradient(90deg, #22C55E 0%, #16A34A 100%);
-}
-
-.roadmap-card.web-development:hover {
-  border-color: #22C55E;
-  box-shadow: 0 12px 40px rgba(34, 197, 94, 0.15);
-}
-
 .roadmap-card-header {
   display: flex;
   align-items: flex-start;

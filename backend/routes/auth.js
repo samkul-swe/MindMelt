@@ -2,7 +2,7 @@ import express from 'express';
 import authService from '../services/authService.js';
 import { authenticateToken } from '../utils/middleware.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from '../config/firebase.js';
+import { auth, userStorage } from '../config/firebase.js';
 
 const router = express.Router();
 
@@ -22,6 +22,7 @@ router.post('/login', async (req, res) => {
     const firebaseUser = userCredential.user;
 
     const token = await authService.getUserToken(firebaseUser);
+    const user = await userStorage.findById(firebaseUser.uid);
 
     res.json({
       success: true,
@@ -97,7 +98,8 @@ router.post('/register', async (req, res) => {
         user: {
           id: user.uid,
           email: user.email,
-          username: user.username
+          username: user.username,
+          createdAt: user.createdAt
         },
         token
       }
@@ -120,96 +122,6 @@ router.post('/register', async (req, res) => {
     res.status(400).json({
       success: false,
       message: errorMessage
-    });
-  }
-});
-
-router.post('/authenticate', async (req, res) => {
-  try {
-    const { idToken } = req.body;
-    
-    if (!idToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Firebase ID token is required'
-      });
-    }
-
-    const user = await authService.authenticateUser(idToken);
-    const token = authService.createCustomToken(user);
-
-    res.json({
-      success: true,
-      message: 'Authentication successful',
-      data: {
-        user: {
-          id: user.uid,
-          email: user.email,
-          username: user.username,
-          currentProgress: user.currentProgress || {}
-        },
-        token
-      }
-    });
-  } catch (error) {
-    console.error('Authentication error:', error);
-    res.status(401).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/profile', authenticateToken, async (req, res) => {
-  try {
-    const user = await authService.getUser(req.user.uid);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        id: user.uid,
-        email: user.email,
-        username: user.username,
-        currentProgress: user.currentProgress || {},
-        createdAt: user.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.put('/profile', authenticateToken, async (req, res) => {
-  try {
-    const updates = req.body;
-    const user = await authService.updateUserProfile(req.user.uid, updates);
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully',
-      data: {
-        id: user.uid,
-        email: user.email,
-        username: user.username,
-        createdAt: user.createdAt
-      }
-    });
-  } catch (error) {
-    console.error('Profile update error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
     });
   }
 });
@@ -239,23 +151,6 @@ router.post('/progress', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Progress update error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.delete('/account', authenticateToken, async (req, res) => {
-  try {
-    await authService.deleteUser(req.user.uid);
-
-    res.json({
-      success: true,
-      message: 'Account deleted successfully'
-    });
-  } catch (error) {
-    console.error('Account deletion error:', error);
     res.status(400).json({
       success: false,
       message: error.message

@@ -24,6 +24,7 @@ router.get('/roadmaps/:roadmapId', async (req, res) => {
   try {
     const { roadmapId } = req.params;
     const roadmap = await dataService.getRoadmap(roadmapId);
+    const topics = await dataService.getRoadmapTopics(roadmapId);
     
     if (!roadmap) {
       return res.status(404).json({
@@ -34,71 +35,13 @@ router.get('/roadmaps/:roadmapId', async (req, res) => {
 
     res.json({
       success: true,
-      data: roadmap
+      roadmap : {
+        details : roadmap,
+        topics : topics
+      }
     });
   } catch (error) {
     console.error('Roadmap fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/roadmaps/:roadmapId/topics', async (req, res) => {
-  try {
-    const { roadmapId } = req.params;
-    const topics = await dataService.getTopicsForRoadmap(roadmapId);
-    
-    res.json({
-      success: true,
-      data: topics
-    });
-  } catch (error) {
-    console.error('Topics fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/topics/:topicId', async (req, res) => {
-  try {
-    const { topicId } = req.params;
-    const topic = await dataService.getTopic(topicId);
-    
-    if (!topic) {
-      return res.status(404).json({
-        success: false,
-        message: 'Topic not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      data: topic
-    });
-  } catch (error) {
-    console.error('Topic fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/roadmaps/:roadmapId/stats', async (req, res) => {
-  try {
-    const { roadmapId } = req.params;
-    const stats = await dataService.getRoadmapStats(roadmapId);
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Roadmap stats error:', error);
     res.status(500).json({
       success: false,
       message: error.message

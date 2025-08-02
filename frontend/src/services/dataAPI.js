@@ -62,33 +62,6 @@ class DataAPI{
     }
   }
 
-
-  async getRoadmap(roadmapId) {
-    try {
-      if (this.roadmapsCache.has(roadmapId)) {
-        return this.roadmapsCache.get(roadmapId);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error('Failed to fetch roadmap');
-      }
-
-      const result = await response.json();
-      const roadmap = result.data || result;
-
-      this.roadmapsCache.set(roadmapId, roadmap);
-      return roadmap;
-    } catch (error) {
-      console.error(`Error fetching roadmap ${roadmapId}:`, error);
-      throw error;
-    }
-  }
-
   async getRoadmapTopics(roadmapId) {
     try {
       const cacheKey = `roadmap_${roadmapId}`;
@@ -96,40 +69,20 @@ class DataAPI{
         return this.topicsCache.get(cacheKey);
       }
 
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/topics`);
+      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch roadmap topics');
       }
 
       const result = await response.json();
-      const topics = result.data || result;
-
+      const topics = result.roadmap || result;
 
       this.topicsCache.set(cacheKey, topics);
       console.log(`Retrieved ${topics.length} topics for roadmap ${roadmapId}`);
       return topics;
     } catch (error) {
       console.error(`Error fetching topics for roadmap ${roadmapId}:`, error);
-      throw error;
-    }
-  }
-
-  async getTopic(topicId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/data/topics/${topicId}`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error('Failed to fetch topic');
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error(`Error fetching topic ${topicId}:`, error);
       throw error;
     }
   }
@@ -260,38 +213,6 @@ class DataAPI{
     }
   }
 
-  async getRoadmapStats(roadmapId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/data/roadmaps/${roadmapId}/stats`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch roadmap stats');
-      }
-
-      const result = await response.json();
-      return result.data || result;
-    } catch (error) {
-      console.error(`Error fetching roadmap stats for ${roadmapId}:`, error);
-      const topics = await this.getRoadmapTopics(roadmapId);
-      return {
-        totalTopics: topics.length,
-        topicsByDifficulty: this.groupTopicsByDifficulty(topics)
-      };
-    }
-  }
-
-  groupTopicsByDifficulty(topics) {
-    const grouped = {};
-    topics.forEach(topic => {
-      const difficulty = topic.difficulty || 'Unknown';
-      if (!grouped[difficulty]) {
-        grouped[difficulty] = 0;
-      }
-      grouped[difficulty]++;
-    });
-    return grouped;
-  }
-
   clearCache() {
     this.roadmapsCache.clear();
     this.topicsCache.clear();
@@ -359,18 +280,6 @@ class DataAPI{
       console.error('Error enrolling user in roadmap:', error);
       return false;
     }
-  }
-
-  async getCourses() {
-    return this.getRoadmaps();
-  }
-
-  async getCourse(courseId) {
-    return this.getRoadmap(courseId);
-  }
-
-  async getTopicsForCourse(courseId) {
-    return this.getRoadmapTopics(courseId);
   }
 
   async getUserCourseProgress(userId, courseId) {

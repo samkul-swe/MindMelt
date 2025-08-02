@@ -6,9 +6,7 @@ import {
   User, 
   LogOut, 
   Plus,
-  Target,
   BookOpen,
-  Clock,
   Save,
   ChevronRight
 } from 'lucide-react';
@@ -17,38 +15,6 @@ import authAPI from '../services/authAPI';
 import dataAPI from '../services/dataAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
-
-const getRoadmapTopics = () => {
-  const roadmapTopics = [
-    { text: "Time to Debug Your Potential!", subtitle: "Let's squash some knowledge gaps together" },
-    { text: "Ready to Compile Some Brilliance?", subtitle: "Your brain is the best IDE for learning" },
-    { text: "Let's Cache Some Knowledge!", subtitle: "Store these concepts in your long-term memory" },
-    { text: "Time to Push Your Limits!", subtitle: "Git ready for an amazing learning session" },
-    { text: "Ready to Parse Some Wisdom?", subtitle: "Breaking down complex topics into digestible bits" },
-    { text: "Let's Refactor Your Understanding!", subtitle: "Clean code, clean mind, clean learning" },
-    { text: "Time to Optimize Your Brain!", subtitle: "Maximum learning efficiency loading..." },
-    { text: "Ready to Stack Some Skills?", subtitle: "Building your knowledge data structure" },
-    { text: "Let's Initialize Your Growth!", subtitle: "constructor() { this.knowledge = new Map(); }" }
-  ];
-  
-  try {
-    const roadmapData = await dataAPI.getRoadmaps();
-
-  } catch (error) {
-    console.warn('localStorage not available, using random pun:', error);
-    return puns[Math.floor(Math.random() * puns.length)];
-  }
-};
-
-const roadmapTopics = {
-  "dsa-fundamentals": [
-    { id: 1, name: "Arrays & Strings", difficulty: "Beginner", duration: "3-4 hours", description: "Master array manipulation and string algorithms" },
-    { id: 2, name: "Linked Lists", difficulty: "Beginner", duration: "2-3 hours", description: "Understand pointer concepts and list operations" },
-    { id: 3, name: "Stacks & Queues", difficulty: "Beginner", duration: "2-3 hours", description: "Learn LIFO and FIFO data structures" },
-    { id: 4, name: "Trees & Binary Trees", difficulty: "Intermediate", duration: "4-5 hours", description: "Explore hierarchical data structures" },
-    { id: 5, name: "Binary Search Trees", difficulty: "Intermediate", duration: "3-4 hours", description: "Efficient searching and sorting with BSTs" }
-  ]
-};
 
 const getTechPunPersistent = () => {
   const puns = [
@@ -120,26 +86,26 @@ const formatMemberSinceDate = (timestamp) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { currentUser, isAuthenticated, logout, updateUser, getDisplayName } = useAuth();
+  const { currentUser, isAuthenticated, loading: authLoading, logout, updateUser, getDisplayName } = useAuth();
   
   const [learningSessions, setLearningSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [savingUsername, setSavingUsername] = useState(false);
   const [usernameUpdateSuccess, setUsernameUpdateSuccess] = useState(false);
   const [dailyPun, setDailyPun] = useState(null);
   const [userProgress, setUserProgress] = useState({});
+  const [roadMaps, setRoadMaps] = useState([]);
 
   const fetchLearningSessions = useCallback(async () => {
     if (!isAuthenticated) {
-      setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      const sessions = await authAPI.getLearningHistory();
+      const sessions = []; // for now, has to be replaced with actual API call
       setLearningSessions(sessions || []);
     } catch (error) {
       console.error('Failed to fetch learning sessions:', error);
@@ -149,6 +115,20 @@ const Dashboard = () => {
     }
   }, [isAuthenticated]);
 
+  const fetchRoadMaps = useCallback(async () => {
+    try {
+      setLoading(true);
+      const roadMaps = await dataAPI.getRoadmaps();
+      console.log("Roadmaps count : " + roadMaps.length);
+      setRoadMaps(roadMaps || []);
+    } catch (error) {
+      console.error('Failed to fetch roadmaps:', error);
+      setRoadMaps([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (usernameUpdateSuccess) {
       setNewUsername('');
@@ -156,15 +136,13 @@ const Dashboard = () => {
   }, [usernameUpdateSuccess]);
 
   useEffect(() => {
-    fetchLearningSessions();
     setDailyPun(getTechPunPersistent());
+    fetchLearningSessions();
+    fetchRoadMaps();
 
     const allProgress = {};
-    Object.keys(roadmapTopics).forEach(roadmapId => {
-      allProgress[roadmapId] = getUserProgress(roadmapId);
-    });
     setUserProgress(allProgress);
-  }, [fetchLearningSessions]);
+  }, [fetchLearningSessions, fetchRoadMaps]);
 
   const handleSaveUsername = async (e) => {
     e.preventDefault();
@@ -200,20 +178,10 @@ const Dashboard = () => {
   };
 
   const handleRoadmapClick = (roadmapData) => {
-    navigate(`/roadmap/${roadmapData.roadmapId}`);
+    navigate(`/roadmap/${roadmapData.id}`);
   };
 
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'Beginner': return '#2ECC71';
-      case 'Intermediate': return '#F39C12';
-      case 'Advanced': return '#E74C3C';
-      case 'Expert': return '#9B59B6';
-      default: return '#95A5A6';
-    }
-  };
-
-  if (loading) {
+  if (authLoading || loading) {
     return <LoadingSpinner message="Loading your dashboard..." />;
   }
 
@@ -283,95 +251,96 @@ const Dashboard = () => {
           <h3>Choose Your Learning Roadmap</h3>
           <div className="simple-activity">
             <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
-              <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>Select a structured learning path:</h4>
-              <div className="roadmap-grid">
-                <div 
-                  className="roadmap-card dsa-fundamentals"
-                  onClick={() => {
-                    handleRoadmapClick({
-                      name: "Data Structures & Algorithms Fundamentals",
-                      description: "Master the core concepts of DSA from basics to advanced topics",
-                      category: "Programming Fundamentals",
-                      difficulty: "Beginner to Advanced",
-                      roadmapId: "dsa-fundamentals"
-                    });
-                  }}
-                >
-                  <div className="roadmap-card-header">
-                    <div className="roadmap-icon-container">
-                      <span className="roadmap-icon">DSA</span>
+              <h4 style={{ color: 'var(--gray-800)', marginBottom: '1rem', fontSize: '1.1rem' }}>
+                Select a structured learning path:
+              </h4>
+              
+              {roadMaps.length > 0 ? (
+                <div className="roadmap-grid">
+                  {roadMaps.map((roadMap) => (
+                    <div 
+                      key={roadMap.id}
+                      className="roadmap-card"
+                      onClick={() => handleRoadmapClick(roadMap)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div 
+                        className="roadmap-card-header"
+                        style={{
+                          background: `linear-gradient(135deg, ${roadMap.color || '#6366f1'} 0%, ${roadMap.color || '#6366f1'}80 100%)`,
+                          borderRadius: '12px 12px 0 0',
+                          padding: '1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          color: 'white'
+                        }}
+                      >
+                        <div className="roadmap-title-section" style={{ flex: 1 }}>
+                          <h5 
+                            className="roadmap-title"
+                            style={{
+                              margin: 0,
+                              fontSize: '1.1rem',
+                              fontWeight: '600',
+                              color: 'white'
+                            }}
+                          >
+                            {roadMap.name || 'Learning Path'}
+                          </h5>
+                        </div>
+                        <div className="roadmap-action">
+                          <ChevronRight size={20} color="white" />
+                        </div>
+                      </div>
+                      <div style={{ padding: '1rem' }}>
+                        <p 
+                          className="roadmap-description"
+                          style={{
+                            margin: 0,
+                            fontSize: '0.9rem',
+                            color: 'var(--gray-600)',
+                            lineHeight: '1.4'
+                          }}
+                        >
+                          {roadMap.description || 'Enhance your skills with this structured learning path'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="roadmap-title-section">
-                      <h5 className="roadmap-title">DSA Fundamentals</h5>
-                      <p className="roadmap-category">Programming Fundamentals</p>
-                    </div>
-                    <div className="roadmap-action">
-                      <ChevronRight size={20} />
-                    </div>
-                  </div>
-                  <p className="roadmap-description">Master core data structures and algorithms from basics to advanced topics</p>
-                  <div className="roadmap-meta">
-                    <span className="meta-item">
-                      <BookOpen size={14} />
-                      15 Topics
-                    </span>
-                    <span className="meta-item">
-                      <Clock size={14} />
-                      8-12 weeks
-                    </span>
-                  </div>
-                  <div className="difficulty-badge">
-                    <Target size={12} />
-                    Beginner to Advanced
-                  </div>
+                  ))}
                 </div>
-
-                <div 
-                  className="roadmap-card web-development"
-                  onClick={() => {
-                    handleRoadmapClick({
-                      name: "Complete Web Development",
-                      description: "From HTML basics to full-stack web applications",
-                      category: "Web Development",
-                      difficulty: "Beginner to Advanced",
-                      roadmapId: "web-development"
-                    });
-                  }}
-                >
-                  <div className="roadmap-card-header">
-                    <div className="roadmap-icon-container">
-                      <span className="roadmap-icon">WEB</span>
-                    </div>
-                    <div className="roadmap-title-section">
-                      <h5 className="roadmap-title">Web Development</h5>
-                      <p className="roadmap-category">Web Development</p>
-                    </div>
-                    <div className="roadmap-action">
-                      <ChevronRight size={20} />
-                    </div>
-                  </div>
-                  <p className="roadmap-description">Complete web development from HTML basics to full-stack applications</p>
-                  <div className="roadmap-meta">
-                    <span className="meta-item">
-                      <BookOpen size={14} />
-                      14 Topics
-                    </span>
-                    <span className="meta-item">
-                      <Clock size={14} />
-                      12-16 weeks
-                    </span>
-                  </div>
-                  <div className="difficulty-badge">
-                    <Target size={12} />
-                    Beginner to Advanced
-                  </div>
-                </div> 
-              </div>
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '2rem', 
+                  color: 'var(--gray-500)',
+                  backgroundColor: 'var(--gray-50)',
+                  borderRadius: '8px',
+                  border: '2px dashed var(--gray-300)'
+                }}>
+                  <BookOpen size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>No roadmaps available at the moment.</p>
+                  <p style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+                    Check back later for exciting learning paths!
+                  </p>
+                </div>
+              )}
             </div>
             
             {!isAuthenticated && (
-              <div style={{ textAlign: 'center', padding: '1rem', background: 'linear-gradient(135deg, #FFF4E6 0%, #FFE4B5 100%)', borderRadius: '0.75rem', border: '2px solid var(--accent-light)' }}>
-                <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--gray-700)' }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '1rem', 
+                background: 'linear-gradient(135deg, #FFF4E6 0%, #FFE4B5 100%)', 
+                borderRadius: '0.75rem', 
+                border: '2px solid var(--accent-light)',
+                marginTop: '1.5rem'
+              }}>
+                <p style={{ 
+                  margin: '0 0 1rem 0', 
+                  fontSize: '0.9rem', 
+                  color: 'var(--gray-700)' 
+                }}>
                   <strong>Pro tip:</strong> Create an account to save your progress and track your learning journey across topics!
                 </p>
                 <button 
@@ -544,6 +513,54 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .roadmap-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.5rem;
+          margin-top: 1rem;
+        }
+
+        .roadmap-card {
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+        }
+
+        .roadmap-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .roadmap-card-header {
+          position: relative;
+        }
+
+        .roadmap-card-header::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+          .roadmap-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+          }
+          
+          .roadmap-card {
+            margin: 0 0.5rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };

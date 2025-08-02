@@ -2,14 +2,15 @@ import jwt from 'jsonwebtoken';
 import { admin, userStorage, sessionStorage } from '../config/firebase.js';
 
 class AuthService {
-  createCustomToken(user) {
+  async createCustomToken(user) {
     const payload = {
       uid: user.uid || user.id,
       email: user.email,
       username: user.username
     };
 
-    let expiresIn = user.createdAt.toDate().getDate() + 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
     
     let jwtToken = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES_IN || '7d'
@@ -19,14 +20,14 @@ class AuthService {
     const userSessionData = {
       uid,
       jwtToken,
-      expiresIn
+      expiresAt
     }
-    let sessionDoc = sessionStorage.create(userSessionData);
+    let sessionDoc = await sessionStorage.create(userSessionData);
     return sessionDoc.jwtToken;
   }
 
   async getUserToken(user) {
-    let token = sessionStorage.findByUserId(user.uid);
+    let token = await sessionStorage.findByUserId(user.uid);
     const expirationDate = new Date(token.JWT_EXPIRES_IN);
     const now = new Date();
     const isExpired = now > expirationDate;
