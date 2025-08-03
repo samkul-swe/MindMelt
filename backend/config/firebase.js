@@ -254,15 +254,20 @@ const roadmapStorage = {
 
 // topics collection in firestore
 const topicStorage = {
-  async findAllTopicsByRoadmapId(id) {
+  async findAllTopicsByRoadmapId(roadmapId, topicCount) {
     try {
-      const snapshot = await db.collection('topics')
-        .where('topicMetaData.roadmapId', '==', id)
-        .get();
+      const topicPromises = [];
+      for (let i = 1; i <= topicCount; i++) { // Adjust max as needed
+        const topicId = `${roadmapId}_topic_${i}`;
+        topicPromises.push(db.collection('topics').doc(topicId).get());
+      }
       
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const results = await Promise.all(topicPromises);
+      return results
+        .filter(doc => doc.exists)
+        .map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-      console.error('Error finding topics for roadmap id ' + id + ' : ', error);
+      console.error('Error finding topics for roadmap ID', roadmapId, ':', error);
       throw error;
     }
   }

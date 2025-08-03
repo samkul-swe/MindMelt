@@ -24,7 +24,7 @@ router.get('/roadmaps/:roadmapId', async (req, res) => {
   try {
     const { roadmapId } = req.params;
     const roadmap = await dataService.getRoadmap(roadmapId);
-    const topics = await dataService.getRoadmapTopics(roadmapId);
+    const topics = await dataService.getRoadmapTopics(roadmapId, roadmap.topicCount);
     
     if (!roadmap) {
       return res.status(404).json({

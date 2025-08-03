@@ -242,20 +242,6 @@ const RoadmapDetails = () => {
             <div className="roadmap-info">
               <h1 className="roadmap-title">{roadmapData.name}</h1>
               <p className="roadmap-description">{roadmapData.description}</p>
-              <div className="roadmap-meta">
-                <span className="meta-item">
-                  <BookOpen size={16} />
-                  {roadmapData.category}
-                </span>
-                <span className="meta-item">
-                  <Clock size={16} />
-                  {roadmapData.duration}
-                </span>
-                <span className="meta-item">
-                  <Target size={16} />
-                  {roadmapData.difficulty}
-                </span>
-              </div>
             </div>
             <div className="progress-circle-large">
               <svg width="120" height="120" className="progress-ring-large">
@@ -356,14 +342,9 @@ const RoadmapDetails = () => {
                   {status === 'locked' ? <Shield size={16} /> : index + 1}
                 </div>
 
-                <div className="topic-icon">
-                  <BookOpen size={24} />
-                </div>
-
                 <div className="topic-main">
                   <div className="topic-header">
                     <h3 className="topic-title">{topic.name}</h3>
-                    <div className="topic-status">{getStatusText(status)}</div>
                   </div>
                   
                   <p className="topic-description">{topic.description}</p>

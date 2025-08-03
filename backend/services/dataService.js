@@ -50,19 +50,19 @@ class DataService {
     }
   }
 
-  async getRoadmapTopics(roadmapId) {
+  async getRoadmapTopics(roadmapId, topicCount) {
     try {
       const cacheKey = `roadmap_${roadmapId}`;
       if (this.topicsCache.has(cacheKey)) {
         return this.topicsCache.get(cacheKey);
       }
 
-      const topicsSnapshot = await topicStorage.findAllTopicsByRoadmapId(roadmapId);
+      const topicsSnapshot = await topicStorage.findAllTopicsByRoadmapId(roadmapId, topicCount);
       console.log("TOPIC SNAPSHOT :" + topicsSnapshot);
       
       const topics = [];
       topicsSnapshot.forEach(doc => {
-        topics.push({ id: doc.id, ...doc.data() });
+        topics.push({ id: doc.id, ...doc });
       });
 
       this.topicsCache.set(cacheKey, topics);
