@@ -50,6 +50,7 @@ const RoadmapDetails = () => {
   const [userProgress, setUserProgress] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showUnlockWarning, setShowUnlockWarning] = useState(null);
 
   useEffect(() => {
     loadRoadmapData();
@@ -83,7 +84,6 @@ const RoadmapDetails = () => {
   const handleTopicSelect = async (topic) => {
     const topicProgress = userProgress[topic.id];
     
-    // Check if topic is unlocked
     if (!topicProgress?.unlocked) {
       console.log('Topic is locked:', topic.name);
       return;
@@ -91,7 +91,6 @@ const RoadmapDetails = () => {
     
     console.log('Starting topic:', topic.name, 'with progress:', topicProgress);
     
-    // Update progress in backend if authenticated
     if (isAuthenticated && currentUser?.id && !topicProgress.started) {
       try {
         // Update topic progress via API
@@ -149,8 +148,59 @@ const RoadmapDetails = () => {
     });
   };
 
-  const getTopicStatus = (topic, progress) => {
+  const handleUnlockTopic = (topic, topicIndex) => {
+    // First topic should always be unlocked without warning
+    if (topicIndex === 0) {
+      const updatedProgress = {
+        ...userProgress,
+        [topic.id]: {
+          completed: false,
+          progress: 0,
+          unlocked: true,
+          started: false,
+          canAdvance: false
+        }
+      };
+      setUserProgress(updatedProgress);
+      handleTopicSelect(topic);
+      return;
+    }
+    
+    // For other topics, show warning
+    setShowUnlockWarning(topic);
+  };
+
+  const proceedWithUnlockedTopic = () => {
+    if (showUnlockWarning) {
+      // Update user progress to unlock the topic
+      const updatedProgress = {
+        ...userProgress,
+        [showUnlockWarning.id]: {
+          completed: false,
+          progress: 0,
+          unlocked: true,
+          started: false,
+          canAdvance: false
+        }
+      };
+      setUserProgress(updatedProgress);
+      
+      // Close warning modal
+      setShowUnlockWarning(null);
+      
+      // Start the topic session
+      handleTopicSelect(showUnlockWarning);
+    }
+  };
+
+  const getTopicStatus = (topic, progress, topicIndex) => {
     const topicProgress = progress[topic.id];
+    
+    // First topic should always be available if not already unlocked
+    if (topicIndex === 0 && (!topicProgress || !topicProgress.unlocked)) {
+      return 'available';
+    }
+    
     if (!topicProgress) return 'locked';
     
     if (topicProgress.completed) return 'completed';
@@ -326,9 +376,9 @@ const RoadmapDetails = () => {
 
         <div className="topics-list">
           {topics.map((topic, index) => {
-            const status = getTopicStatus(topic, userProgress);
+            const status = getTopicStatus(topic, userProgress, index);
             const topicProgress = userProgress[topic.id];
-            const isClickable = status !== 'locked';
+            const isClickable = status !== 'locked' || index === 0; // First topic is always clickable
             
             return (
               <div
@@ -337,9 +387,9 @@ const RoadmapDetails = () => {
               >
                 <div 
                   className="topic-number" 
-                  style={{ background: status === 'locked' ? '#9CA3AF' : getStatusColor(status) }}
+                  style={{ background: status === 'locked' && index !== 0 ? '#9CA3AF' : getStatusColor(status) }}
                 >
-                  {status === 'locked' ? <Shield size={16} /> : index + 1}
+                  {status === 'locked' && index !== 0 ? <Shield size={16} /> : index + 1}
                 </div>
 
                 <div className="topic-main">
@@ -349,7 +399,7 @@ const RoadmapDetails = () => {
                   
                   <p className="topic-description">{topic.description}</p>
 
-                  {status !== 'locked' && (
+                  {(status !== 'locked' || index === 0) && (
                     <div className="topic-progress">
                       <div className="progress-bar">
                         <div 
@@ -384,11 +434,74 @@ const RoadmapDetails = () => {
                 </div>
                 
                 <div className="topic-action-container">
-                  {status === 'locked' ? (
-                    <div className="topic-action locked-action">
+                  {status === 'locked' && index !== 0 ? (
+                    <button 
+                      className="topic-action-btn unlock"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnlockTopic(topic, index);
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                        border: 'none',
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 4px 16px rgba(245, 158, 11, 0.3)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                      }}
+                    >
                       <Shield size={16} />
-                      <span>Locked</span>
-                    </div>
+                      <span>Unlock Topic</span>
+                    </button>
+                  ) : status === 'available' && index === 0 && (!topicProgress?.unlocked) ? (
+                    <button 
+                      className="topic-action-btn available"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnlockTopic(topic, index);
+                      }}
+                      style={{
+                        background: getStatusColor('available'),
+                        border: 'none',
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                      }}
+                    >
+                      <Zap size={16} />
+                      <span>Start Learning</span>
+                    </button>
                   ) : (
                     <button 
                       className={`topic-action-btn ${status}`}
@@ -465,6 +578,143 @@ const RoadmapDetails = () => {
             <p style={{ margin: '0', opacity: '0.9', fontSize: '0.95rem' }}>
               Keep up the momentum! Each topic you complete brings you closer to mastering {roadmapData.category}.
             </p>
+          </div>
+        </div>
+      )}
+
+      {showUnlockWarning && (
+        <div 
+          className="unlock-warning-overlay"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            backdropFilter: 'blur(4px)'
+          }}
+          onClick={() => setShowUnlockWarning(null)}
+        >
+          <div 
+            className="unlock-warning-modal"
+            style={{
+              background: 'white',
+              borderRadius: '1rem',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <div 
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1rem auto'
+                }}
+              >
+                <Shield size={28} color="white" />
+              </div>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#1F2937', fontSize: '1.4rem' }}>
+                Unlock Advanced Topic?
+              </h3>
+              <p style={{ margin: '0', color: '#6B7280', fontSize: '0.95rem' }}>
+                You're about to unlock "{showUnlockWarning.name}"
+              </p>
+            </div>
+            
+            <div 
+              style={{
+                background: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                borderRadius: '0.75rem',
+                padding: '1rem',
+                marginBottom: '1.5rem'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ 
+                  background: '#F59E0B', 
+                  borderRadius: '50%', 
+                  padding: '0.25rem',
+                  marginTop: '0.125rem'
+                }}>
+                  <Shield size={16} color="white" />
+                </div>
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#92400E', fontSize: '0.9rem', fontWeight: '600' }}>
+                    ⚠️ Learning Path Advisory
+                  </h4>
+                  <p style={{ margin: '0', color: '#92400E', fontSize: '0.85rem', lineHeight: '1.4' }}>
+                    This topic is typically unlocked after completing previous concepts. 
+                    Starting here may be more challenging without the foundational knowledge from earlier topics.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowUnlockWarning(null)}
+                style={{
+                  background: '#F3F4F6',
+                  color: '#374151',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#E5E7EB';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#F3F4F6';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={proceedWithUnlockedTopic}
+                style={{
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-1px)';
+                  e.target.style.boxShadow = '0 4px 16px rgba(245, 158, 11, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
+                }}
+              >
+                Unlock & Start Learning
+              </button>
+            </div>
           </div>
         </div>
       )}

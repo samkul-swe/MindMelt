@@ -58,7 +58,6 @@ class DataService {
       }
 
       const topicsSnapshot = await topicStorage.findAllTopicsByRoadmapId(roadmapId, topicCount);
-      console.log("TOPIC SNAPSHOT :" + topicsSnapshot);
       
       const topics = [];
       topicsSnapshot.forEach(doc => {
