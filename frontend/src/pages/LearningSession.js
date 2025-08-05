@@ -13,14 +13,18 @@ import {
   Info,
   Lightbulb,
   Coffee,
-  Code,
-  Save,
-  X
+  Code
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import authAPI from '../services/authAPI';
+import aiAPI from '../services/aiAPI';
+import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
-import '../styles/pages/learning-session.css'
+
+// Import existing CSS files properly
+import '../styles/pages/learning-session.css';
+import '../styles/components/buttons.css';
+import '../styles/components/modals.css';
 
 // Timer Constants
 const TIMER_CONSTANTS = {
@@ -33,8 +37,7 @@ const TIMER_CONSTANTS = {
 const MESSAGE_TYPES = {
   USER: 'user',
   BOT: 'bot',
-  HINT: 'hint',
-  SYSTEM: 'system'
+  HINT: 'hint'
 };
 
 const HINT_CONSTANTS = {
@@ -45,41 +48,34 @@ const HINT_CONSTANTS = {
 const learningPaths = {
   conceptual: { 
     name: "Conceptual Track", 
-    description: "Deep understanding of core concepts - focus on the 'why'",
-    icon: "Brain"
+    description: "Deep understanding of core concepts - focus on the 'why'"
   },
   applied: { 
     name: "Applied Track", 
-    description: "Practical implementation and real-world examples",
-    icon: "Zap"
+    description: "Practical implementation and real-world examples"
   },
   comprehensive: { 
     name: "Comprehensive Track", 
-    description: "Complete mastery with theory and practice combined",
-    icon: "Target"
+    description: "Complete mastery with theory and practice combined"
   }
 };
 
 const questioningStyles = {
   socratic: { 
     name: "Socratic Method", 
-    description: "Guided discovery through strategic questions that build understanding step by step",
-    icon: "MessageCircle"
+    description: "Guided discovery through strategic questions that build understanding step by step"
   },
   scenario: { 
     name: "Scenario-Based", 
-    description: "Real-world problem scenarios and practical use cases to explore concepts",
-    icon: "Globe"
+    description: "Real-world problem scenarios and practical use cases to explore concepts"
   },
   puzzle: { 
     name: "Puzzle & Brain Teaser", 
-    description: "Challenge-based learning with creative problem solving and logic puzzles",
-    icon: "Puzzle"
+    description: "Challenge-based learning with creative problem solving and logic puzzles"
   },
   analogy: { 
     name: "Analogy & Metaphor", 
-    description: "Learn through comparisons, analogies, and familiar everyday examples",
-    icon: "Link"
+    description: "Learn through comparisons, analogies, and familiar everyday examples"
   }
 };
 
@@ -153,10 +149,15 @@ const useHints = (initialCount = HINT_CONSTANTS.MAX_HINTS) => {
   };
 };
 
-// Ice Cream Timer Component (simplified)
+// Ice Cream Timer Component (keeping existing implementation)
 const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+  const dripsRef = useRef([]);
+  const lastUpdateRef = useRef(0);
+  
   const percentage = useMemo(() => (timeLeft / totalTime) * 100, [timeLeft, totalTime]);
+  const meltLevel = useMemo(() => (100 - percentage) / 100, [percentage]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -171,39 +172,141 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
     canvas.style.height = '80px';
     ctx.scale(dpr, dpr);
 
-    ctx.clearRect(0, 0, 60, 80);
-    
-    // Draw simple ice cream cone
-    ctx.fillStyle = '#d97706';
-    ctx.beginPath();
-    ctx.moveTo(18, 40);
-    ctx.lineTo(42, 40);
-    ctx.lineTo(30, 70);
-    ctx.closePath();
-    ctx.fill();
+    class Drip {
+      constructor(x, y, color, size = 1.5) {
+        this.x = x;
+        this.y = y;
+        this.originalY = y;
+        this.color = color;
+        this.size = size;
+        this.speed = Math.random() * 0.4 + 0.2;
+        this.opacity = 0.8;
+        this.life = 1.0;
+      }
 
-    // Draw ice cream scoops based on time remaining
-    if (percentage > 0) {
-      ctx.fillStyle = '#f59e0b';
-      ctx.beginPath();
-      ctx.arc(30, 32, 13, 0, Math.PI * 2);
-      ctx.fill();
+      update() {
+        this.y += this.speed;
+        this.speed += 0.015;
+        this.life -= 0.006;
+        this.opacity = Math.max(0, this.life * 0.8);
+        
+        if (this.y > 75 || this.life <= 0) {
+          this.y = this.originalY;
+          this.life = 1.0;
+          this.opacity = 0.8;
+          this.speed = Math.random() * 0.4 + 0.2;
+        }
+      }
+
+      draw(ctx) {
+        if (this.opacity <= 0) return;
+        
+        ctx.save();
+        ctx.globalAlpha = this.opacity;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
-    
-    if (percentage > 33) {
-      ctx.fillStyle = '#ec4899';
+
+    const updateDrips = () => {
+      const targetDripCount = Math.floor(meltLevel * 6);
+      const colors = ['#fbbf24', '#f59e0b', '#f97316', '#ec4899'];
+      
+      while (dripsRef.current.length < targetDripCount) {
+        dripsRef.current.push(new Drip(
+          15 + Math.random() * 30,
+          32 + Math.random() * 8,
+          colors[Math.floor(Math.random() * colors.length)]
+        ));
+      }
+      
+      dripsRef.current = dripsRef.current.slice(0, targetDripCount);
+    };
+
+    const drawIceCream = (timestamp) => {
+      if (timestamp - lastUpdateRef.current < 33) {
+        if (isRunning || dripsRef.current.length > 0) {
+          animationRef.current = requestAnimationFrame(drawIceCream);
+        }
+        return;
+      }
+      lastUpdateRef.current = timestamp;
+
+      ctx.clearRect(0, 0, 60, 80);
+      
+      // Draw cone with orange theme
+      const coneGradient = ctx.createLinearGradient(0, 50, 0, 80);
+      coneGradient.addColorStop(0, '#d97706');
+      coneGradient.addColorStop(1, '#92400e');
+      
+      ctx.fillStyle = coneGradient;
       ctx.beginPath();
-      ctx.arc(30, 22, 11, 0, Math.PI * 2);
+      ctx.moveTo(18, 40);
+      ctx.lineTo(42, 40);
+      ctx.lineTo(30, 70);
+      ctx.closePath();
       ctx.fill();
-    }
-    
-    if (percentage > 66) {
-      ctx.fillStyle = '#ea580c';
-      ctx.beginPath();
-      ctx.arc(30, 14, 9, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }, [percentage]);
+
+      const meltSag = meltLevel * 10;
+      
+      const drawMeltingScoop = (centerX, centerY, radius, color, meltAmount) => {
+        const gradient = ctx.createRadialGradient(centerX - 3, centerY - 3, 0, centerX, centerY, radius);
+        gradient.addColorStop(0, color.light);
+        gradient.addColorStop(1, color.dark);
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + meltAmount * 5, radius, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      // Draw scoops with melting effects - always visible with orange theme
+      if (percentage > -10) {
+        const opacity = Math.max(0.3, percentage / 100);
+        ctx.globalAlpha = opacity;
+        drawMeltingScoop(30, 32 + meltSag, 13, 
+          { light: '#FF8A56', dark: '#FF6B35' }, meltLevel); // Orange theme
+        ctx.globalAlpha = 1;
+      }
+      
+      if (percentage > -40) {
+        const opacity = Math.max(0.3, percentage / 100);
+        ctx.globalAlpha = opacity;
+        drawMeltingScoop(30, 22 + meltSag * 0.7, 11, 
+          { light: '#fce7f3', dark: '#ec4899' }, meltLevel * 0.8);
+        ctx.globalAlpha = 1;
+      }
+      
+      if (percentage > -70) {
+        const opacity = Math.max(0.3, percentage / 100);
+        ctx.globalAlpha = opacity;
+        drawMeltingScoop(30, 14 + meltSag * 0.5, 9, 
+          { light: '#fed7aa', dark: '#ea580c' }, meltLevel * 0.6);
+        ctx.globalAlpha = 1;
+      }
+
+      updateDrips();
+      dripsRef.current.forEach(drip => {
+        if (isRunning) drip.update();
+        drip.draw(ctx);
+      });
+
+      if (isRunning || dripsRef.current.length > 0) {
+        animationRef.current = requestAnimationFrame(drawIceCream);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(drawIceCream);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [percentage, meltLevel, isRunning]);
 
   return (
     <canvas 
@@ -242,7 +345,6 @@ const Message = React.memo(({ message }) => (
     <div className="message-avatar">
       {message.type === MESSAGE_TYPES.USER ? <User size={20} /> : 
        message.type === MESSAGE_TYPES.HINT ? <Lightbulb size={20} /> :
-       message.type === MESSAGE_TYPES.SYSTEM ? <Brain size={20} /> :
        <Bot size={20} />}
     </div>
     <div className="message-content">
@@ -263,7 +365,6 @@ const getMessageBubbleClass = (message) => {
   if (message.isBonus) classes.push('bonus');
   if (message.isTimeUp) classes.push('time-up');
   if (message.type === MESSAGE_TYPES.HINT) classes.push('hint');
-  if (message.type === MESSAGE_TYPES.SYSTEM) classes.push('system');
   return classes.join(' ');
 };
 
@@ -304,12 +405,32 @@ const HintCounter = React.memo(({ hintsRemaining, onHintRequest, canUseHint, isR
   </div>
 ));
 
+// Exhausted Hints Actions Component
+const ExhaustedHintsActions = React.memo(({ onVisualize, onTakeBreak }) => (
+  <div className="exhausted-hints-actions">
+    <div className="exhausted-message">
+      <Lightbulb size={20} />
+      <span>No more hints available! Choose your next step:</span>
+    </div>
+    <div className="action-buttons">
+      <button className="action-btn visualize-btn" onClick={onVisualize}>
+        <Code size={18} />
+        Visualize with Code
+      </button>
+      <button className="action-btn break-btn" onClick={onTakeBreak}>
+        <Coffee size={18} />
+        Take a Break
+      </button>
+    </div>
+  </div>
+));
+
 // Main Learning Session Component
 const LearningSession = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const location = useLocation();
-  const { currentUser, isAuthenticated, logout } = useAuth();
+  const { user } = useAuth();
 
   // Session State
   const [sessionData, setSessionData] = useState(null);
@@ -320,132 +441,205 @@ const LearningSession = () => {
   const [correctStreak, setCorrectStreak] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [currentQuestioningStyle, setCurrentQuestioningStyle] = useState('socratic');
+  const [currentLearningPath, setCurrentLearningPath] = useState('comprehensive');
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
+  const [showPathSelector, setShowPathSelector] = useState(false);
   const [isLoadingFirstQuestion, setIsLoadingFirstQuestion] = useState(true);
   const [sessionStartTime] = useState(Date.now());
-  const [exchangeCount, setExchangeCount] = useState(0);
+  const [isRestartingPath, setIsRestartingPath] = useState(false);
+  const [isRestartingStyle, setIsRestartingStyle] = useState(false);
 
   const timer = useTimer();
   const hints = useHints();
+  const apiKeyManager = useApiKey();
   const messageEndRef = useRef(null);
+  
+  // Refs for click-outside detection
+  const styleDropdownRef = useRef(null);
+  const styleBadgeRef = useRef(null);
+  const pathDropdownRef = useRef(null);
+  const pathBadgeRef = useRef(null);
+
+  // Enhanced click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Handle style selector
+      if (
+        showStyleSelector &&
+        styleDropdownRef.current &&
+        styleBadgeRef.current &&
+        !styleDropdownRef.current.contains(event.target) &&
+        !styleBadgeRef.current.contains(event.target)
+      ) {
+        setShowStyleSelector(false);
+      }
+
+      // Handle path selector
+      if (
+        showPathSelector &&
+        pathDropdownRef.current &&
+        pathBadgeRef.current &&
+        !pathDropdownRef.current.contains(event.target) &&
+        !pathBadgeRef.current.contains(event.target)
+      ) {
+        setShowPathSelector(false);
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        setShowStyleSelector(false);
+        setShowPathSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [showStyleSelector, showPathSelector]);
 
   // Initialize session
   useEffect(() => {
-    console.log('Initializing session with:', { sessionId, locationState: location.state });
     initializeSession();
   }, [sessionId, location.state]);
 
   const initializeSession = async () => {
     try {
-      console.log('Starting initializeSession...', { sessionId, locationState: location.state });
       let sessionInfo = null;
 
       if (sessionId && sessionId !== 'new') {
-        console.log('Loading existing session:', sessionId);
-        if (isAuthenticated) {
-          try {
-            const sessions = await authAPI.getLearningHistory();
-            sessionInfo = sessions.find(s => s.id === sessionId);
-            
-            if (sessionInfo) {
-              console.log('Loaded existing session:', sessionInfo);
-              setMessages(sessionInfo.messages || []);
-              setProgress(sessionInfo.progress || []);
-              setCorrectStreak(sessionInfo.correctStreak || 0);
-              setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
-              setExchangeCount(sessionInfo.exchangeCount || 0);
-            }
-          } catch (error) {
-            console.error('Failed to load session:', error);
-            sessionInfo = location.state;
+        // Load existing session
+        try {
+          sessionInfo = await authAPI.getLearningSession(sessionId);
+          setMessages(sessionInfo.messages || []);
+          setProgress(sessionInfo.progress || []);
+          setCorrectStreak(sessionInfo.correctStreak || 0);
+          setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
+          setCurrentLearningPath(sessionInfo.learningPath || 'comprehensive');
+          
+          // Restore hint state
+          if (sessionInfo.hintsRemaining !== undefined) {
+            hints.setHintsRemaining(sessionInfo.hintsRemaining);
           }
-        } else {
-          sessionInfo = location.state;
-        }
-      } else {
-        console.log('Creating new session from location state');
-        sessionInfo = location.state;
-        
-        if (!sessionInfo?.isNewSession) {
-          console.error('Invalid session data for new session:', sessionInfo);
-          const redirectPath = isAuthenticated ? '/dashboard' : '/start';
-          navigate(redirectPath, { replace: true });
+          
+          // Restore timer state
+          if (sessionInfo.timerRemaining) {
+            timer.setTimeRemaining(sessionInfo.timerRemaining);
+          }
+        } catch (error) {
+          console.error('Failed to load session:', error);
+          navigate('/', { replace: true });
           return;
         }
+      } else {
+        // New session from location state
+        sessionInfo = location.state;
+        if (!sessionInfo?.isNewSession || !sessionInfo?.topicData) {
+          navigate('/', { replace: true });
+          return;
+        }
+
+        // Create new session in backend
+        try {
+          const newSession = await authAPI.createLearningSession({
+            topicName: sessionInfo.topicData.name,
+            topicData: sessionInfo.topicData,
+            learningPath: sessionInfo.learningPath || 'comprehensive',
+            questioningStyle: sessionInfo.questioningStyle || 'socratic',
+            hintsRemaining: HINT_CONSTANTS.MAX_HINTS
+          });
+          
+          // Update URL with new session ID
+          navigate(`/learn/${newSession.id}`, { replace: true, state: null });
+        } catch (error) {
+          console.error('Failed to create session:', error);
+          // Continue with local session for now
+        }
       }
 
-      if (!sessionInfo) {
-        const redirectPath = isAuthenticated ? '/dashboard' : '/start';
-        navigate(redirectPath, { replace: true });
-        return;
-      }
-
-      console.log('Setting session data:', sessionInfo);
       setSessionData(sessionInfo);
-      setCurrentQuestioningStyle(sessionInfo?.questioningStyle || 'socratic');
+      setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
+      setCurrentLearningPath(sessionInfo.learningPath || 'comprehensive');
       
+      // Start timer
       timer.setTimerActive(true);
-
+      
+      // Get first question if new session
       if (!sessionId || sessionId === 'new') {
-        console.log('Getting first question...');
         await getFirstQuestion(sessionInfo);
       } else {
         setIsLoadingFirstQuestion(false);
       }
-      
-      console.log('Session initialization complete!');
 
     } catch (error) {
       console.error('Failed to initialize session:', error);
-      const redirectPath = isAuthenticated ? '/dashboard' : '/start';
-      navigate(redirectPath, { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
   const getFirstQuestion = useCallback(async (sessionInfo) => {
+    const apiKey = apiKeyManager.getCurrentApiKey();
+    if (!apiKey) {
+      setIsLoadingFirstQuestion(false);
+      return;
+    }
+
     try {
       setIsLoadingFirstQuestion(true);
       
-      const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name || 'Unknown Topic';
-      const learningPathName = learningPaths[sessionInfo.learningPath]?.name || 'Comprehensive Track';
+      const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name;
+      const learningPathName = learningPaths[sessionInfo.learningPath].name;
       
-      // Simulate AI response (replace with actual API call when backend AI is ready)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const firstQuestion = `Welcome to learning ${topicName}! Let's start with the ${learningPathName} approach. What's your current understanding of this topic?`;
+      const firstQuestion = await aiAPI.getSocraticResponse(
+        topicName,
+        `I'm ready to learn about ${topicName} using the ${learningPathName} approach. Let's begin!`,
+        sessionInfo.learningPath || 'comprehensive',
+        sessionInfo.questioningStyle || 'socratic',
+        apiKey
+      );
       
       const firstMessage = createMessage(MESSAGE_TYPES.BOT, firstQuestion);
       setMessages([firstMessage]);
       
-      // Add welcome message for non-authenticated users
-      if (!isAuthenticated) {
-        const welcomeMessage = createMessage(MESSAGE_TYPES.SYSTEM, 
-          `Welcome to MindMelt! You're learning as a guest. Your progress will be saved locally, but you can create an account anytime to save it permanently.`,
-          { isWelcome: true }
-        );
-        setMessages(prev => [welcomeMessage, ...prev]);
-      }
-      
     } catch (error) {
       console.error('Failed to get first question:', error);
-      const fallbackQuestion = `Welcome to learning ${sessionInfo?.topicData?.name || 'this topic'}! What would you like to explore first?`;
+      const fallbackQuestion = `Welcome to learning ${sessionInfo.topicData?.name || 'this topic'}! 🧠 What would you like to explore first?`;
       const fallbackMessage = createMessage(MESSAGE_TYPES.BOT, fallbackQuestion);
       setMessages([fallbackMessage]);
     } finally {
       setIsLoadingFirstQuestion(false);
     }
-  }, [isAuthenticated]);
+  }, [apiKeyManager]);
 
   // Request hint function
   const handleHintRequest = useCallback(async () => {
     if (!hints.canUseHint || !sessionData) return;
     
+    const currentApiKey = apiKeyManager.getCurrentApiKey();
+    if (!currentApiKey) {
+      return;
+    }
+    
     hints.setIsRequestingHint(true);
     
     try {
-      // Simulate hint response (replace with actual API call when backend AI is ready)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      const recentMessages = messages.slice(-6); // Get last 6 messages for context
+      const conversationContext = recentMessages.map(msg => 
+        `${msg.type === MESSAGE_TYPES.USER ? 'Student' : 'Tutor'}: ${msg.content}`
+      ).join('\n');
       
-      const hintResponse = "Think about the fundamental concepts we've discussed. What patterns do you notice?";
+      const hintResponse = await aiAPI.getHintResponse(
+        topicName,
+        conversationContext,
+        currentLearningPath,
+        currentQuestioningStyle,
+        currentApiKey
+      );
       
       const hintMessage = createMessage(MESSAGE_TYPES.HINT, hintResponse, { isHint: true });
       setMessages(prev => [...prev, hintMessage]);
@@ -454,19 +648,19 @@ const LearningSession = () => {
       
     } catch (error) {
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
-        `Hint Error: ${error.message}`,
+        `❌ Hint Error: ${error.message}`,
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       hints.setIsRequestingHint(false);
     }
-  }, [hints, sessionData]);
+  }, [hints, sessionData, apiKeyManager, messages, currentQuestioningStyle, currentLearningPath]);
 
   // Handle visualization action
   const handleVisualize = useCallback(() => {
     const visualizationMessage = createMessage(MESSAGE_TYPES.BOT,
-      "Let's create a visualization! Try writing some code to represent what you've learned about this topic.",
+      "🎨 Let's create a visualization! Try writing some code to represent what you've learned about this topic. You can use pseudocode, diagrams, or actual code snippets.",
       { isBonus: true }
     );
     setMessages(prev => [...prev, visualizationMessage]);
@@ -476,7 +670,7 @@ const LearningSession = () => {
   const handleTakeBreak = useCallback(() => {
     timer.togglePause();
     const breakMessage = createMessage(MESSAGE_TYPES.BOT,
-      "Taking a break is important for learning! Your timer is paused. When you're ready, feel free to continue our discussion.",
+      "☕ Taking a break is important for learning! Your timer is paused. When you're ready, feel free to continue our discussion or return to the dashboard.",
       { isBonus: true }
     );
     setMessages(prev => [...prev, breakMessage]);
@@ -495,7 +689,7 @@ const LearningSession = () => {
           if (t <= 1) {
             clearInterval(interval);
             setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
-              "Time's up! Your ice cream has melted. Great learning session though!",
+              "🍦💧 Time's up! Your ice cream has melted. Great learning session though!",
               { isTimeUp: true }
             )]);
             return 0;
@@ -507,8 +701,39 @@ const LearningSession = () => {
     }
   }, [timer.timerActive, timer.timerPaused, timer.timeRemaining, timer.setTimeRemaining]);
 
+  // Save session periodically
+  useEffect(() => {
+    if (!sessionData || !sessionId || sessionId === 'new') return;
+
+    const saveSession = async () => {
+      try {
+        await authAPI.updateLearningSession(sessionId, {
+          messages,
+          progress,
+          correctStreak,
+          questioningStyle: currentQuestioningStyle,
+          learningPath: currentLearningPath,
+          timerRemaining: timer.timeRemaining,
+          hintsRemaining: hints.hintsRemaining,
+          duration: Math.floor((Date.now() - sessionStartTime) / 1000),
+          lastActivity: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('Failed to save session:', error);
+      }
+    };
+
+    const saveInterval = setInterval(saveSession, 30000); // Save every 30 seconds
+    return () => clearInterval(saveInterval);
+  }, [sessionData, sessionId, messages, progress, correctStreak, currentQuestioningStyle, currentLearningPath, timer.timeRemaining, hints.hintsRemaining, sessionStartTime]);
+
   const handleSubmit = useCallback(async () => {
     if (!userInput.trim() || isThinking || timer.timeRemaining <= 0 || !sessionData) return;
+    
+    const currentApiKey = apiKeyManager.getCurrentApiKey();
+    if (!currentApiKey) {
+      return;
+    }
     
     setIsThinking(true);
     
@@ -516,11 +741,14 @@ const LearningSession = () => {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      // Simulate AI response (replace with actual API call when backend AI is ready)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
-      const botReply = `That's an interesting perspective on ${topicName}! Can you elaborate on what you think happens next?`;
+      const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      const botReply = await aiAPI.getSocraticResponse(
+        topicName, 
+        userInput, 
+        currentLearningPath, 
+        currentQuestioningStyle,
+        currentApiKey
+      );
       
       const botMessage = createMessage(MESSAGE_TYPES.BOT, botReply);
       setMessages(prev => [...prev, botMessage]);
@@ -531,36 +759,19 @@ const LearningSession = () => {
         timestamp: new Date() 
       }]);
 
-      // Increment exchange count
-      setExchangeCount(prev => prev + 1);
-
       // Progress-based timer bonus
       if (userInput.length > 30 && progress.length % 3 === 2) {
         timer.increaseTimer();
         setCorrectStreak(prev => prev + 1);
         setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
-          "Great progress! Your ice cream is refreezing - you've earned more focus time!",
+          "🍦✨ Great progress! Your ice cream is refreezing - you've earned more focus time!",
           { isBonus: true }
         )]);
-        
-        // Update progress in backend if authenticated
-        if (isAuthenticated && sessionData.roadmapId) {
-          try {
-            const newProgress = Math.min(progress.length * 10, 100);
-            await authAPI.updateUserProgress(
-              sessionData.roadmapId,
-              sessionData.topicData?.id || 'topic1',
-              newProgress
-            );
-          } catch (error) {
-            console.error('Error updating progress:', error);
-          }
-        }
       }
       
     } catch (error) {
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
-        `Error: ${error.message}`,
+        `❌ Error: ${error.message}`,
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
@@ -568,15 +779,11 @@ const LearningSession = () => {
       setIsThinking(false);
       setUserInput('');
     }
-  }, [userInput, isThinking, timer, sessionData, progress, isAuthenticated]);
+  }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress, currentQuestioningStyle, currentLearningPath]);
 
   const handleBackToDashboard = useCallback(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    } else {
-      navigate('/start', { replace: true });
-    }
-  }, [navigate, isAuthenticated]);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   const handleInfoClick = useCallback(() => {
     if (timer.timerActive && !timer.timerPaused) {
@@ -592,23 +799,98 @@ const LearningSession = () => {
     }
   }, [timer]);
 
+  // Enhanced restart functions with loading states
+  const restartWithNewLearningPath = useCallback(async (newLearningPath) => {
+    if (!sessionData || isRestartingPath) return;
+    
+    setIsRestartingPath(true);
+    
+    try {
+      const updatedSessionData = {
+        ...sessionData,
+        learningPath: newLearningPath
+      };
+      
+      setSessionData(updatedSessionData);
+      setCurrentLearningPath(newLearningPath);
+      setMessages([]);
+      setProgress([]);
+      setCorrectStreak(0);
+      setUserInput('');
+      setIsThinking(false);
+      
+      // Reset hints when restarting
+      hints.resetHints();
+      
+      timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
+      timer.setTimerActive(true);
+      
+      const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
+        `🎯 Learning path changed to ${learningPaths[newLearningPath].name}! Starting fresh with new questions and full hints restored.`, 
+        { isBonus: true }
+      );
+      setMessages([restartMessage]);
+      
+      // Small delay for better UX
+      setTimeout(() => {
+        getFirstQuestion(updatedSessionData);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Failed to restart with new learning path:', error);
+    } finally {
+      setIsRestartingPath(false);
+    }
+  }, [sessionData, timer, hints, getFirstQuestion, isRestartingPath]);
+
+  const restartWithNewQuestioningStyle = useCallback(async (newQuestioningStyle) => {
+    if (!sessionData || isRestartingStyle) return;
+    
+    setIsRestartingStyle(true);
+    
+    try {
+      const updatedSessionData = {
+        ...sessionData,
+        questioningStyle: newQuestioningStyle
+      };
+      
+      setSessionData(updatedSessionData);
+      setCurrentQuestioningStyle(newQuestioningStyle);
+      setMessages([]);
+      setProgress([]);
+      setCorrectStreak(0);
+      setUserInput('');
+      setIsThinking(false);
+      
+      // Reset hints when restarting
+      hints.resetHints();
+      
+      timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
+      timer.setTimerActive(true);
+      
+      const restartMessage = createMessage(MESSAGE_TYPES.BOT, 
+        `🎯 Questioning style changed to ${questioningStyles[newQuestioningStyle].name}! Starting fresh with new questions and full hints restored.`, 
+        { isBonus: true }
+      );
+      setMessages([restartMessage]);
+      
+      // Small delay for better UX
+      setTimeout(() => {
+        getFirstQuestion(updatedSessionData);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Failed to restart with new questioning style:', error);
+    } finally {
+      setIsRestartingStyle(false);
+    }
+  }, [sessionData, timer, hints, getFirstQuestion, isRestartingStyle]);
+
   if (!sessionData) {
     return <LoadingSpinner message="Loading your learning session..." />;
   }
-  
-  if (!sessionData.topicData && !sessionData.selectedTopicData) {
-    return (
-      <div className="error-container" style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>Session Error</h2>
-        <p>Topic data is missing. Please try starting a new session.</p>
-        <button onClick={() => navigate('/dashboard')} className="btn btn-primary">
-          Return to Dashboard
-        </button>
-      </div>
-    );
-  }
 
-  const topicName = sessionData?.topicData?.name || sessionData?.selectedTopicData?.name || 'Unknown Topic';
+  const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name || 'Unknown Topic';
 
   return (
     <div className="learning-session-page">
@@ -617,34 +899,124 @@ const LearningSession = () => {
           <div className="learning-header">
             <div className="session-info">
               <div className="session-title">
-                <button
-                  onClick={handleBackToDashboard}
-                  className="back-btn"
-                  title={isAuthenticated ? "Back to Dashboard" : "Back to Start"}
-                >
-                  <Home size={20} />
-                </button>
                 <h2>
-                  <Brain size={24} />
                   {topicName}
                 </h2>
               </div>
               <div className="session-meta">
-                <div className="path-badge">
-                  {learningPaths[sessionData.learningPath]?.name || 'Learning Path'}
+                <div className="style-selector-container">
+                  <button 
+                    ref={pathBadgeRef}
+                    className={`path-badge clickable enhanced ${showPathSelector ? 'dropdown-open' : ''}`}
+                    onClick={() => {
+                      setShowPathSelector(!showPathSelector);
+                      setShowStyleSelector(false); // Close other dropdown
+                    }}
+                    title="Click to change track (restarts session)"
+                    aria-expanded={showPathSelector}
+                    aria-haspopup="true"
+                  >
+                    {learningPaths[currentLearningPath].name}
+                  </button>
+                  
+                  {showPathSelector && (
+                    <>
+                      <div 
+                        className="dropdown-overlay" 
+                        onClick={() => setShowPathSelector(false)}
+                        aria-hidden="true"
+                      />
+                      <div 
+                        ref={pathDropdownRef} 
+                        className="style-dropdown enhanced"
+                        role="menu"
+                        aria-labelledby="path-selector"
+                      >
+                        {Object.entries(learningPaths).map(([key, path]) => (
+                          <button
+                            key={key}
+                            className={`style-option concise ${currentLearningPath === key ? 'active' : ''} ${isRestartingPath ? 'loading' : ''}`}
+                            onClick={() => {
+                              if (key !== currentLearningPath && !isRestartingPath) {
+                                restartWithNewLearningPath(key);
+                              }
+                              setShowPathSelector(false);
+                            }}
+                            role="menuitem"
+                            aria-current={currentLearningPath === key ? 'true' : 'false'}
+                            disabled={isRestartingPath}
+                          >
+                            <span className="style-option-name">{path.name}</span>
+                            {currentLearningPath === key && (
+                              <span className="current-badge">Current</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="style-badge">
-                  {questioningStyles[currentQuestioningStyle]?.name || 'Questioning Style'}
+                <div className="style-selector-container">
+                  <button 
+                    ref={styleBadgeRef}
+                    className={`style-badge clickable enhanced ${showStyleSelector ? 'dropdown-open' : ''}`}
+                    onClick={() => {
+                      setShowStyleSelector(!showStyleSelector);
+                      setShowPathSelector(false); // Close other dropdown
+                    }}
+                    title="Click to change questioning style (restarts session)"
+                    aria-expanded={showStyleSelector}
+                    aria-haspopup="true"
+                  >
+                    {questioningStyles[currentQuestioningStyle].name}
+                  </button>
+                  
+                  {showStyleSelector && (
+                    <>
+                      <div 
+                        className="dropdown-overlay" 
+                        onClick={() => setShowStyleSelector(false)}
+                        aria-hidden="true"
+                      />
+                      <div 
+                        ref={styleDropdownRef} 
+                        className="style-dropdown enhanced"
+                        role="menu"
+                        aria-labelledby="style-selector"
+                      >
+                        {Object.entries(questioningStyles).map(([key, style]) => (
+                          <button
+                            key={key}
+                            className={`style-option concise ${currentQuestioningStyle === key ? 'active' : ''} ${isRestartingStyle ? 'loading' : ''}`}
+                            onClick={() => {
+                              if (key !== currentQuestioningStyle && !isRestartingStyle) {
+                                restartWithNewQuestioningStyle(key);
+                              }
+                              setShowStyleSelector(false);
+                            }}
+                            role="menuitem"
+                            aria-current={currentQuestioningStyle === key ? 'true' : 'false'}
+                            disabled={isRestartingStyle}
+                          >
+                            <span className="style-option-name">{style.name}</span>
+                            {currentQuestioningStyle === key && (
+                              <span className="current-badge">Current</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <button 
-                  className="info-btn"
+                  className="info-btn enhanced"
                   onClick={handleInfoClick}
-                  title="Session Information"
+                  title="Session Information (Auto-pauses timer)"
                 >
                   <Info size={18} />
-                  Info
+                  <span className="info-text">Info</span>
                 </button>
               </div>
             </div>
@@ -662,7 +1034,7 @@ const LearningSession = () => {
                   </div>
                   <div className="timer-label">
                     Focus Time • Max: {Math.floor(timer.maxTime / 60)}min
-                    {timer.timerPaused && <span className="paused-label"> • Paused</span>}
+                    {showInfo && <span className="paused-label"> • Paused</span>}
                   </div>
                 </div>
               </div>
@@ -690,7 +1062,7 @@ const LearningSession = () => {
             {isLoadingFirstQuestion ? (
               <div className="loading-first-question">
                 <div className="loading-spinner"></div>
-                <p>Preparing your {learningPaths[sessionData.learningPath]?.name?.toLowerCase() || 'learning'} question...</p>
+                <p>🧠 Preparing your {learningPaths[sessionData.learningPath].name.toLowerCase()} question...</p>
               </div>
             ) : (
               <>
@@ -723,12 +1095,12 @@ const LearningSession = () => {
 
           <div className="input-area">
             <div className="input-container">
-              <input
+              <textarea
                 className="message-input"
                 placeholder={
                   isLoadingFirstQuestion ? "Loading your first question..." :
-                  timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted" : 
-                  "Type your response..."
+                  timer.timeRemaining <= 0 ? "Time's up! Your ice cream melted 🍦💧" : 
+                  "Type your response... (Press Enter to send)"
                 }
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
@@ -739,11 +1111,23 @@ const LearningSession = () => {
                   }
                 }}
                 disabled={timer.timeRemaining <= 0 || isThinking || isLoadingFirstQuestion}
+                rows={1}
+                style={{
+                  resize: 'none',
+                  height: 'auto',
+                  minHeight: '24px',
+                  maxHeight: '120px'
+                }}
+                onInput={(e) => {
+                  e.target.style.height = 'auto';
+                  e.target.style.height = e.target.scrollHeight + 'px';
+                }}
               />
               <button 
                 className="send-btn"
                 onClick={handleSubmit}
                 disabled={timer.timeRemaining <= 0 || isThinking || !userInput.trim() || isLoadingFirstQuestion}
+                title="Send message (Enter)"
               >
                 <MessageCircle size={20} />
               </button>
@@ -759,102 +1143,107 @@ const LearningSession = () => {
                   isRequestingHint={hints.isRequestingHint}
                 />
               ) : (
-                <div className="exhausted-hints-actions">
-                  <div className="exhausted-message">
-                    <Lightbulb size={20} />
-                    <span>No more hints available! Choose your next step:</span>
-                  </div>
-                  <div className="action-buttons">
-                    <button className="action-btn visualize-btn" onClick={handleVisualize}>
-                      <Code size={18} />
-                      Visualize with Code
-                    </button>
-                    <button className="action-btn break-btn" onClick={handleTakeBreak}>
-                      <Coffee size={18} />
-                      Take a Break
-                    </button>
-                  </div>
-                </div>
+                <ExhaustedHintsActions
+                  onVisualize={handleVisualize}
+                  onTakeBreak={handleTakeBreak}
+                />
               )}
             </div>
             
             <div className="session-controls">
               <div className="progress-info">
                 <CheckCircle size={16} className="progress-icon" />
-                <span>{exchangeCount} exchanges • Streak: {correctStreak}</span>
-                {!isAuthenticated && (
-                  <>
-                    <span className="separator">•</span>
-                    <span className="anonymous-indicator">Guest Session</span>
-                  </>
-                )}
+                <span>{progress.length} exchanges • Streak: {correctStreak} 🔥</span>
               </div>
               
               <button onClick={handleBackToDashboard} className="btn btn-secondary btn-sm">
                 <Home size={16} />
-                {isAuthenticated ? 'Dashboard' : 'Start Page'}
+                Dashboard
               </button>
             </div>
           </div>
         </div>
 
-        {/* Info Modal */}
+        {/* Info Modal - keeping existing implementation */}
         {showInfo && (
           <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
             <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header simplified">
                 <div className="modal-title">
-                  <span className="modal-icon">Learning Session Info</span>
                   <div>
                     <h2>Learning Session Info</h2>
                     <div className="modal-badges">
-                      <span className="category-badge">{sessionData.topicData?.category || 'Computer Science'}</span>
-                      <span className="difficulty-badge">{sessionData.topicData?.difficulty || 'Intermediate'}</span>
-                      <span className="timer-badge">Timer Paused</span>
-                      {!isAuthenticated && <span className="user-badge">Guest Session</span>}
+                      <span className="timer-badge">⏸️ Timer Paused</span>
                     </div>
                   </div>
                 </div>
                 <button className="modal-close simplified" onClick={handleInfoClose}>
                   <span>✕</span>
-                  <span className="close-hint">Resume</span>
                 </button>
               </div>
               
               <div className="modal-body simplified">
                 <div className="info-content">
                   <div className="welcome-text">
-                    <p>You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
-                    <p>Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
-                    <p>Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
-                    <p>I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
-                    <p>Take your time to think through each question and explain your reasoning for the best learning experience!</p>
-                    {!isAuthenticated && (
-                      <p><strong>Guest Session:</strong> Your progress is saved locally. Create an account to save it permanently and unlock advanced features!</p>
-                    )}
+                    <p>🧠 You're learning <strong>{topicName}</strong> with AI-powered Socratic tutoring.</p>
+                    <p>🍦 Your Ice Cream Timer: Watch your ice cream melt as time passes! Answer thoughtfully to refreeze it and gain more focus time.</p>
+                    <p>💡 Hint System: You have {hints.hintsRemaining} hints remaining. Use them wisely when you get stuck!</p>
+                    <p>🎯 I'm your Socratic tutor - I'll guide you to discover answers through strategic questions rather than giving direct answers.</p>
+                    <p>💡 Take your time to think through each question and explain your reasoning for the best learning experience!</p>
                   </div>
                   
                   <div className="current-session-info">
-                    <h3>Current Session</h3>
+                    <h3>📚 Current Session</h3>
                     <div className="session-summary">
                       <div className="summary-item">
                         <strong>Topic:</strong> {topicName}
                       </div>
                       <div className="summary-item">
-                        <strong>Learning Path:</strong> {learningPaths[sessionData.learningPath]?.name || 'Unknown'}
+                        <strong>Learning Path:</strong> {learningPaths[currentLearningPath].name}
                       </div>
                       <div className="summary-item">
-                        <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle]?.name || 'Unknown'}
+                        <strong>Question Style:</strong> {questioningStyles[currentQuestioningStyle].name}
                       </div>
                       <div className="summary-item">
-                        <strong>Progress:</strong> {exchangeCount} exchanges completed
+                        <strong>Progress:</strong> {progress.length} exchanges completed
                       </div>
                       <div className="summary-item">
                         <strong>Hints:</strong> {hints.hintsRemaining} remaining
                       </div>
-                      <div className="summary-item">
-                        <strong>User Type:</strong> {isAuthenticated ? 'Registered' : 'Guest'}
-                      </div>
+                    </div>
+                  </div>
+
+                  <div className="questioning-styles-info">
+                    <h3>💭 Available Questioning Styles</h3>
+                    <p className="styles-intro">You can change your questioning style anytime. Each style offers a different approach:</p>
+                    
+                    <div className="styles-info-list">
+                      {Object.entries(questioningStyles).map(([key, style]) => (
+                        <div key={key} className={`style-info-item ${currentQuestioningStyle === key ? 'current' : ''}`}>
+                          <div className="style-info-header">
+                            <span className="style-info-name">{style.name}</span>
+                            {currentQuestioningStyle === key && <span className="current-indicator">Current</span>}
+                          </div>
+                          <p className="style-info-desc">{style.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="questioning-styles-info">
+                    <h3>💭 Available Learning Paths</h3>
+                    <p className="styles-intro">You can change your learning path anytime. Each path offers a different approach:</p>
+                    
+                    <div className="styles-info-list">
+                      {Object.entries(learningPaths).map(([key, path]) => (
+                        <div key={key} className={`style-info-item ${currentLearningPath === key ? 'current' : ''}`}>
+                          <div className="style-info-header">
+                            <span className="style-info-name">{path.name}</span>
+                            {currentLearningPath === key && <span className="current-indicator">Current</span>}
+                          </div>
+                          <p className="style-info-desc">{path.description}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -863,7 +1252,7 @@ const LearningSession = () => {
               <div className="modal-footer simplified">
                 <button onClick={handleInfoClose} className="btn btn-primary">
                   <Play size={16} />
-                  Resume Learning
+                  Resume Learning 🚀
                 </button>
               </div>
             </div>

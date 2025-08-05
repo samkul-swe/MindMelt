@@ -257,7 +257,7 @@ const topicStorage = {
   async findAllTopicsByRoadmapId(roadmapId, topicCount) {
     try {
       const topicPromises = [];
-      for (let i = 1; i <= topicCount; i++) { // Adjust max as needed
+      for (let i = 1; i <= topicCount; i++) {
         const topicId = `${roadmapId}_topic_${i}`;
         topicPromises.push(db.collection('topics').doc(topicId).get());
       }
@@ -272,7 +272,6 @@ const topicStorage = {
     }
   }
 };
-
 
 const app = initializeFirebase();
 const clientApp = initializeFirebaseClient();

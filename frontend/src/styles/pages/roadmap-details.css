@@ -1,11 +1,8 @@
-/* Roadmap Details Page Styles - Clean Orange Theme */
-
 .roadmap-details {
   min-height: 100vh;
   background: #ffffff;
 }
 
-/* Header Section */
 .roadmap-header {
   position: relative;
   margin-bottom: 2rem;
@@ -78,7 +75,6 @@
   color: #f3f4f6;
 }
 
-/* Progress Circle */
 .progress-circle-large {
   position: relative;
   width: 100px;
@@ -115,7 +111,6 @@
   font-weight: 600;
 }
 
-/* Progress Statistics */
 .progress-stats-section {
   padding: 0 2rem 2rem 2rem;
   max-width: 1200px;
@@ -204,7 +199,6 @@
   margin: 0;
 }
 
-/* Topics List */
 .topics-list {
   display: flex;
   flex-direction: column;
@@ -408,7 +402,6 @@
   cursor: not-allowed;
 }
 
-/* Encouragement Section */
 .encouragement-section {
   padding: 2rem;
   max-width: 1200px;
@@ -435,7 +428,6 @@
   font-size: 0.9rem;
 }
 
-/* Error State */
 .roadmap-not-found {
   display: flex;
   flex-direction: column;
@@ -469,7 +461,6 @@
   transform: translateY(-1px);
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .roadmap-title {
     font-size: 1.75rem;

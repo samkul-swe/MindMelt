@@ -104,16 +104,16 @@ const RoadmapDetails = () => {
     let initialDifficulty = 'beginner';
     let questioningStyle = 'socratic';
     
-    if (topicProgress.progress >= 70) {
-      initialDifficulty = 'advanced';
-      questioningStyle = 'challenging';
-    } else if (topicProgress.progress >= 40) {
-      initialDifficulty = 'intermediate';
-      questioningStyle = 'guided';
-    } else if (topicProgress.progress > 0) {
-      initialDifficulty = 'beginner-plus';
-      questioningStyle = 'supportive';
-    }
+    // if (topicProgress.progress >= 70) {
+    //   initialDifficulty = 'advanced';
+    //   questioningStyle = 'challenging';
+    // } else if (topicProgress.progress >= 40) {
+    //   initialDifficulty = 'intermediate';
+    //   questioningStyle = 'guided';
+    // } else if (topicProgress.progress > 0) {
+    //   initialDifficulty = 'beginner-plus';
+    //   questioningStyle = 'supportive';
+    // }
 
     const navigationState = {
       isNewSession: true,
@@ -521,8 +521,7 @@ const RoadmapDetails = () => {
                         fontSize: '0.9rem',
                         fontWeight: '600',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                        transition: 'all 0.2s ease'
                       }}
                       onMouseEnter={(e) => {
                         e.target.style.transform = 'translateY(-2px)';
