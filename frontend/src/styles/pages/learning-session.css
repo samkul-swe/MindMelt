@@ -1255,15 +1255,6 @@
   position: relative;
 }
 
-.message.hint .message-content::before {
-  content: '💡';
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  font-size: 1.5rem;
-  animation: bounce 2s infinite;
-}
-
 /* Bounce animation for hint icon */
 @keyframes bounce {
   0%, 20%, 50%, 80%, 100% {

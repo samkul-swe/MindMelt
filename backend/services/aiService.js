@@ -416,14 +416,16 @@ async function testApiKey(apiKey) {
 async function getSocraticResponse(concept, userResponse, learningPath, questioningStyle, apiKey, returnParsed = false) {
   const callId = `socratic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   console.log(`📚 [${callId}] === MINDMELT BACKEND GEMINI API DEBUG ===`);
-  console.log(`📚 [${callId}] Learning CS concept:`, concept);
+  console.log(`📚 [${callId}] Learning path:`, learningPath);
+  console.log(`📚 [${callId}] Questioning style:`, questioningStyle);
   console.log(`📚 [${callId}] Using SOCRATIC_RESPONSE config with JSON schema`);
+  console.log(`📚 [${callId}] User response:`, userResponse);
  
   if (!apiKey) {
     throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
   }
 
-  const systemPrompt = createMindMeltPrompt(concept, learningPath, questioningStyle);
+  const systemPrompt = createMindMeltPrompt(concept, userResponse, learningPath, questioningStyle);
 
   try {
     console.log(`🚀 [${callId}] About to call makeGeminiCall with SOCRATIC_RESPONSE config...`);
@@ -628,30 +630,72 @@ async function generateDailySummary(sessionsData, apiKey) {
   }
 }
 
-function createMindMeltPrompt(concept, learningPath, questioningStyle) {
+function createMindMeltPrompt(concept, userResponse, learningPath, questioningStyle) {
   const basePrompt = `You are helping a student learn "${concept}" through Socratic questioning and Bloom's taxonomy progression.
 
-RESPONSE REQUIREMENTS:
-- Provide a structured response with level, pun, question, and explanation
-- Start with a clever pun or wordplay related to the concept
-- Ask one focused Socratic question to guide their learning
-- Be concise but informative
-- Never give direct answers - guide discovery through questions
+STUDENT'S CURRENT RESPONSE:
+"${userResponse}"
 
-BLOOM'S TAXONOMY LEVELS:
-1. REMEMBER - Basic facts and terminology
-2. UNDERSTAND - Explanations and interpretation  
-3. APPLY - Using knowledge in new situations
-4. ANALYZE - Breaking down complex ideas
-5. EVALUATE - Making reasoned judgments
-6. CREATE - Combining ideas to create something new
+YOUR TASK:
+1. Analyze the student's response to assess their understanding level
+2. Identify what they understand well and what needs clarification
+3. Determine the appropriate Bloom's taxonomy level for your next question
+4. Create a follow-up question that builds on their response
+5. Include a concept-related pun
 
-Choose the appropriate level based on the student's demonstrated understanding.
+RESPONSE ANALYSIS GUIDE:
+- Technical vocabulary used correctly → Higher level appropriate
+- Vague or incorrect terminology → Start with basics (REMEMBER/UNDERSTAND)
+- Detailed explanations with examples → Can move to APPLY/ANALYZE
+- Shows connections between concepts → Ready for EVALUATE/CREATE
+- Expresses confusion or "I don't know" → Clarify at current or lower level
+- Demonstrates practical thinking → Good for scenario-based questions
 
-Learning Path: ${learningPath}
-Questioning Style: ${questioningStyle}
+BLOOM'S TAXONOMY PROGRESSION:
 
-Provide your response as a structured object with level, levelName, pun, question, and explanation fields.`;
+LEVEL 1 - REMEMBER (Foundation Building)
+- Use when: Student shows basic confusion or limited recall
+- Focus: Definitions, basic facts, terminology
+- Questions: "What is...", "Can you identify...", "Name the components..."
+
+LEVEL 2 - UNDERSTAND (Comprehension Building)  
+- Use when: Student recalls facts but struggles with meaning/relationships
+- Focus: Explanations, interpretation, connections
+- Questions: "Why does this work...", "How would you explain...", "What does this mean..."
+
+LEVEL 3 - APPLY (Problem Solving)
+- Use when: Student understands concepts but hasn't applied them
+- Focus: Using knowledge in new situations, practical scenarios
+- Questions: "How would you use this to...", "Solve this problem using..."
+
+LEVEL 4 - ANALYZE (Critical Examination)
+- Use when: Student can apply but needs deeper analysis
+- Focus: Breaking down complexity, comparing approaches
+- Questions: "Compare this with...", "What are the trade-offs...", "How do these relate..."
+
+LEVEL 5 - EVALUATE (Judgment and Assessment)
+- Use when: Student shows analytical thinking
+- Focus: Judging effectiveness, making reasoned choices
+- Questions: "Which approach is better and why...", "What would you recommend..."
+
+LEVEL 6 - CREATE (Innovation and Synthesis)
+- Use when: Student demonstrates evaluative thinking
+- Focus: Designing new solutions, combining concepts creatively
+- Questions: "Design a new approach...", "How would you innovate..."
+
+ADAPTIVE RESPONSE STRATEGY:
+- Build directly on what the student just said
+- Reference their specific words and examples
+- Address any misconceptions you notice
+- If they're struggling, ask a simpler clarifying question
+- If they're excelling, challenge them with the next level
+- Always acknowledge what they got right before progressing
+
+LEARNING CONTEXT:
+- Learning Path: ${getPathInstructions(learningPath)}
+- Questioning Style: ${getStyleInstructions(questioningStyle)}
+
+Based on the student's response about "${concept}", provide your next Socratic question as a structured JSON object.`;
 
   return basePrompt;
 }

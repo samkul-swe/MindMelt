@@ -582,21 +582,18 @@ const LearningSession = () => {
   };
 
   const getFirstQuestion = useCallback(async (sessionInfo) => {
-    const apiKey = apiKeyManager.getCurrentApiKey();
-    if (!apiKey) {
-      setIsLoadingFirstQuestion(false);
-      return;
-    }
-
     try {
       setIsLoadingFirstQuestion(true);
       
       const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name;
       const learningPathName = learningPaths[sessionInfo.learningPath].name;
       
+      // For the first question, use a generic "ready to learn" response
+      const initialResponse = `I'm ready to learn about ${topicName} using the ${learningPathName} approach. I'm excited to explore this topic through ${questioningStyles[sessionInfo.questioningStyle || 'socratic'].name.toLowerCase()}. Let's begin!`;
+      
       const firstQuestion = await aiAPI.getSocraticResponse(
         topicName,
-        `I'm ready to learn about ${topicName} using the ${learningPathName} approach. Let's begin!`,
+        initialResponse,
         sessionInfo.learningPath || 'comprehensive',
         sessionInfo.questioningStyle || 'socratic'
       );
@@ -616,16 +613,11 @@ const LearningSession = () => {
     } finally {
       setIsLoadingFirstQuestion(false);
     }
-  }, [apiKeyManager]);
+  }, []);
 
   // Request hint function
   const handleHintRequest = useCallback(async () => {
     if (!hints.canUseHint || !sessionData) return;
-    
-    const currentApiKey = apiKeyManager.getCurrentApiKey();
-    if (!currentApiKey) {
-      return;
-    }
     
     hints.setIsRequestingHint(true);
     
@@ -635,6 +627,8 @@ const LearningSession = () => {
       const conversationContext = recentMessages.map(msg => 
         `${msg.type === MESSAGE_TYPES.USER ? 'Student' : 'Tutor'}: ${msg.content}`
       ).join('\n');
+      
+      console.log('💡 Frontend: Requesting hint with context:', conversationContext);
       
       const hintResponse = await aiAPI.getHintResponse(
         topicName,
@@ -653,6 +647,7 @@ const LearningSession = () => {
       hints.useHint();
       
     } catch (error) {
+      console.error('❌ Frontend: Error getting hint:', error);
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
         `❌ Hint Error: ${error.message}`,
         { isError: true }
@@ -661,7 +656,7 @@ const LearningSession = () => {
     } finally {
       hints.setIsRequestingHint(false);
     }
-  }, [hints, sessionData, apiKeyManager, messages, currentQuestioningStyle, currentLearningPath]);
+  }, [hints, sessionData, messages, currentQuestioningStyle, currentLearningPath]);
 
   // Handle visualization action
   const handleVisualize = useCallback(() => {
@@ -736,24 +731,27 @@ const LearningSession = () => {
   const handleSubmit = useCallback(async () => {
     if (!userInput.trim() || isThinking || timer.timeRemaining <= 0 || !sessionData) return;
     
-    const currentApiKey = apiKeyManager.getCurrentApiKey();
-    if (!currentApiKey) {
-      return;
-    }
-    
     setIsThinking(true);
     
     const userMessage = createMessage(MESSAGE_TYPES.USER, userInput);
     setMessages(prev => [...prev, userMessage]);
     
+    const currentUserInput = userInput; // Capture current input before clearing
+    setUserInput(''); // Clear input immediately for better UX
+    
     try {
       const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
+      
+      console.log('💬 Frontend: Sending user response to AI:', currentUserInput);
+      
       const botReply = await aiAPI.getSocraticResponse(
         topicName, 
-        userInput, 
+        currentUserInput, // Pass the actual user response
         currentLearningPath, 
         currentQuestioningStyle
       );
+      
+      console.log('🤖 Frontend: Received bot reply:', typeof botReply, botReply);
       
       // Ensure we always get a string for display
       const displayText = typeof botReply === 'string' ? botReply : 
@@ -763,13 +761,13 @@ const LearningSession = () => {
       setMessages(prev => [...prev, botMessage]);
       
       setProgress(prev => [...prev, { 
-        question: userInput, 
-        answer: botReply, 
+        question: currentUserInput, 
+        answer: displayText, 
         timestamp: new Date() 
       }]);
 
       // Progress-based timer bonus
-      if (userInput.length > 30 && progress.length % 3 === 2) {
+      if (currentUserInput.length > 30 && progress.length % 3 === 2) {
         timer.increaseTimer();
         setCorrectStreak(prev => prev + 1);
         setMessages(prev => [...prev, createMessage(MESSAGE_TYPES.BOT,
@@ -779,16 +777,18 @@ const LearningSession = () => {
       }
       
     } catch (error) {
+      console.error('❌ Frontend: Error getting AI response:', error);
       const errorMessage = createMessage(MESSAGE_TYPES.BOT,
         `❌ Error: ${error.message}`,
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
+      // Restore user input on error
+      setUserInput(currentUserInput);
     } finally {
       setIsThinking(false);
-      setUserInput('');
     }
-  }, [userInput, isThinking, timer, apiKeyManager, sessionData, progress, currentQuestioningStyle, currentLearningPath]);
+  }, [userInput, isThinking, timer, sessionData, progress, currentQuestioningStyle, currentLearningPath]);
 
   const handleBackToDashboard = useCallback(() => {
     navigate('/', { replace: true });
