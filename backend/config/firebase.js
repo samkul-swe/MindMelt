@@ -175,11 +175,21 @@ const userStorage = {
 const sessionStorage = {
   async findByUserId(userId) {
     try {
-      const snapshot = await db.collection('sessions')
-        .where('sessionMetaData.uid', '==', userId)
-        .get();
+      const snapshot = await db.collection('sessions').get();
+
+      let foundSession = null;
+      for (const doc of snapshot.docs) {
+        const sessionData = doc.data();
+        if (sessionData.uid === userId) {
+          foundSession = {
+            sessionId: doc.id,
+            ...sessionData
+          };
+          break;
+        }
+      }
       
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return foundSession;
     } catch (error) {
       console.error('Error finding sessions by user ID:', error);
       throw error;

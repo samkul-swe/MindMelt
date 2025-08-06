@@ -64,6 +64,7 @@ const userStorage = {
   setCurrentUser: (user) => {
     try {
       if (user) {
+        console.log("Current USer Set : " + JSON.stringify(user));
         safeLocalStorage.set('current_user', JSON.stringify(user));
         safeLocalStorage.set('mindmelt_is_authenticated', 'true');
       } else {
@@ -165,6 +166,8 @@ export const AuthProvider = ({ children }) => {
       
       const response = await authAPI.signIn(email, password);
       const { user, token } = response;
+
+      console.log("AUTH TOKEN< SET : " + token);
 
       safeLocalStorage.set('authToken', token);
       userStorage.setCurrentUser(user);

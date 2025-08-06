@@ -5,6 +5,7 @@ import morgan from 'morgan';
 
 import authRoutes from './routes/auth.js';
 import dataRoutes from './routes/data.js';
+import aiRoutes from './routes/ai.js';
 
 import {
   requestLogger,
@@ -49,6 +50,7 @@ app.get('/health', (req, res) => {
 
 app.use('/auth', authRoutes);
 app.use('/data', dataRoutes);
+app.use('/ai', aiRoutes);
 
 app.get('/', (req, res) => {
   res.json({
@@ -58,7 +60,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       auth: '/api/auth',
-      data: '/api/data'
+      data: '/api/data',
+      ai: '/api/ai'
     },
     documentation: 'See README.md for API documentation'
   });

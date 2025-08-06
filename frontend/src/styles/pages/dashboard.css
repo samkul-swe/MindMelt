@@ -970,10 +970,6 @@
     flex-direction: column;
   }
   
-  .username-edit-form {
-    flex-direction: column;
-    align-items: stretch;
-  }
 }
 
 @media (max-width: 480px) {

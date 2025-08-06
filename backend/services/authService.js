@@ -38,7 +38,7 @@ class AuthService {
       return this.createCustomToken(user);
     }
     console.log("Token is still valid");
-    return token;
+    return token.jwtToken;
   }
 
   async authenticateUser(idToken) {

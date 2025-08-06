@@ -598,11 +598,14 @@ const LearningSession = () => {
         topicName,
         `I'm ready to learn about ${topicName} using the ${learningPathName} approach. Let's begin!`,
         sessionInfo.learningPath || 'comprehensive',
-        sessionInfo.questioningStyle || 'socratic',
-        apiKey
+        sessionInfo.questioningStyle || 'socratic'
       );
       
-      const firstMessage = createMessage(MESSAGE_TYPES.BOT, firstQuestion);
+      // Ensure we always get a string for display
+      const displayText = typeof firstQuestion === 'string' ? firstQuestion : 
+                         (firstQuestion?.displayText || firstQuestion?.pun + '\n\n' + firstQuestion?.question || 'Let\'s begin learning!');
+      
+      const firstMessage = createMessage(MESSAGE_TYPES.BOT, displayText);
       setMessages([firstMessage]);
       
     } catch (error) {
@@ -637,11 +640,14 @@ const LearningSession = () => {
         topicName,
         conversationContext,
         currentLearningPath,
-        currentQuestioningStyle,
-        currentApiKey
+        currentQuestioningStyle
       );
       
-      const hintMessage = createMessage(MESSAGE_TYPES.HINT, hintResponse, { isHint: true });
+      // Ensure we always get a string for display
+      const displayHint = typeof hintResponse === 'string' ? hintResponse : 
+                         (hintResponse?.displayText || hintResponse?.content || 'Here\'s a hint to help you!');
+      
+      const hintMessage = createMessage(MESSAGE_TYPES.HINT, displayHint, { isHint: true });
       setMessages(prev => [...prev, hintMessage]);
       
       hints.useHint();
@@ -746,11 +752,14 @@ const LearningSession = () => {
         topicName, 
         userInput, 
         currentLearningPath, 
-        currentQuestioningStyle,
-        currentApiKey
+        currentQuestioningStyle
       );
       
-      const botMessage = createMessage(MESSAGE_TYPES.BOT, botReply);
+      // Ensure we always get a string for display
+      const displayText = typeof botReply === 'string' ? botReply : 
+                         (botReply?.displayText || botReply?.pun + '\n\n' + botReply?.question || 'Response received');
+      
+      const botMessage = createMessage(MESSAGE_TYPES.BOT, displayText);
       setMessages(prev => [...prev, botMessage]);
       
       setProgress(prev => [...prev, { 

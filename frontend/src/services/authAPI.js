@@ -40,7 +40,7 @@ class AuthAPI {
 
       if (response.ok) {
         const result = await response.json();
-        return result.data || result.user || result;
+        return result.user || result;
       }
       return null;
     } catch (error) {
@@ -245,6 +245,33 @@ class AuthAPI {
     } catch (error) {
       console.error('Error checking username:', error);
       return false;
+    }
+  }
+
+  async setApiKey(apiKey) {
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/api-key`, {
+        method: 'POST',
+        body: JSON.stringify({ apiKey })
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error setting API key:', error);
+      throw error;
+    }
+  }
+
+  async removeApiKey() {
+    try {
+      const result = await this.makeAuthenticatedRequest(`${API_BASE_URL}/auth/api-key`, {
+        method: 'DELETE'
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error removing API key:', error);
+      throw error;
     }
   }
 }

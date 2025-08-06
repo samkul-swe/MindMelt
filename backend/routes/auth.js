@@ -158,4 +158,115 @@ router.post('/progress', authenticateToken, async (req, res) => {
   }
 });
 
+// Get user profile
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await authService.getUser(req.user.uid);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.uid,
+        email: user.email,
+        username: user.username,
+        currentProgress: user.currentProgress || {},
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Update user profile
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const updates = req.body;
+    
+    // Remove sensitive fields that shouldn't be updated directly
+    delete updates.id;
+    delete updates.uid;
+    delete updates.createdAt;
+    
+    const updatedUser = await authService.updateUserProfile(req.user.uid, updates);
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: updatedUser.uid,
+          email: updatedUser.email,
+          username: updatedUser.username,
+          currentProgress: updatedUser.currentProgress || {},
+          hasApiKey: !!updatedUser.aiApiKey,
+          createdAt: updatedUser.createdAt
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Set AI API key
+router.post('/api-key', authenticateToken, async (req, res) => {
+  try {
+    const { apiKey } = req.body;
+    
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'API key is required'
+      });
+    }
+
+    await authService.updateUserProfile(req.user.uid, { aiApiKey: apiKey });
+
+    res.json({
+      success: true,
+      message: 'AI API key saved successfully'
+    });
+  } catch (error) {
+    console.error('Set API key error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Remove AI API key
+router.delete('/api-key', authenticateToken, async (req, res) => {
+  try {
+    await authService.updateUserProfile(req.user.uid, { aiApiKey: null });
+
+    res.json({
+      success: true,
+      message: 'AI API key removed successfully'
+    });
+  } catch (error) {
+    console.error('Remove API key error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 export default router;

@@ -8,10 +8,18 @@ import {
   Plus,
   BookOpen,
   Save,
-  ChevronRight
+  ChevronRight,
+  Key,
+  TestTube,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import authAPI from '../services/authAPI';
+import aiAPI from '../services/aiAPI';
 import dataAPI from '../services/dataAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/dashboard.css';
@@ -97,6 +105,16 @@ const Dashboard = () => {
   const [dailyPun, setDailyPun] = useState(null);
   const [userProgress, setUserProgress] = useState({});
   const [roadMaps, setRoadMaps] = useState([]);
+  
+  // API Key management state
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [testingApiKey, setTestingApiKey] = useState(false);
+  const [testingEnvKey, setTestingEnvKey] = useState(false);
+  const [apiKeyTestResult, setApiKeyTestResult] = useState(null);
+  const [envKeyTestResult, setEnvKeyTestResult] = useState(null);
+  const [savingApiKey, setSavingApiKey] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
 
   const fetchLearningSessions = useCallback(async () => {
     if (!isAuthenticated) {
@@ -145,7 +163,7 @@ const Dashboard = () => {
   }, [fetchLearningSessions, fetchRoadMaps]);
 
   const handleSaveUsername = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!newUsername.trim() || savingUsername) return;
     
     setSavingUsername(true);
@@ -165,6 +183,96 @@ const Dashboard = () => {
       alert('Failed to update username. Please try again.');
     } finally {
       setSavingUsername(false);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!apiKey.trim()) return;
+    
+    setSavingApiKey(true);
+    setApiKeyTestResult(null);
+    
+    try {
+      console.log('🔧 Frontend: Saving API key...');
+      await authAPI.setApiKey(apiKey.trim());
+      setApiKeySaved(true);
+      setTimeout(() => setApiKeySaved(false), 3000);
+      
+      console.log('🔧 Frontend: NOT auto-testing after save to avoid double calls');
+      // Removed auto-test after save to prevent double calls
+      // User can manually test if needed
+    } catch (error) {
+      console.error('Failed to save API key:', error);
+      setApiKeyTestResult({
+        success: false,
+        message: `Failed to save API key: ${error.message}`
+      });
+    } finally {
+      setSavingApiKey(false);
+    }
+  };
+
+  const handleTestApiKey = async () => {
+    if (!apiKey.trim()) {
+      setApiKeyTestResult({
+        success: false,
+        message: 'Please enter an API key to test'
+      });
+      return;
+    }
+    
+    console.log('🧪 Frontend: Starting API key test...');
+    setTestingApiKey(true);
+    setApiKeyTestResult(null);
+    
+    try {
+      console.log('📞 Frontend: Making single test API call...');
+      const result = await aiAPI.testApiKey(apiKey.trim());
+      console.log('✅ Frontend: Test completed, result:', result);
+      setApiKeyTestResult(result);
+    } catch (error) {
+      console.error('❌ Frontend: Test failed with error:', error);
+      setApiKeyTestResult({
+        success: false,
+        message: `Test failed: ${error.message}`
+      });
+    } finally {
+      console.log('🏁 Frontend: Test finished, setting testingApiKey to false');
+      setTestingApiKey(false);
+    }
+  };
+
+  const handleTestEnvironmentKey = async () => {
+    console.log('🧪 Frontend: Starting environment key test...');
+    setTestingEnvKey(true);
+    setEnvKeyTestResult(null);
+    
+    try {
+      console.log('📞 Frontend: Making environment key test call...');
+      const result = await aiAPI.testEnvironmentApiKey();
+      console.log('✅ Frontend: Environment test completed, result:', result);
+      setEnvKeyTestResult(result);
+    } catch (error) {
+      console.error('❌ Frontend: Environment test failed:', error);
+      setEnvKeyTestResult({
+        success: false,
+        message: `Environment key test failed: ${error.message}`
+      });
+    } finally {
+      console.log('🏁 Frontend: Environment test finished');
+      setTestingEnvKey(false);
+    }
+  };
+
+  const handleRemoveApiKey = async () => {
+    try {
+      await authAPI.removeApiKey();
+      setApiKey('');
+      setApiKeyTestResult(null);
+      alert('API key removed successfully!');
+    } catch (error) {
+      console.error('Failed to remove API key:', error);
+      alert('Failed to remove API key. Please try again.');
     }
   };
 
@@ -428,6 +536,7 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
+              {/* Username Edit Section */}
               <div className="username-edit-section">
                 <h4>
                   <User size={16} />
@@ -435,7 +544,7 @@ const Dashboard = () => {
                 </h4>
                 <p>Choose how you want to be addressed in MindMelt.</p>
                 
-                <form onSubmit={handleSaveUsername} className="username-edit-form">
+                <div className="username-edit-form">
                   <div className="username-input-group">
                     <label htmlFor="new-username">Username</label>
                     <input
@@ -448,12 +557,73 @@ const Dashboard = () => {
                       maxLength={50}
                     />
                   </div>
+                  <div className="username-button-wrapper">
+                    <button
+                      type="button"
+                      onClick={handleSaveUsername}
+                      className="btn btn-primary btn-sm"
+                      disabled={!newUsername.trim() || savingUsername}
+                    >
+                      {savingUsername ? (
+                        <>
+                          <div className="spinner" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={14} />
+                          Update Username
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {usernameUpdateSuccess && (
+                  <div className="username-success-message">
+                    <CheckCircle size={16} />
+                    Username updated successfully!
+                  </div>
+                )}
+              </div>
+
+              {/* API Key Management Section */}
+              <div className="api-key-section">
+                <h4>
+                  <Key size={16} />
+                  AI API Key Settings
+                </h4>
+                <p>Configure your Google Gemini API key for AI-powered learning features.</p>
+                
+                <div className="api-key-input-group">
+                  <label htmlFor="api-key">Google Gemini API Key</label>
+                  <div className="api-key-input-wrapper">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      id="api-key"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="AIzaSyC..."
+                      disabled={savingApiKey || testingApiKey}
+                    />
+                    <button
+                      type="button"
+                      className="toggle-visibility-btn"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      title={showApiKey ? "Hide API key" : "Show API key"}
+                    >
+                      {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="api-key-actions">
                   <button
-                    type="submit"
-                    className="username-save-btn"
-                    disabled={!newUsername.trim() || savingUsername}
+                    onClick={handleSaveApiKey}
+                    className="btn btn-primary btn-sm"
+                    disabled={!apiKey.trim() || savingApiKey}
                   >
-                    {savingUsername ? (
+                    {savingApiKey ? (
                       <>
                         <div className="spinner" />
                         Saving...
@@ -461,19 +631,133 @@ const Dashboard = () => {
                     ) : (
                       <>
                         <Save size={14} />
-                        Update
+                        Save Key
                       </>
                     )}
                   </button>
-                </form>
+                  
+                  <button
+                    onClick={handleTestApiKey}
+                    className="btn btn-secondary btn-sm"
+                    disabled={!apiKey.trim() || testingApiKey}
+                  >
+                    {testingApiKey ? (
+                      <>
+                        <div className="spinner" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube size={14} />
+                        Test Key
+                      </>
+                    )}
+                  </button>
 
-                {usernameUpdateSuccess && (
-                  <div className="username-success-message">
-                    Username updated successfully!
+                  {apiKey.trim() && (
+                    <button
+                      onClick={handleRemoveApiKey}
+                      className="btn btn-danger btn-sm"
+                    >
+                      Remove Key
+                    </button>
+                  )}
+                </div>
+
+                {apiKeySaved && (
+                  <div className="api-key-success-message">
+                    <CheckCircle size={16} />
+                    API key saved successfully!
                   </div>
                 )}
+
+                {/* API Key Test Results */}
+                {apiKeyTestResult && (
+                  <div className={`api-test-result ${apiKeyTestResult.success ? 'success' : 'error'}`}>
+                    <div className="test-result-header">
+                      {apiKeyTestResult.success ? (
+                        <CheckCircle size={16} />
+                      ) : (
+                        <XCircle size={16} />
+                      )}
+                      <span>API Key Test Result</span>
+                    </div>
+                    <p>{apiKeyTestResult.message}</p>
+                    {apiKeyTestResult.debug && (
+                      <details className="test-debug-details">
+                        <summary>Debug Information</summary>
+                        <pre>{JSON.stringify(apiKeyTestResult.debug, null, 2)}</pre>
+                      </details>
+                    )}
+                  </div>
+                )}
+
+                {/* Environment Key Testing */}
+                <div className="env-key-testing">
+                  <h5>
+                    <AlertCircle size={14} />
+                    Test Environment API Key
+                  </h5>
+                  <p>
+                    Check if the server has GEMINI_API_KEY configured (for admins/developers)
+                  </p>
+                  
+                  <button
+                    onClick={handleTestEnvironmentKey}
+                    className="btn btn-outline btn-sm"
+                    disabled={testingEnvKey}
+                  >
+                    {testingEnvKey ? (
+                      <>
+                        <div className="spinner" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <TestTube size={14} />
+                        Test Environment Key
+                      </>
+                    )}
+                  </button>
+
+                  {envKeyTestResult && (
+                    <div className={`api-test-result ${envKeyTestResult.success ? 'success' : 'error'}`}>
+                      <div className="test-result-header">
+                        {envKeyTestResult.success ? (
+                          <CheckCircle size={16} />
+                        ) : (
+                          <XCircle size={16} />
+                        )}
+                        <span>Environment Key Test</span>
+                      </div>
+                      <p>{envKeyTestResult.message}</p>
+                      {envKeyTestResult.debug && (
+                        <details className="test-debug-details">
+                          <summary>Debug Information</summary>
+                          <pre>{JSON.stringify(envKeyTestResult.debug, null, 2)}</pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* API Key Setup Instructions */}
+                <div className="api-key-help">
+                  <h5>Need an API Key?</h5>
+                  <p>
+                    Get your free Google Gemini API key from{' '}
+                    <a 
+                      href="https://aistudio.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      Google AI Studio
+                    </a>
+                  </p>
+                </div>
               </div>
               
+              {/* Account Information Section */}
               <div className="profile-section">
                 <h3>Account Information</h3>
                 <div className="profile-fields">
@@ -550,6 +834,379 @@ const Dashboard = () => {
           background: rgba(255, 255, 255, 0.2);
         }
 
+        /* Profile Modal Styling */
+        .profile-modal {
+          max-width: 600px;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+
+        .modal-body {
+          padding: 1.5rem;
+        }
+
+        .username-edit-section,
+        .api-key-section,
+        .profile-section {
+          margin-bottom: 2rem;
+        }
+
+        .api-key-section {
+          padding-top: 2rem;
+          border-top: 1px solid #E5E5E5;
+        }
+
+        .profile-section {
+          padding-top: 2rem;
+          border-top: 1px solid #E5E5E5;
+        }
+
+        .api-key-section h4,
+        .username-edit-section h4,
+        .profile-section h3 {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+          color: #262626;
+          font-size: 1.1rem;
+        }
+
+        .api-key-section p,
+        .username-edit-section p {
+          color: #525252;
+          font-size: 0.9rem;
+          margin-bottom: 1.25rem;
+        }
+
+        /* Username Form Layout */
+        .username-edit-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .username-input-group {
+          width: 100%;
+        }
+
+        .username-button-wrapper {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+        }
+
+        .username-input-group label,
+        .api-key-input-group label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: #404040;
+          font-size: 0.9rem;
+        }
+
+        .username-input-group input,
+        .api-key-input-wrapper input {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          border: 2px solid #E5E5E5;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          transition: border-color 0.2s, box-shadow 0.2s;
+          box-sizing: border-box;
+        }
+
+        .username-input-group input:focus,
+        .api-key-input-wrapper input:focus {
+          outline: none;
+          border-color: #FF6B35;
+          box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        /* API Key Input */
+        .api-key-input-group {
+          margin-bottom: 1rem;
+        }
+
+        .api-key-input-wrapper {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .api-key-input-wrapper input {
+          padding-right: 3rem;
+        }
+
+        .toggle-visibility-btn {
+          position: absolute;
+          right: 0.75rem;
+          background: none;
+          border: none;
+          color: #737373;
+          cursor: pointer;
+          padding: 0.25rem;
+          border-radius: 4px;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .toggle-visibility-btn:hover {
+          color: #404040;
+          background: #F5F5F5;
+        }
+
+        .api-key-actions {
+          display: flex;
+          gap: 0.75rem;
+          align-items: center;
+          flex-wrap: wrap;
+          margin-top: 1rem;
+        }
+
+        /* Button Styles */
+        .btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: none;
+          text-decoration: none;
+        }
+
+        .btn-primary {
+          background: #FF6B35;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #E55A2B;
+          transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+          background: #E5E5E5;
+          color: #404040;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+          background: #D4D4D4;
+        }
+
+        .btn-outline {
+          background: white;
+          color: #FF6B35;
+          border: 2px solid #FF6B35;
+        }
+
+        .btn-outline:hover:not(:disabled) {
+          background: #FF6B35;
+          color: white;
+        }
+
+        .btn-danger {
+          background: #EF4444;
+          color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+          background: #DC2626;
+        }
+
+        .btn-sm {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.85rem;
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none !important;
+        }
+
+        /* Success Messages */
+        .api-key-success-message,
+        .username-success-message {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          background: #f0f9f4;
+          color: #15803d;
+          border-radius: 8px;
+          margin-top: 1rem;
+          border: 1px solid #bbf7d0;
+          font-size: 0.9rem;
+        }
+
+        /* Test Results */
+        .api-test-result {
+          margin-top: 1rem;
+          padding: 1rem;
+          border-radius: 8px;
+          border: 1px solid;
+        }
+
+        .api-test-result.success {
+          background: #f0f9f4;
+          border-color: #bbf7d0;
+          color: #15803d;
+        }
+
+        .api-test-result.error {
+          background: #fef2f2;
+          border-color: #fecaca;
+          color: #dc2626;
+        }
+
+        .test-result-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+        }
+
+        .test-result-header + p {
+          margin: 0;
+          font-size: 0.9rem;
+          line-height: 1.4;
+        }
+
+        .test-debug-details {
+          margin-top: 0.75rem;
+        }
+
+        .test-debug-details summary {
+          cursor: pointer;
+          font-size: 0.85rem;
+          color: #525252;
+          margin-bottom: 0.5rem;
+          padding: 0.25rem 0;
+        }
+
+        .test-debug-details summary:hover {
+          color: #262626;
+        }
+
+        .test-debug-details pre {
+          background: rgba(0, 0, 0, 0.05);
+          padding: 0.75rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          overflow-x: auto;
+          white-space: pre-wrap;
+          word-break: break-all;
+          margin: 0;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Environment Key Testing */
+        .env-key-testing {
+          margin-top: 1.5rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid #E5E5E5;
+        }
+
+        .env-key-testing h5 {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 0 0 0.5rem 0;
+          color: #262626;
+          font-size: 1rem;
+        }
+
+        .env-key-testing p {
+          margin: 0 0 1rem 0;
+          color: #525252;
+          font-size: 0.85rem;
+        }
+
+        /* API Key Help */
+        .api-key-help {
+          margin-top: 1.5rem;
+          padding: 1rem;
+          background: #f8fafc;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .api-key-help h5 {
+          margin: 0 0 0.5rem 0;
+          color: #262626;
+          font-size: 0.95rem;
+        }
+
+        .api-key-help p {
+          margin: 0;
+          color: #525252;
+          font-size: 0.85rem;
+        }
+
+        .api-key-help a {
+          color: #FF6B35;
+          text-decoration: none;
+          font-weight: 500;
+        }
+
+        .api-key-help a:hover {
+          text-decoration: underline;
+        }
+
+        /* Profile Fields */
+        .profile-fields {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .profile-field {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .profile-field label {
+          margin-bottom: 0.5rem;
+          font-weight: 500;
+          color: #404040;
+          font-size: 0.9rem;
+        }
+
+        .profile-field input {
+          padding: 0.75rem 1rem;
+          border: 2px solid #E5E5E5;
+          border-radius: 8px;
+          background: #FAFAFA;
+          color: #525252;
+          font-size: 0.9rem;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+          width: 14px;
+          height: 14px;
+          border: 2px solid transparent;
+          border-top: 2px solid currentColor;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        /* Mobile Responsive */
         @media (max-width: 768px) {
           .roadmap-grid {
             grid-template-columns: 1fr;
@@ -558,6 +1215,39 @@ const Dashboard = () => {
           
           .roadmap-card {
             margin: 0 0.5rem;
+          }
+
+          .username-edit-form {
+            gap: 1rem;
+          }
+
+          .username-button-wrapper {
+            justify-content: stretch;
+          }
+
+          .username-button-wrapper .btn {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .api-key-actions {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .api-key-actions .btn {
+            width: 100%;
+            justify-content: center;
+          }
+
+          .modal-content {
+            margin: 1rem;
+            max-height: 90vh;
+            overflow-y: auto;
+          }
+
+          .modal-body {
+            padding: 1rem;
           }
         }
       `}</style>
