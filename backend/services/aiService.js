@@ -10,9 +10,7 @@ const AI_CONFIG = {
   }
 };
 
-// Specific configs for different call types
 const CALL_CONFIGS = {
-  // For testing API keys - simple text response
   TEST_API_KEY: {
     generationConfig: {
       temperature: 0.1,
@@ -22,7 +20,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For Socratic responses - structured JSON format
   SOCRATIC_RESPONSE: {
     generationConfig: {
       temperature: 0.8,
@@ -59,7 +56,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For understanding assessment - structured scoring
   ASSESSMENT: {
     generationConfig: {
       temperature: 0.3,
@@ -96,7 +92,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For topic search - JSON array of topics
   SEARCH_TOPICS: {
     generationConfig: {
       temperature: 0.4,
@@ -141,7 +136,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For topic details - structured topic information
   TOPIC_DETAILS: {
     generationConfig: {
       temperature: 0.4,
@@ -185,7 +179,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For hints - simple text response
   HINT_RESPONSE: {
     generationConfig: {
       temperature: 0.7,
@@ -195,7 +188,6 @@ const CALL_CONFIGS = {
     }
   },
 
-  // For daily summaries - motivational text
   DAILY_SUMMARY: {
     generationConfig: {
       temperature: 0.7,
@@ -268,13 +260,11 @@ async function handleGeminiResponse(result) {
   }
 
   const response = result.response;
-  
-  // Check if response was blocked
+
   if (response.promptFeedback?.blockReason) {
     throw new Error(`${ERROR_MESSAGES.SAFETY_BLOCKED} (${response.promptFeedback.blockReason})`);
   }
 
-  // Get the text from the response
   const text = response.text();
   
   if (!text || text.trim().length === 0) {
@@ -287,7 +277,6 @@ async function handleGeminiResponse(result) {
 function handleGeminiError(error) {
   console.error('💥 MindMelt: Error calling Gemini API:', error);
   
-  // Check for specific error types
   if (error.message.includes('API_KEY_INVALID') || error.message.includes('403') || error.message.includes('invalid API key')) {
     return new Error(ERROR_MESSAGES.API_KEY_INVALID);
   }
@@ -329,8 +318,7 @@ async function makeGeminiCall(prompt, apiKey, configName = 'DEFAULT') {
     
     const responseText = await handleGeminiResponse(result);
     console.log(`✅ [${callId}] Response processed successfully`);
-    
-    // If using JSON response format, try to parse it
+
     const config = CALL_CONFIGS[configName];
     if (config?.generationConfig?.responseMimeType === "application/json") {
       try {
@@ -355,8 +343,7 @@ async function makeGeminiCall(prompt, apiKey, configName = 'DEFAULT') {
 async function testApiKey(apiKey) {
   const callId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   console.log(`🧪 [${callId}] ===== GEMINI API KEY TEST START ===== 🧪`);
-  
-  // Basic validation first
+
   const validation = validateApiKey(apiKey);
   if (!validation.valid) {
     console.log(`❌ [${callId}] API Key validation failed:`, validation.message);
@@ -432,9 +419,7 @@ async function getSocraticResponse(concept, userResponse, learningPath, question
     const structuredResponse = await makeGeminiCall(systemPrompt, apiKey, 'SOCRATIC_RESPONSE');
     console.log(`✅ [${callId}] Structured response received:`, structuredResponse);
 
-    // Handle both JSON structured response and fallback text parsing
     if (typeof structuredResponse === 'object' && structuredResponse.pun && structuredResponse.question) {
-      // JSON response from schema
       console.log(`📋 [${callId}] Using structured JSON response`);
       const displayText = `${structuredResponse.pun}\n\n${structuredResponse.question}`;
       
@@ -455,7 +440,6 @@ async function getSocraticResponse(concept, userResponse, learningPath, question
         return displayText;
       }
     } else {
-      // Fallback to old parsing for non-JSON responses
       console.log(`📋 [${callId}] Falling back to text parsing`);
       const parsedResponse = parseAIResponse(structuredResponse);
       
@@ -501,8 +485,7 @@ Provide a structured assessment.`;
 
   try {
     const assessment = await makeGeminiCall(assessmentPrompt, apiKey, 'ASSESSMENT');
-    
-    // Handle structured JSON response
+
     if (typeof assessment === 'object' && assessment.score !== undefined) {
       return {
         score: Math.max(0, Math.min(100, assessment.score)),
@@ -511,7 +494,6 @@ Provide a structured assessment.`;
         improvements: assessment.improvements || []
       };
     } else {
-      // Fallback to text parsing
       const scoreMatch = assessment.match(/(\d+)/);
       const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
       
@@ -548,19 +530,16 @@ Search: "${query.trim()}"`;
 
     console.log('🤖 Backend Gemini Response received');
 
-    // Handle structured JSON response
     if (Array.isArray(topics)) {
       console.log(`✅ Backend returning ${topics.length} structured topics`);
-      return topics.slice(0, 5); // Ensure exactly 5 topics
+      return topics.slice(0, 5);
     } else {
-      // Fallback for non-JSON responses
       console.warn('⚠️  Received non-array response, using fallback parsing');
       throw new Error('Invalid response format');
     }
     
   } catch (error) {
     console.error('Backend Gemini search failed:', error);
-    // Return fallback topics
     return [{
       name: `${query.trim()} Fundamentals`,
       description: `Core concepts in ${query.trim()}`,
@@ -583,7 +562,6 @@ Topic: "${topicName}"`;
   try {
     const details = await makeGeminiCall(detailsPrompt, apiKey, 'TOPIC_DETAILS');
 
-    // Handle structured JSON response
     if (typeof details === 'object' && details.concept) {
       console.log('✅ Using structured topic details');
       return details;
@@ -732,7 +710,6 @@ Recent conversation: ${conversationContext}
 Provide a helpful but not complete hint (1-2 sentences max) that guides them toward discovery without giving away the full answer.`;
 }
 
-// Legacy parsing functions for fallback
 function parseAIResponse(rawResponse) {
   const parsed = {
     level: null,
@@ -801,7 +778,7 @@ function getDefaultTopicDetails(topicName) {
 
 function assessBasicQuality(userResponse) {
   const response = userResponse.toLowerCase();
-  let score = 30; // Base score
+  let score = 30;
 
   if (response.length > 100) score += 20;
   else if (response.length > 50) score += 10;

@@ -5,16 +5,13 @@ import { authenticateToken } from '../utils/middleware.js';
 
 const router = express.Router();
 
-// Helper function to get API key (environment variable takes precedence)
 async function getApiKeyForUser(userId) {
-  // First check for environment variable (server-wide API key)
   const envApiKey = process.env.GEMINI_API_KEY;
   if (envApiKey) {
     console.log('🔑 Using GEMINI_API_KEY from environment variables');
     return envApiKey;
   }
 
-  // Fallback to user's personal API key
   const user = await authService.getUser(userId);
   if (user && user.aiApiKey) {
     console.log('🔑 Using user\'s personal API key');
@@ -24,7 +21,6 @@ async function getApiKeyForUser(userId) {
   return null;
 }
 
-// Test API key (still accepts API key from request for testing purposes)
 router.post('/test-key', authenticateToken, async (req, res) => {
   console.log('🔴 ==> BACKEND: /api/ai/test-key endpoint called');
   console.log('📋 Backend: Request body keys:', Object.keys(req.body));
@@ -58,7 +54,6 @@ router.post('/test-key', authenticateToken, async (req, res) => {
   }
 });
 
-// Test environment API key (uses GEMINI_API_KEY)
 router.post('/test-env-key', authenticateToken, async (req, res) => {
   console.log('🔴 ==> BACKEND: /api/ai/test-env-key endpoint called');
   console.log('👤 Backend: User ID:', req.user?.uid);
@@ -104,7 +99,6 @@ router.post('/test-env-key', authenticateToken, async (req, res) => {
   }
 });
 
-// Get Socratic response
 router.post('/socratic-response', authenticateToken, async (req, res) => {
   try {
     const { concept, userResponse, learningPath, questioningStyle, returnParsed } = req.body;
@@ -116,7 +110,6 @@ router.post('/socratic-response', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
       return res.status(400).json({
@@ -147,7 +140,6 @@ router.post('/socratic-response', authenticateToken, async (req, res) => {
   }
 });
 
-// Get hint response
 router.post('/hint-response', authenticateToken, async (req, res) => {
   try {
     const { concept, conversationContext, learningPath, questioningStyle } = req.body;
@@ -159,7 +151,6 @@ router.post('/hint-response', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
       return res.status(400).json({
@@ -189,7 +180,6 @@ router.post('/hint-response', authenticateToken, async (req, res) => {
   }
 });
 
-// Assess understanding quality
 router.post('/assess-understanding', authenticateToken, async (req, res) => {
   try {
     const { concept, userResponse } = req.body;
@@ -201,10 +191,8 @@ router.post('/assess-understanding', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
-      // Return basic assessment if no API key using a fallback function
       const basicAssessment = assessBasicQuality(userResponse);
       
       return res.json({
@@ -240,7 +228,6 @@ router.post('/search-topics', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
       return res.status(400).json({
@@ -261,7 +248,6 @@ router.post('/search-topics', authenticateToken, async (req, res) => {
   }
 });
 
-// Get topic details
 router.post('/topic-details', authenticateToken, async (req, res) => {
   try {
     const { topicName } = req.body;
@@ -273,7 +259,6 @@ router.post('/topic-details', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
       return res.status(400).json({
@@ -294,7 +279,6 @@ router.post('/topic-details', authenticateToken, async (req, res) => {
   }
 });
 
-// Generate daily summary
 router.post('/daily-summary', authenticateToken, async (req, res) => {
   try {
     const { sessionsData } = req.body;
@@ -306,7 +290,6 @@ router.post('/daily-summary', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get API key (environment variable or user's key)
     const apiKey = await getApiKeyForUser(req.user.uid);
     if (!apiKey) {
       return res.status(400).json({
@@ -330,7 +313,6 @@ router.post('/daily-summary', authenticateToken, async (req, res) => {
   }
 });
 
-// Validate API key format (doesn't require stored API key)
 router.post('/validate-key', async (req, res) => {
   try {
     const { apiKey } = req.body;
@@ -350,10 +332,9 @@ router.post('/validate-key', async (req, res) => {
   }
 });
 
-// Basic quality assessment fallback function
 function assessBasicQuality(userResponse) {
   const response = userResponse.toLowerCase();
-  let score = 30; // Base score
+  let score = 30;
   
   if (response.length > 100) score += 20;
   else if (response.length > 50) score += 10;

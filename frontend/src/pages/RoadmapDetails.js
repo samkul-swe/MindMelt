@@ -17,22 +17,13 @@ import dataAPI from '../services/dataAPI';
 import LoadingSpinner from '../components/LoadingSpinner';
 import '../styles/pages/roadmap-details.css';
 
-// Mock user progress data - replace with API call later
 const getUserProgress = (roadmapId) => {
-  const mockProgress = {
-    "dsa-fundamentals": {
-      1: { completed: false, progress: 75, unlocked: true, started: true, canAdvance: true },
-      2: { completed: false, progress: 35, unlocked: true, started: true, canAdvance: false },
-      3: { completed: false, progress: 0, unlocked: true, started: false, canAdvance: false },
-      4: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false },
-      5: { completed: false, progress: 0, unlocked: false, started: false, canAdvance: false }
-    }
-  };
-  
-  return mockProgress[roadmapId] || {};
+  // const userProgress = await 
+  // IMPLEMENT API CALL HERE
+  // return mockProgress[roadmapId] || {};
+  return {};
 };
 
-// Calculate overall roadmap progress
 const calculateRoadmapProgress = (progress) => {
   const topics = Object.values(progress);
   if (topics.length === 0) return 0;
@@ -104,16 +95,16 @@ const RoadmapDetails = () => {
     let initialDifficulty = 'beginner';
     let questioningStyle = 'socratic';
     
-    // if (topicProgress.progress >= 70) {
-    //   initialDifficulty = 'advanced';
-    //   questioningStyle = 'challenging';
-    // } else if (topicProgress.progress >= 40) {
-    //   initialDifficulty = 'intermediate';
-    //   questioningStyle = 'guided';
-    // } else if (topicProgress.progress > 0) {
-    //   initialDifficulty = 'beginner-plus';
-    //   questioningStyle = 'supportive';
-    // }
+    if (topicProgress.progress >= 70) {
+      initialDifficulty = 'advanced';
+      questioningStyle = 'challenging';
+    } else if (topicProgress.progress >= 40) {
+      initialDifficulty = 'intermediate';
+      questioningStyle = 'guided';
+    } else if (topicProgress.progress > 0) {
+      initialDifficulty = 'beginner-plus';
+      questioningStyle = 'supportive';
+    }
 
     const navigationState = {
       isNewSession: true,
@@ -149,7 +140,6 @@ const RoadmapDetails = () => {
   };
 
   const handleUnlockTopic = (topic, topicIndex) => {
-    // First topic should always be unlocked without warning
     if (topicIndex === 0) {
       const updatedProgress = {
         ...userProgress,
@@ -166,13 +156,11 @@ const RoadmapDetails = () => {
       return;
     }
     
-    // For other topics, show warning
     setShowUnlockWarning(topic);
   };
 
   const proceedWithUnlockedTopic = () => {
     if (showUnlockWarning) {
-      // Update user progress to unlock the topic
       const updatedProgress = {
         ...userProgress,
         [showUnlockWarning.id]: {
@@ -184,19 +172,16 @@ const RoadmapDetails = () => {
         }
       };
       setUserProgress(updatedProgress);
-      
-      // Close warning modal
+
       setShowUnlockWarning(null);
-      
-      // Start the topic session
+
       handleTopicSelect(showUnlockWarning);
     }
   };
 
   const getTopicStatus = (topic, progress, topicIndex) => {
     const topicProgress = progress[topic.id];
-    
-    // First topic should always be available if not already unlocked
+
     if (topicIndex === 0 && (!topicProgress || !topicProgress.unlocked)) {
       return 'available';
     }

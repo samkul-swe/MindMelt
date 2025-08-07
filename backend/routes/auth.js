@@ -17,7 +17,6 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // logs in user using firebase authentication
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
@@ -83,7 +82,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // create user in firebase authentication
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
 
@@ -158,7 +156,6 @@ router.post('/progress', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user profile
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const user = await authService.getUser(req.user.uid);
@@ -189,12 +186,10 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Update user profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
     const updates = req.body;
     
-    // Remove sensitive fields that shouldn't be updated directly
     delete updates.id;
     delete updates.uid;
     delete updates.createdAt;
@@ -224,7 +219,6 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Set AI API key
 router.post('/api-key', authenticateToken, async (req, res) => {
   try {
     const { apiKey } = req.body;
@@ -251,7 +245,6 @@ router.post('/api-key', authenticateToken, async (req, res) => {
   }
 });
 
-// Remove AI API key
 router.delete('/api-key', authenticateToken, async (req, res) => {
   try {
     await authService.updateUserProfile(req.user.uid, { aiApiKey: null });

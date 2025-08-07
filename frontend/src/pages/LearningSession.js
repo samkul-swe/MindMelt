@@ -21,12 +21,10 @@ import aiAPI from '../services/aiAPI';
 import { useApiKey } from '../hooks/useApiKey';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Import existing CSS files properly
 import '../styles/pages/learning-session.css';
 import '../styles/components/buttons.css';
 import '../styles/components/modals.css';
 
-// Timer Constants
 const TIMER_CONSTANTS = {
   INITIAL_TIME: 8 * 60, // 8 minutes
   MAX_TIME: 25 * 60, // 25 minutes
@@ -79,7 +77,6 @@ const questioningStyles = {
   }
 };
 
-// Timer Hook
 const useTimer = (initialTime = TIMER_CONSTANTS.INITIAL_TIME) => {
   const [timeRemaining, setTimeRemaining] = useState(initialTime);
   const [maxTime, setMaxTime] = useState(initialTime);
@@ -115,7 +112,6 @@ const useTimer = (initialTime = TIMER_CONSTANTS.INITIAL_TIME) => {
   };
 };
 
-// Hints Hook
 const useHints = (initialCount = HINT_CONSTANTS.MAX_HINTS) => {
   const [hintsRemaining, setHintsRemaining] = useState(initialCount);
   const [isRequestingHint, setIsRequestingHint] = useState(false);
@@ -149,7 +145,6 @@ const useHints = (initialCount = HINT_CONSTANTS.MAX_HINTS) => {
   };
 };
 
-// Ice Cream Timer Component (keeping existing implementation)
 const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
@@ -236,8 +231,7 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
       lastUpdateRef.current = timestamp;
 
       ctx.clearRect(0, 0, 60, 80);
-      
-      // Draw cone with orange theme
+
       const coneGradient = ctx.createLinearGradient(0, 50, 0, 80);
       coneGradient.addColorStop(0, '#d97706');
       coneGradient.addColorStop(1, '#92400e');
@@ -263,12 +257,11 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
         ctx.fill();
       };
 
-      // Draw scoops with melting effects - always visible with orange theme
       if (percentage > -10) {
         const opacity = Math.max(0.3, percentage / 100);
         ctx.globalAlpha = opacity;
         drawMeltingScoop(30, 32 + meltSag, 13, 
-          { light: '#FF8A56', dark: '#FF6B35' }, meltLevel); // Orange theme
+          { light: '#FF8A56', dark: '#FF6B35' }, meltLevel);
         ctx.globalAlpha = 1;
       }
       
@@ -317,7 +310,6 @@ const IceCreamTimer = React.memo(({ timeLeft, totalTime, isRunning }) => {
   );
 });
 
-// Utility functions
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -339,7 +331,6 @@ const createMessage = (type, content, options = {}) => ({
   ...options
 });
 
-// Message Component
 const Message = React.memo(({ message }) => (
   <div className={`message ${message.type}`}>
     <div className="message-avatar">
@@ -368,7 +359,6 @@ const getMessageBubbleClass = (message) => {
   return classes.join(' ');
 };
 
-// Hint Counter Component
 const HintCounter = React.memo(({ hintsRemaining, onHintRequest, canUseHint, isRequestingHint }) => (
   <div className="hint-counter">
     <div className="hint-info">
@@ -425,14 +415,12 @@ const ExhaustedHintsActions = React.memo(({ onVisualize, onTakeBreak }) => (
   </div>
 ));
 
-// Main Learning Session Component
 const LearningSession = () => {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
 
-  // Session State
   const [sessionData, setSessionData] = useState(null);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -453,17 +441,14 @@ const LearningSession = () => {
   const hints = useHints();
   const apiKeyManager = useApiKey();
   const messageEndRef = useRef(null);
-  
-  // Refs for click-outside detection
+
   const styleDropdownRef = useRef(null);
   const styleBadgeRef = useRef(null);
   const pathDropdownRef = useRef(null);
   const pathBadgeRef = useRef(null);
 
-  // Enhanced click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Handle style selector
       if (
         showStyleSelector &&
         styleDropdownRef.current &&
@@ -474,7 +459,6 @@ const LearningSession = () => {
         setShowStyleSelector(false);
       }
 
-      // Handle path selector
       if (
         showPathSelector &&
         pathDropdownRef.current &&
@@ -502,7 +486,6 @@ const LearningSession = () => {
     };
   }, [showStyleSelector, showPathSelector]);
 
-  // Initialize session
   useEffect(() => {
     initializeSession();
   }, [sessionId, location.state]);
@@ -512,7 +495,6 @@ const LearningSession = () => {
       let sessionInfo = null;
 
       if (sessionId && sessionId !== 'new') {
-        // Load existing session
         try {
           sessionInfo = await authAPI.getLearningSession(sessionId);
           setMessages(sessionInfo.messages || []);
@@ -520,13 +502,11 @@ const LearningSession = () => {
           setCorrectStreak(sessionInfo.correctStreak || 0);
           setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
           setCurrentLearningPath(sessionInfo.learningPath || 'comprehensive');
-          
-          // Restore hint state
+
           if (sessionInfo.hintsRemaining !== undefined) {
             hints.setHintsRemaining(sessionInfo.hintsRemaining);
           }
-          
-          // Restore timer state
+
           if (sessionInfo.timerRemaining) {
             timer.setTimeRemaining(sessionInfo.timerRemaining);
           }
@@ -536,14 +516,12 @@ const LearningSession = () => {
           return;
         }
       } else {
-        // New session from location state
         sessionInfo = location.state;
         if (!sessionInfo?.isNewSession || !sessionInfo?.topicData) {
           navigate('/', { replace: true });
           return;
         }
 
-        // Create new session in backend
         try {
           const newSession = await authAPI.createLearningSession({
             topicName: sessionInfo.topicData.name,
@@ -552,23 +530,19 @@ const LearningSession = () => {
             questioningStyle: sessionInfo.questioningStyle || 'socratic',
             hintsRemaining: HINT_CONSTANTS.MAX_HINTS
           });
-          
-          // Update URL with new session ID
+
           navigate(`/learn/${newSession.id}`, { replace: true, state: null });
         } catch (error) {
           console.error('Failed to create session:', error);
-          // Continue with local session for now
         }
       }
 
       setSessionData(sessionInfo);
       setCurrentQuestioningStyle(sessionInfo.questioningStyle || 'socratic');
       setCurrentLearningPath(sessionInfo.learningPath || 'comprehensive');
-      
-      // Start timer
+
       timer.setTimerActive(true);
-      
-      // Get first question if new session
+
       if (!sessionId || sessionId === 'new') {
         await getFirstQuestion(sessionInfo);
       } else {
@@ -587,8 +561,7 @@ const LearningSession = () => {
       
       const topicName = sessionInfo.topicData?.name || sessionInfo.selectedTopicData?.name;
       const learningPathName = learningPaths[sessionInfo.learningPath].name;
-      
-      // For the first question, use a generic "ready to learn" response
+
       const initialResponse = `I'm ready to learn about ${topicName} using the ${learningPathName} approach. I'm excited to explore this topic through ${questioningStyles[sessionInfo.questioningStyle || 'socratic'].name.toLowerCase()}. Let's begin!`;
       
       const firstQuestion = await aiAPI.getSocraticResponse(
@@ -597,8 +570,7 @@ const LearningSession = () => {
         sessionInfo.learningPath || 'comprehensive',
         sessionInfo.questioningStyle || 'socratic'
       );
-      
-      // Ensure we always get a string for display
+
       const displayText = typeof firstQuestion === 'string' ? firstQuestion : 
                          (firstQuestion?.displayText || firstQuestion?.pun + '\n\n' + firstQuestion?.question || 'Let\'s begin learning!');
       
@@ -615,7 +587,6 @@ const LearningSession = () => {
     }
   }, []);
 
-  // Request hint function
   const handleHintRequest = useCallback(async () => {
     if (!hints.canUseHint || !sessionData) return;
     
@@ -636,8 +607,7 @@ const LearningSession = () => {
         currentLearningPath,
         currentQuestioningStyle
       );
-      
-      // Ensure we always get a string for display
+
       const displayHint = typeof hintResponse === 'string' ? hintResponse : 
                          (hintResponse?.displayText || hintResponse?.content || 'Here\'s a hint to help you!');
       
@@ -658,7 +628,6 @@ const LearningSession = () => {
     }
   }, [hints, sessionData, messages, currentQuestioningStyle, currentLearningPath]);
 
-  // Handle visualization action
   const handleVisualize = useCallback(() => {
     const visualizationMessage = createMessage(MESSAGE_TYPES.BOT,
       "🎨 Let's create a visualization! Try writing some code to represent what you've learned about this topic. You can use pseudocode, diagrams, or actual code snippets.",
@@ -667,7 +636,6 @@ const LearningSession = () => {
     setMessages(prev => [...prev, visualizationMessage]);
   }, []);
 
-  // Handle take break action
   const handleTakeBreak = useCallback(() => {
     timer.togglePause();
     const breakMessage = createMessage(MESSAGE_TYPES.BOT,
@@ -677,12 +645,10 @@ const LearningSession = () => {
     setMessages(prev => [...prev, breakMessage]);
   }, [timer]);
 
-  // Auto-scroll messages
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Timer countdown effect
   useEffect(() => {
     if (timer.timerActive && !timer.timerPaused && timer.timeRemaining > 0) {
       const interval = setInterval(() => {
@@ -702,7 +668,6 @@ const LearningSession = () => {
     }
   }, [timer.timerActive, timer.timerPaused, timer.timeRemaining, timer.setTimeRemaining]);
 
-  // Save session periodically
   useEffect(() => {
     if (!sessionData || !sessionId || sessionId === 'new') return;
 
@@ -724,7 +689,7 @@ const LearningSession = () => {
       }
     };
 
-    const saveInterval = setInterval(saveSession, 30000); // Save every 30 seconds
+    const saveInterval = setInterval(saveSession, 30000);
     return () => clearInterval(saveInterval);
   }, [sessionData, sessionId, messages, progress, correctStreak, currentQuestioningStyle, currentLearningPath, timer.timeRemaining, hints.hintsRemaining, sessionStartTime]);
 
@@ -736,8 +701,8 @@ const LearningSession = () => {
     const userMessage = createMessage(MESSAGE_TYPES.USER, userInput);
     setMessages(prev => [...prev, userMessage]);
     
-    const currentUserInput = userInput; // Capture current input before clearing
-    setUserInput(''); // Clear input immediately for better UX
+    const currentUserInput = userInput;
+    setUserInput('');
     
     try {
       const topicName = sessionData.topicData?.name || sessionData.selectedTopicData?.name;
@@ -746,14 +711,13 @@ const LearningSession = () => {
       
       const botReply = await aiAPI.getSocraticResponse(
         topicName, 
-        currentUserInput, // Pass the actual user response
+        currentUserInput,
         currentLearningPath, 
         currentQuestioningStyle
       );
       
       console.log('🤖 Frontend: Received bot reply:', typeof botReply, botReply);
-      
-      // Ensure we always get a string for display
+
       const displayText = typeof botReply === 'string' ? botReply : 
                          (botReply?.displayText || botReply?.pun + '\n\n' + botReply?.question || 'Response received');
       
@@ -766,7 +730,6 @@ const LearningSession = () => {
         timestamp: new Date() 
       }]);
 
-      // Progress-based timer bonus
       if (currentUserInput.length > 30 && progress.length % 3 === 2) {
         timer.increaseTimer();
         setCorrectStreak(prev => prev + 1);
@@ -783,7 +746,6 @@ const LearningSession = () => {
         { isError: true }
       );
       setMessages(prev => [...prev, errorMessage]);
-      // Restore user input on error
       setUserInput(currentUserInput);
     } finally {
       setIsThinking(false);
@@ -808,7 +770,6 @@ const LearningSession = () => {
     }
   }, [timer]);
 
-  // Enhanced restart functions with loading states
   const restartWithNewLearningPath = useCallback(async (newLearningPath) => {
     if (!sessionData || isRestartingPath) return;
     
@@ -828,7 +789,6 @@ const LearningSession = () => {
       setUserInput('');
       setIsThinking(false);
       
-      // Reset hints when restarting
       hints.resetHints();
       
       timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
@@ -839,8 +799,7 @@ const LearningSession = () => {
         { isBonus: true }
       );
       setMessages([restartMessage]);
-      
-      // Small delay for better UX
+
       setTimeout(() => {
         getFirstQuestion(updatedSessionData);
       }, 1000);
@@ -870,8 +829,7 @@ const LearningSession = () => {
       setCorrectStreak(0);
       setUserInput('');
       setIsThinking(false);
-      
-      // Reset hints when restarting
+
       hints.resetHints();
       
       timer.setTimeRemaining(TIMER_CONSTANTS.INITIAL_TIME);
@@ -882,8 +840,7 @@ const LearningSession = () => {
         { isBonus: true }
       );
       setMessages([restartMessage]);
-      
-      // Small delay for better UX
+
       setTimeout(() => {
         getFirstQuestion(updatedSessionData);
       }, 1000);
@@ -919,7 +876,7 @@ const LearningSession = () => {
                     className={`path-badge clickable enhanced ${showPathSelector ? 'dropdown-open' : ''}`}
                     onClick={() => {
                       setShowPathSelector(!showPathSelector);
-                      setShowStyleSelector(false); // Close other dropdown
+                      setShowStyleSelector(false);
                     }}
                     title="Click to change track (restarts session)"
                     aria-expanded={showPathSelector}
@@ -972,7 +929,7 @@ const LearningSession = () => {
                     className={`style-badge clickable enhanced ${showStyleSelector ? 'dropdown-open' : ''}`}
                     onClick={() => {
                       setShowStyleSelector(!showStyleSelector);
-                      setShowPathSelector(false); // Close other dropdown
+                      setShowPathSelector(false);
                     }}
                     title="Click to change questioning style (restarts session)"
                     aria-expanded={showStyleSelector}
@@ -1141,8 +1098,7 @@ const LearningSession = () => {
                 <MessageCircle size={20} />
               </button>
             </div>
-            
-            {/* Hint System */}
+
             <div className="hint-system">
               {!hints.hintsExhausted ? (
                 <HintCounter
@@ -1173,7 +1129,6 @@ const LearningSession = () => {
           </div>
         </div>
 
-        {/* Info Modal - keeping existing implementation */}
         {showInfo && (
           <div className="modal-overlay info-modal-overlay" onClick={handleInfoClose}>
             <div className="modal-content info-modal simplified" onClick={(e) => e.stopPropagation()}>

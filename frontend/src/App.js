@@ -14,38 +14,25 @@ function App() {
       <Router>
         <div className="app">
           <Routes>
-            {/* Public routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
-            
-            {/* Instant start route - no auth required */}
             <Route path="/start" element={<InstantStart />} />
-            
-            {/* Semi-protected routes - allow anonymous users */}
             <Route path="/learn/:sessionId?" element={
               <ProtectedRoute allowAnonymous={true}>
                 <LearningSession />
               </ProtectedRoute>
             } />
-            
-            {/* Dashboard route - allow anonymous users */}
             <Route path="/dashboard" element={
               <ProtectedRoute allowAnonymous={true}>
                 <Dashboard />
               </ProtectedRoute>
             } />
-            
-            {/* Roadmap details route - allow anonymous users */}
             <Route path="/roadmap/:roadmapId" element={
               <ProtectedRoute allowAnonymous={true}>
                 <RoadmapDetails />
               </ProtectedRoute>
             } />
-            
-            {/* Root route redirects to start page */}
             <Route path="/" element={<Navigate to="/start" replace />} />
-            
-            {/* Catch all route */}
             <Route path="*" element={<Navigate to="/start" replace />} />
           </Routes>
         </div>

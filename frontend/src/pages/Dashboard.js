@@ -105,8 +105,7 @@ const Dashboard = () => {
   const [dailyPun, setDailyPun] = useState(null);
   const [userProgress, setUserProgress] = useState({});
   const [roadMaps, setRoadMaps] = useState([]);
-  
-  // API Key management state
+
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [testingApiKey, setTestingApiKey] = useState(false);
@@ -199,8 +198,6 @@ const Dashboard = () => {
       setTimeout(() => setApiKeySaved(false), 3000);
       
       console.log('🔧 Frontend: NOT auto-testing after save to avoid double calls');
-      // Removed auto-test after save to prevent double calls
-      // User can manually test if needed
     } catch (error) {
       console.error('Failed to save API key:', error);
       setApiKeyTestResult({
@@ -536,7 +533,6 @@ const Dashboard = () => {
             </div>
             
             <div className="modal-body">
-              {/* Username Edit Section */}
               <div className="username-edit-section">
                 <h4>
                   <User size={16} />
@@ -587,7 +583,6 @@ const Dashboard = () => {
                 )}
               </div>
 
-              {/* API Key Management Section */}
               <div className="api-key-section">
                 <h4>
                   <Key size={16} />
@@ -671,7 +666,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* API Key Test Results */}
                 {apiKeyTestResult && (
                   <div className={`api-test-result ${apiKeyTestResult.success ? 'success' : 'error'}`}>
                     <div className="test-result-header">
@@ -692,7 +686,6 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {/* Environment Key Testing */}
                 <div className="env-key-testing">
                   <h5>
                     <AlertCircle size={14} />
@@ -741,7 +734,6 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* API Key Setup Instructions */}
                 <div className="api-key-help">
                   <h5>Need an API Key?</h5>
                   <p>
@@ -757,7 +749,6 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              {/* Account Information Section */}
               <div className="profile-section">
                 <h3>Account Information</h3>
                 <div className="profile-fields">

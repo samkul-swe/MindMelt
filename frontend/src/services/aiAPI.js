@@ -2,17 +2,14 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api
 
 class AIAPI {
   constructor() {
-    // Request deduplication to prevent double calls
     this.pendingRequests = new Map();
   }
 
   async makeAuthenticatedRequest(url, options = {}) {
     const token = localStorage.getItem('authToken');
     
-    // Create a unique key for this request to prevent duplicates
     const requestKey = `${options.method || 'GET'}-${url}-${JSON.stringify(options.body || {})}`;
     
-    // If there's already a pending request with the same parameters, return that promise
     if (this.pendingRequests.has(requestKey)) {
       console.log('🔄 Frontend: Deduplicating identical request:', requestKey.substring(0, 100) + '...');
       return this.pendingRequests.get(requestKey);
@@ -30,7 +27,6 @@ class AIAPI {
       ...defaultOptions,
       ...options
     }).then(async response => {
-      // Remove from pending requests when complete
       this.pendingRequests.delete(requestKey);
       
       if (!response.ok) {
@@ -39,12 +35,10 @@ class AIAPI {
       }
       return response.json();
     }).catch(error => {
-      // Remove from pending requests on error too
       this.pendingRequests.delete(requestKey);
       throw error;
     });
-    
-    // Store the promise to deduplicate identical requests
+
     this.pendingRequests.set(requestKey, requestPromise);
     
     return requestPromise;
@@ -138,14 +132,12 @@ class AIAPI {
       console.log('✅ MindMelt Frontend: Backend API Response received successfully');
       console.log('🗺 Response type:', typeof result.response);
       console.log('📋 Response content:', result.response);
-      
-      // Always return a string for React rendering
+
       if (typeof result.response === 'string') {
         return result.response;
       } else if (result.response?.displayText) {
         return result.response.displayText;
       } else if (typeof result.response === 'object') {
-        // Handle structured response
         const { pun, question } = result.response;
         return pun && question ? `${pun}\n\n${question}` : JSON.stringify(result.response);
       } else {
@@ -174,8 +166,7 @@ class AIAPI {
       });
       
       console.log('💡 MindMelt Frontend: Hint generated successfully');
-      
-      // Always return a string for React rendering
+
       if (typeof result.response === 'string') {
         return result.response;
       } else {
@@ -204,7 +195,6 @@ class AIAPI {
       };
     } catch (error) {
       console.error('❌ MindMelt Frontend: Assessment API call failed:', error);
-      // Return basic assessment as fallback
       return this.assessBasicQuality(userResponse);
     }
   }
@@ -285,7 +275,7 @@ class AIAPI {
 
   assessBasicQuality(userResponse) {
     const response = userResponse.toLowerCase();
-    let score = 30; // Base score
+    let score = 30;
     
     if (response.length > 100) score += 20;
     else if (response.length > 50) score += 10;
