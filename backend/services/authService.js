@@ -28,14 +28,15 @@ class AuthService {
 
   async getUserToken(user) {
     let token = await sessionStorage.findByUserId(user.uid);
-    const expirationDate = new Date(token.JWT_EXPIRES_IN);
+    const expirationDate = token.expiresAt.toDate();
     const now = new Date();
     const isExpired = now > expirationDate;
 
     if (isExpired) {
       console.log("Token is expired");
-      // create a new token
-      return this.createCustomToken(user);
+      await sessionStorage.delete(token.sessionId);
+      await this.createCustomToken(user);
+      return;
     }
     console.log("Token is still valid");
     return token.jwtToken;

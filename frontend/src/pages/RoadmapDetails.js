@@ -60,9 +60,26 @@ const RoadmapDetails = () => {
         return;
       }
       
+      // Ensure first topic is always unlocked
+      const initializedProgress = { ...progress };
+      if (roadmapTopics.length > 0) {
+        const firstTopicId = roadmapTopics[0].id;
+        if (!initializedProgress[firstTopicId]) {
+          initializedProgress[firstTopicId] = {
+            completed: false,
+            progress: 0,
+            unlocked: true,
+            started: false,
+            canAdvance: false
+          };
+        } else if (!initializedProgress[firstTopicId].unlocked) {
+          initializedProgress[firstTopicId].unlocked = true;
+        }
+      }
+      
       setRoadmapData(roadmap.details);
       setTopics(roadmapTopics);
-      setUserProgress(progress);
+      setUserProgress(initializedProgress);
       
     } catch (error) {
       console.error('Error loading roadmap data:', error);
@@ -72,20 +89,15 @@ const RoadmapDetails = () => {
     }
   };
 
-  const handleTopicSelect = async (topic) => {
+  const startLearningSession = async (topic) => {
     const topicProgress = userProgress[topic.id];
-    
-    if (!topicProgress?.unlocked) {
-      console.log('Topic is locked:', topic.name);
-      return;
-    }
     
     console.log('Starting topic:', topic.name, 'with progress:', topicProgress);
     
-    if (isAuthenticated && currentUser?.id && !topicProgress.started) {
+    if (isAuthenticated && currentUser?.id && !topicProgress?.started) {
       try {
         // Update topic progress via API
-        // await api.updateUserProgress(roadmapId, topic.id, topicProgress.progress || 0);
+        // await api.updateUserProgress(roadmapId, topic.id, topicProgress?.progress || 0);
         console.log('Would update progress for authenticated user');
       } catch (error) {
         console.error('Error updating topic progress:', error);
@@ -95,13 +107,14 @@ const RoadmapDetails = () => {
     let initialDifficulty = 'beginner';
     let questioningStyle = 'socratic';
     
-    if (topicProgress.progress >= 70) {
+    const currentProgress = topicProgress?.progress || 0;
+    if (currentProgress >= 70) {
       initialDifficulty = 'advanced';
       questioningStyle = 'challenging';
-    } else if (topicProgress.progress >= 40) {
+    } else if (currentProgress >= 40) {
       initialDifficulty = 'intermediate';
       questioningStyle = 'guided';
-    } else if (topicProgress.progress > 0) {
+    } else if (currentProgress > 0) {
       initialDifficulty = 'beginner-plus';
       questioningStyle = 'supportive';
     }
@@ -120,7 +133,7 @@ const RoadmapDetails = () => {
         duration: topic.duration,
         roadmapId: roadmapId,
         roadmapName: roadmapData?.name || 'Unknown Roadmap',
-        currentProgress: topicProgress?.progress || 0,
+        currentProgress: currentProgress,
         initialDifficulty: initialDifficulty,
         category: roadmapData?.category || 'General'
       }
@@ -139,24 +152,16 @@ const RoadmapDetails = () => {
     });
   };
 
-  const handleUnlockTopic = (topic, topicIndex) => {
-    if (topicIndex === 0) {
-      const updatedProgress = {
-        ...userProgress,
-        [topic.id]: {
-          completed: false,
-          progress: 0,
-          unlocked: true,
-          started: false,
-          canAdvance: false
-        }
-      };
-      setUserProgress(updatedProgress);
-      handleTopicSelect(topic);
-      return;
+  const handleTopicClick = (topic, topicIndex) => {
+    const topicProgress = userProgress[topic.id];
+    const isFirstTopic = topicIndex === 0;
+    const isUnlocked = isFirstTopic || topicProgress?.unlocked;
+
+    if (isUnlocked) {
+      startLearningSession(topic);
+    } else {
+      setShowUnlockWarning(topic);
     }
-    
-    setShowUnlockWarning(topic);
   };
 
   const proceedWithUnlockedTopic = () => {
@@ -172,17 +177,16 @@ const RoadmapDetails = () => {
         }
       };
       setUserProgress(updatedProgress);
-
       setShowUnlockWarning(null);
-
-      handleTopicSelect(showUnlockWarning);
+      startLearningSession(showUnlockWarning);
     }
   };
 
   const getTopicStatus = (topic, progress, topicIndex) => {
     const topicProgress = progress[topic.id];
+    const isFirstTopic = topicIndex === 0;
 
-    if (topicIndex === 0 && (!topicProgress || !topicProgress.unlocked)) {
+    if (isFirstTopic && (!topicProgress || !topicProgress.unlocked)) {
       return 'available';
     }
     
@@ -222,6 +226,49 @@ const RoadmapDetails = () => {
       case 'Expert': return '#9B59B6';
       default: return '#95A5A6';
     }
+  };
+
+  const getButtonContent = (status, topicIndex, topicProgress) => {
+    const isFirstTopic = topicIndex === 0;
+    const isUnlocked = isFirstTopic || topicProgress?.unlocked;
+
+    if (status === 'locked' && !isUnlocked) {
+      return {
+        icon: <Shield size={16} />,
+        text: 'Unlock Topic',
+        style: {
+          background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+        }
+      };
+    }
+
+    if (status === 'completed') {
+      return {
+        icon: <Star size={16} />,
+        text: 'Review',
+        style: {
+          background: getStatusColor(status),
+        }
+      };
+    }
+
+    if (status === 'in-progress') {
+      return {
+        icon: <Play size={16} />,
+        text: 'Continue',
+        style: {
+          background: getStatusColor(status),
+        }
+      };
+    }
+
+    return {
+      icon: <Zap size={16} />,
+      text: 'Start Learning',
+      style: {
+        background: getStatusColor('available'),
+      }
+    };
   };
 
   if (loading) {
@@ -363,12 +410,12 @@ const RoadmapDetails = () => {
           {topics.map((topic, index) => {
             const status = getTopicStatus(topic, userProgress, index);
             const topicProgress = userProgress[topic.id];
-            const isClickable = status !== 'locked' || index === 0; // First topic is always clickable
+            const buttonContent = getButtonContent(status, index, topicProgress);
             
             return (
               <div
                 key={topic.id}
-                className={`topic-item ${status} ${!isClickable ? 'disabled' : ''}`}
+                className={`topic-item ${status}`}
               >
                 <div 
                   className="topic-number" 
@@ -419,122 +466,39 @@ const RoadmapDetails = () => {
                 </div>
                 
                 <div className="topic-action-container">
-                  {status === 'locked' && index !== 0 ? (
-                    <button 
-                      className="topic-action-btn unlock"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUnlockTopic(topic, index);
-                      }}
-                      style={{
-                        background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                        border: 'none',
-                        color: 'white',
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 4px 16px rgba(245, 158, 11, 0.3)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                      }}
-                    >
-                      <Shield size={16} />
-                      <span>Unlock Topic</span>
-                    </button>
-                  ) : status === 'available' && index === 0 && (!topicProgress?.unlocked) ? (
-                    <button 
-                      className="topic-action-btn available"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUnlockTopic(topic, index);
-                      }}
-                      style={{
-                        background: getStatusColor('available'),
-                        border: 'none',
-                        color: 'white',
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                      }}
-                    >
-                      <Zap size={16} />
-                      <span>Start Learning</span>
-                    </button>
-                  ) : (
-                    <button 
-                      className={`topic-action-btn ${status}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTopicSelect(topic);
-                      }}
-                      style={{
-                        background: getStatusColor(status),
-                        border: 'none',
-                        color: 'white',
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        fontSize: '0.9rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-                      }}
-                    >
-                      {status === 'completed' ? (
-                        <>
-                          <Star size={16} />
-                          <span>Review</span>
-                        </>
-                      ) : status === 'in-progress' ? (
-                        <>
-                          <Play size={16} />
-                          <span>Continue</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap size={16} />
-                          <span>Start Learning</span>
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button 
+                    className={`topic-action-btn ${status}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTopicClick(topic, index);
+                    }}
+                    style={{
+                      ...buttonContent.style,
+                      border: 'none',
+                      color: 'white',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.9rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                    }}
+                  >
+                    {buttonContent.icon}
+                    <span>{buttonContent.text}</span>
+                  </button>
                 </div>
               </div>
             );

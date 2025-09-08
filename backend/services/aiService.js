@@ -1,10 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const AI_CONFIG = {
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash",
   generationConfig: {
     temperature: 0.8,
-    maxOutputTokens: 400,
+    maxOutputTokens: 700,
     topP: 0.95,
     topK: 40
   }
@@ -14,7 +14,7 @@ const CALL_CONFIGS = {
   TEST_API_KEY: {
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 50,
+      maxOutputTokens: 500,
       topP: 0.1,
       topK: 1
     }
@@ -23,7 +23,7 @@ const CALL_CONFIGS = {
   SOCRATIC_RESPONSE: {
     generationConfig: {
       temperature: 0.8,
-      maxOutputTokens: 600,
+      maxOutputTokens: 1500,
       topP: 0.95,
       topK: 40,
       responseMimeType: "application/json",
@@ -59,7 +59,7 @@ const CALL_CONFIGS = {
   ASSESSMENT: {
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 150,
+      maxOutputTokens: 1500,
       topP: 0.8,
       topK: 20,
       responseMimeType: "application/json",
@@ -68,9 +68,9 @@ const CALL_CONFIGS = {
         properties: {
           score: {
             type: "integer",
-            description: "Understanding quality score from 0-100",
+            description: "Understanding quality score from 0-10",
             minimum: 0,
-            maximum: 100
+            maximum: 10
           },
           feedback: {
             type: "string",
@@ -92,97 +92,10 @@ const CALL_CONFIGS = {
     }
   },
 
-  SEARCH_TOPICS: {
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 1200,
-      topP: 0.8,
-      topK: 20,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            name: {
-              type: "string",
-              description: "Topic name"
-            },
-            description: {
-              type: "string",
-              description: "Brief 40-50 character description"
-            },
-            category: {
-              type: "string",
-              description: "Topic category",
-              enum: ["Programming Languages", "Web Development", "Data Science", "AI & ML", "Cloud Computing", "Mobile Development", "Databases", "Cybersecurity", "Algorithms", "DevOps", "Blockchain", "Game Development"]
-            },
-            difficulty: {
-              type: "string",
-              description: "Difficulty level",
-              enum: ["Beginner", "Intermediate", "Advanced"]
-            },
-            keywords: {
-              type: "array",
-              items: { type: "string" },
-              description: "Related keywords"
-            }
-          },
-          required: ["name", "description", "category", "difficulty", "keywords"]
-        },
-        minItems: 5,
-        maxItems: 5
-      }
-    }
-  },
-
-  TOPIC_DETAILS: {
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 1000,
-      topP: 0.9,
-      topK: 30,
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "object",
-        properties: {
-          concept: {
-            type: "string",
-            description: "2-3 sentence explanation of what this topic is"
-          },
-          whyImportant: {
-            type: "string",
-            description: "2-3 sentences explaining why this topic matters in CS"
-          },
-          buildingBlocks: {
-            type: "array",
-            items: { type: "string" },
-            description: "5-7 key concepts/skills within this topic"
-          },
-          realWorldConnection: {
-            type: "string",
-            description: "2-3 sentences connecting this to real applications"
-          },
-          nextSteps: {
-            type: "array",
-            items: { type: "string" },
-            description: "3-5 related topics to learn next"
-          },
-          prerequisites: {
-            type: "array",
-            items: { type: "string" },
-            description: "2-4 topics that should be learned before this"
-          }
-        },
-        required: ["concept", "whyImportant", "buildingBlocks", "realWorldConnection", "nextSteps", "prerequisites"]
-      }
-    }
-  },
-
   HINT_RESPONSE: {
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 150,
+      maxOutputTokens: 1500,
       topP: 0.9,
       topK: 40
     }
@@ -260,6 +173,7 @@ async function handleGeminiResponse(result) {
   }
 
   const response = result.response;
+  console.log("RESPONSE :: " + JSON.stringify(response));
 
   if (response.promptFeedback?.blockReason) {
     throw new Error(`${ERROR_MESSAGES.SAFETY_BLOCKED} (${response.promptFeedback.blockReason})`);
@@ -474,7 +388,7 @@ async function assessUnderstandingQuality(concept, userResponse, apiKey) {
 
 Student's response: "${userResponse}"
 
-Rate their understanding quality from 0-100 based on:
+Rate their understanding quality from 0-10 based on:
 - Depth of thinking (shows they understand core concepts)
 - Accuracy of information 
 - Use of proper CS terminology
@@ -488,7 +402,7 @@ Provide a structured assessment.`;
 
     if (typeof assessment === 'object' && assessment.score !== undefined) {
       return {
-        score: Math.max(0, Math.min(100, assessment.score)),
+        score: Math.max(0, Math.min(10, assessment.score)),
         feedback: assessment.feedback || "Assessment completed",
         strengths: assessment.strengths || [],
         improvements: assessment.improvements || []
@@ -498,81 +412,13 @@ Provide a structured assessment.`;
       const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
       
       return {
-        score: Math.max(0, Math.min(100, score)),
+        score: Math.max(0, Math.min(10, score)),
         feedback: assessment.substring(assessment.indexOf(' - ') + 3) || "Assessment completed"
       };
     }
   } catch (error) {
     console.log('Assessment API call failed, using basic scoring:', error.message);
     return assessBasicQuality(userResponse);
-  }
-}
-
-async function searchCSTopics(query, apiKey) {
-  if (!apiKey) {
-    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
-  }
-
-  if (!query || query.trim().length < 2) {
-    return [];
-  }
-
-  const searchPrompt = `You are a CS education expert. For the search "${query.trim()}", provide EXACTLY 5 relevant computer science topics.
-
-Include topics from: programming languages, web development, mobile development, data science, AI/ML, databases, cloud computing, cybersecurity, algorithms, data structures, DevOps, blockchain, game development, etc.
-
-Search: "${query.trim()}"`;
-
-  try {
-    console.log('🔍 Backend Fast Gemini Search:', query.trim());
-    
-    const topics = await makeGeminiCall(searchPrompt, apiKey, 'SEARCH_TOPICS');
-
-    console.log('🤖 Backend Gemini Response received');
-
-    if (Array.isArray(topics)) {
-      console.log(`✅ Backend returning ${topics.length} structured topics`);
-      return topics.slice(0, 5);
-    } else {
-      console.warn('⚠️  Received non-array response, using fallback parsing');
-      throw new Error('Invalid response format');
-    }
-    
-  } catch (error) {
-    console.error('Backend Gemini search failed:', error);
-    return [{
-      name: `${query.trim()} Fundamentals`,
-      description: `Core concepts in ${query.trim()}`,
-      category: "Computer Science",
-      difficulty: "Intermediate", 
-      keywords: [query.trim().toLowerCase(), "cs", "programming"]
-    }];
-  }
-}
-
-async function getTopicDetails(topicName, apiKey) {
-  if (!apiKey) {
-    throw new Error(ERROR_MESSAGES.API_KEY_MISSING);
-  }
-
-  const detailsPrompt = `You are a computer science education expert. Provide detailed information about the CS topic "${topicName}".
-
-Topic: "${topicName}"`;
-
-  try {
-    const details = await makeGeminiCall(detailsPrompt, apiKey, 'TOPIC_DETAILS');
-
-    if (typeof details === 'object' && details.concept) {
-      console.log('✅ Using structured topic details');
-      return details;
-    } else {
-      console.warn('⚠️  Received non-object response, using default');
-      return getDefaultTopicDetails(topicName);
-    }
-    
-  } catch (error) {
-    console.error('Topic details fetch failed:', error);
-    return getDefaultTopicDetails(topicName);
   }
 }
 
@@ -759,23 +605,6 @@ function formatResponseForDisplay(parsedResponse) {
   return parsedResponse.fullResponse || parsedResponse.raw;
 }
 
-function getDefaultTopicDetails(topicName) {
-  return {
-    concept: `${topicName} is an important computer science concept that involves understanding fundamental principles and practical applications.`,
-    whyImportant: `Learning ${topicName} is essential for building a strong foundation in computer science and developing problem-solving skills.`,
-    buildingBlocks: [
-      "Understanding the basic concepts and terminology",
-      "Learning the fundamental principles",
-      "Exploring practical applications",
-      "Understanding implementation details",
-      "Recognizing common patterns and use cases"
-    ],
-    realWorldConnection: `${topicName} is used in many real-world applications including software development, system design, and technology solutions.`,
-    nextSteps: ["Related advanced topics", "Practical implementation", "System design applications"],
-    prerequisites: ["Basic programming concepts", "Mathematical foundations"]
-  };
-}
-
 function assessBasicQuality(userResponse) {
   const response = userResponse.toLowerCase();
   let score = 30;
@@ -797,7 +626,7 @@ function assessBasicQuality(userResponse) {
   }
   
   return {
-    score: Math.max(0, Math.min(100, score)),
+    score: Math.max(0, Math.min(10, score)),
     feedback: score > 70 ? "Good depth and detail" : 
               score > 50 ? "Shows basic understanding" : 
               "Could use more detail and examples"
@@ -827,8 +656,6 @@ export default {
   getSocraticResponse,
   getHintResponse,
   assessUnderstandingQuality,
-  searchCSTopics,
-  getTopicDetails,
   generateDailySummary,
   testApiKey,
   validateApiKey

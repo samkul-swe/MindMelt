@@ -105,6 +105,7 @@ const Dashboard = () => {
   const [dailyPun, setDailyPun] = useState(null);
   const [userProgress, setUserProgress] = useState({});
   const [roadMaps, setRoadMaps] = useState([]);
+  const [roadMapsLoaded, setRoadMapsLoaded] = useState(false);
 
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
@@ -133,18 +134,21 @@ const Dashboard = () => {
   }, [isAuthenticated]);
 
   const fetchRoadMaps = useCallback(async () => {
+    if (roadMapsLoaded) return; // Prevent duplicate calls
+    
     try {
       setLoading(true);
       const roadMaps = await dataAPI.getRoadmaps();
       console.log("Roadmaps count : " + roadMaps.length);
       setRoadMaps(roadMaps || []);
+      setRoadMapsLoaded(true);
     } catch (error) {
       console.error('Failed to fetch roadmaps:', error);
       setRoadMaps([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [roadMapsLoaded]);
 
   useEffect(() => {
     if (usernameUpdateSuccess) {

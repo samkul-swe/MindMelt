@@ -216,69 +216,6 @@ router.post('/assess-understanding', authenticateToken, async (req, res) => {
   }
 });
 
-// Search CS topics
-router.post('/search-topics', authenticateToken, async (req, res) => {
-  try {
-    const { query } = req.body;
-    
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        message: 'Query is required'
-      });
-    }
-
-    const apiKey = await getApiKeyForUser(req.user.uid);
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: '🔑 AI API key not found. Please set GEMINI_API_KEY environment variable or set your personal API key in MindMelt settings to search for topics!'
-      });
-    }
-
-    const topics = await aiService.searchCSTopics(query, apiKey);
-    
-    res.json(topics);
-  } catch (error) {
-    console.error('Search topics error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to search topics'
-    });
-  }
-});
-
-router.post('/topic-details', authenticateToken, async (req, res) => {
-  try {
-    const { topicName } = req.body;
-    
-    if (!topicName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Topic name is required'
-      });
-    }
-
-    const apiKey = await getApiKeyForUser(req.user.uid);
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: '🔑 AI API key not found. Please set GEMINI_API_KEY environment variable or set your personal API key in MindMelt settings to get topic details!'
-      });
-    }
-
-    const details = await aiService.getTopicDetails(topicName, apiKey);
-    
-    res.json(details);
-  } catch (error) {
-    console.error('Topic details error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to get topic details'
-    });
-  }
-});
-
 router.post('/daily-summary', authenticateToken, async (req, res) => {
   try {
     const { sessionsData } = req.body;

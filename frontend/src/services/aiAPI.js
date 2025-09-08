@@ -294,7 +294,7 @@ class AIAPI {
     }
     
     return {
-      score: Math.max(0, Math.min(100, score)),
+      score: Math.max(0, Math.min(10, score)),
       feedback: score > 70 ? "Good depth and detail" : 
                 score > 50 ? "Shows basic understanding" : 
                 "Could use more detail and examples"

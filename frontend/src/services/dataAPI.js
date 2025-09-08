@@ -5,6 +5,7 @@ class DataAPI{
     this.roadmapsCache = new Map();
     this.topicsCache = new Map();
     this.currentUserId = null;
+    this.ongoingRequests = new Map(); // Add request deduplication
   }
 
   setUser(userId) {
@@ -36,11 +37,34 @@ class DataAPI{
   }
 
   async getRoadmaps() {
-    try {
-      if (this.roadmapsCache.size > 0) {
-        return Array.from(this.roadmapsCache.values());
-      }
+    const cacheKey = 'roadmaps';
+    
+    // Check cache first
+    if (this.roadmapsCache.size > 0) {
+      return Array.from(this.roadmapsCache.values());
+    }
 
+    // Check if request is already in progress
+    if (this.ongoingRequests.has(cacheKey)) {
+      console.log('🔄 Roadmaps request already in progress, waiting...');
+      return await this.ongoingRequests.get(cacheKey);
+    }
+
+    // Start new request
+    const requestPromise = this._fetchRoadmapsFromServer();
+    this.ongoingRequests.set(cacheKey, requestPromise);
+    
+    try {
+      const result = await requestPromise;
+      return result;
+    } finally {
+      this.ongoingRequests.delete(cacheKey);
+    }
+  }
+
+  async _fetchRoadmapsFromServer() {
+    try {
+      console.log('📡 Making fresh roadmaps API call');
       const response = await fetch(`${API_BASE_URL}/data/roadmaps`);
       
       if (!response.ok) {
@@ -54,10 +78,10 @@ class DataAPI{
         this.roadmapsCache.set(roadmap.id, roadmap);
       });
 
-      console.log(`Retrieved ${roadmaps.length} roadmaps from backend`);
+      console.log(`✅ Retrieved ${roadmaps.length} roadmaps from backend`);
       return roadmaps;
     } catch (error) {
-      console.error('Error fetching roadmaps:', error);
+      console.error('❌ Error fetching roadmaps:', error);
       throw error;
     }
   }

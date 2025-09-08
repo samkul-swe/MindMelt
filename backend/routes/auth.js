@@ -34,7 +34,7 @@ router.post('/login', async (req, res) => {
           currentProgress: user?.currentProgress || {},
           createdAt: user?.createdAt || {}
         },
-        token
+        token: token
       }
     });
   } catch (error) {
