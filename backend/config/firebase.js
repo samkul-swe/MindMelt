@@ -103,7 +103,6 @@ async function initializeFirestore() {
   }
 }
 
-// user collection in firestore
 const userStorage = {
   async findById(id) {
     try {
@@ -171,7 +170,6 @@ const userStorage = {
   }
 };
 
-// session collection in firestore
 const sessionStorage = {
   async findByUserId(userId) {
     try {
@@ -239,7 +237,6 @@ const sessionStorage = {
   }
 };
 
-// roadmaps collection in firestore
 const roadmapStorage = {
   async findById(id) {
     try {
@@ -262,7 +259,6 @@ const roadmapStorage = {
   }
 };
 
-// topics collection in firestore
 const topicStorage = {
   async findAllTopicsByRoadmapId(roadmapId, topicCount) {
     try {
