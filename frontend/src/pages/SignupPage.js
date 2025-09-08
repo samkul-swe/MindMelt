@@ -380,15 +380,15 @@ const SignupPage = () => {
           
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>Charts</span>
+              <span style={styles.featureIcon}>-</span>
               <span>Track your learning progress over time</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>Target</span>
+              <span style={styles.featureIcon}>-</span>
               <span>Get personalized learning paths</span>
             </div>
             <div style={styles.featureItem}>
-              <span style={styles.featureIcon}>Trophy</span>
+              <span style={styles.featureIcon}>-</span>
               <span>Earn achievements and badges</span>
             </div>
           </div>
@@ -422,7 +422,6 @@ const SignupPage = () => {
           <form onSubmit={handleSubmit} style={styles.form}>
             {(formError || error) && (
               <div style={styles.errorMessage}>
-                <span>Warning</span>
                 <span>{formError || error}</span>
               </div>
             )}
@@ -491,19 +490,19 @@ const SignupPage = () => {
               </div>
               <div style={styles.benefitsGrid}>
                 <div style={styles.benefitItem}>
-                  <div>Charts</div>
+                  <div>-</div>
                   <span>Progress tracking</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>Target</div>
+                  <div>-</div>
                   <span>Personalized paths</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>Trophy</div>
+                  <div>-</div>
                   <span>Achievement badges</span>
                 </div>
                 <div style={styles.benefitItem}>
-                  <div>Graph</div>
+                  <div>-</div>
                   <span>Learning analytics</span>
                 </div>
               </div>
