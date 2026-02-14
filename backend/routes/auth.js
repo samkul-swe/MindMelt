@@ -1,164 +1,139 @@
 import express from 'express';
-import authService from '../services/authService.js';
-import { authenticateToken } from '../utils/middleware.js';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { auth, userStorage } from '../config/firebase.js';
+import bcrypt from 'bcrypt';
+import { registerValidation, loginValidation, validate } from '../utils/validation.js';
+import { findOne, createDoc } from '../utils/firestore.js';
+import { generateToken, authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+/**
+ * POST /api/auth/register
+ * Register a new user
+ */
+router.post('/register', registerValidation, validate, async (req, res) => {
   try {
-    const { email, password } = req.body;
-    
-    if (!email || !password) {
+    const { username, email, password, name } = req.body;
+
+    console.log(`[Auth] Registration attempt: ${username}`);
+
+    // Check if username already exists
+    const existingUser = await findOne('users', 'username', username);
+    if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Username already taken'
       });
     }
 
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const firebaseUser = userCredential.user;
+    // Check if email already exists
+    const existingEmail = await findOne('users', 'email', email);
+    if (existingEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered'
+      });
+    }
 
-    const token = await authService.getUserToken(firebaseUser);
-    const user = await userStorage.findById(firebaseUser.uid);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const userData = {
+      username,
+      email,
+      password: hashedPassword,
+      name: name || username
+    };
+
+    const user = await createDoc('users', userData);
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    console.log(`[Auth] User registered successfully: ${user.id}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name
+      }
+    });
+
+  } catch (error) {
+    console.error('[Auth] Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Registration failed. Please try again.'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login existing user
+ */
+router.post('/login', loginValidation, validate, async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    console.log(`[Auth] Login attempt: ${username}`);
+
+    // Find user
+    const user = await findOne('users', 'username', username);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
+
+    // Verify password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    console.log(`[Auth] Login successful: ${user.id}`);
 
     res.json({
       success: true,
       message: 'Login successful',
-      data: {
-        user: {
-          id: user?.uid || firebaseUser.uid,
-          email: user?.email || firebaseUser.email,
-          username: user?.username,
-          currentProgress: user?.currentProgress || {},
-          createdAt: user?.createdAt || {}
-        },
-        token: token
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    
-    let errorMessage = '';
-    if (error.code == 'auth/invalid-credential') {
-      errorMessage = 'Invalid credentials. Please check your username/password';
-    } else if (error.code === 'auth/user-not-found') {
-      errorMessage = 'No user found with this email';
-    } else if (error.code === 'auth/wrong-password') {
-      errorMessage = 'Incorrect password';
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Invalid email address';
-    } else if (error.code === 'auth/too-many-requests') {
-      errorMessage = 'Too many failed attempts. Please try again later';
-    } else if (error.code === 'auth/user-disabled') {
-      errorMessage = 'This account has been disabled';
-    } else {
-      errorMessage = 'Login failed';
-    }
-    
-    res.status(401).json({
-      success: false,
-      message: errorMessage
-    });
-  }
-});
-
-router.post('/register', async (req, res) => {
-  try {
-    const { email, password, username } = req.body;
-    
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters long'
-      });
-    }
-
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const firebaseUser = userCredential.user;
-
-    const user = await authService.createUser(firebaseUser.uid, email, username);
-
-    const token = authService.createCustomToken(user);
-
-    res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      data: {
-        user: {
-          id: user.uid,
-          email: user.email,
-          username: user.username,
-          createdAt: user.createdAt
-        },
-        token
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name
       }
     });
 
   } catch (error) {
-    console.error('Registration error:', error);
-
-    let errorMessage = 'Registration failed';
-    if (error.code === 'auth/email-already-in-use') {
-      errorMessage = 'An account with this email already exists';
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Invalid email address';
-    } else if (error.code === 'auth/weak-password') {
-      errorMessage = 'Password is too weak';
-    } else if (error.code === 'auth/operation-not-allowed') {
-      errorMessage = 'Email registration is not enabled';
-    }
-    
-    res.status(400).json({
+    console.error('[Auth] Login error:', error);
+    res.status(500).json({
       success: false,
-      message: errorMessage
+      message: 'Login failed. Please try again.'
     });
   }
 });
 
-router.post('/progress', authenticateToken, async (req, res) => {
+/**
+ * GET /api/auth/me
+ * Get current user info (requires authentication)
+ */
+router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const { roadmapId, topicId, percentage } = req.body;
-    
-    if (!roadmapId || !topicId || percentage === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'roadmapId, topicId, and percentage are required'
-      });
-    }
-
-    const roadmapProgress = await authService.updateUserProgress(
-      req.user.uid, 
-      roadmapId, 
-      topicId, 
-      percentage
-    );
-
-    res.json({
-      success: true,
-      message: 'Progress updated successfully',
-      data: roadmapProgress
-    });
-  } catch (error) {
-    console.error('Progress update error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.get('/profile', authenticateToken, async (req, res) => {
-  try {
-    const user = await authService.getUser(req.user.uid);
+    const user = await findOne('users', 'username', req.user.username);
     
     if (!user) {
       return res.status(404).json({
@@ -170,96 +145,34 @@ router.get('/profile', authenticateToken, async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: user.uid,
-        email: user.email,
+        id: user.id,
         username: user.username,
-        currentProgress: user.currentProgress || {},
+        email: user.email,
+        name: user.name,
         createdAt: user.createdAt
       }
     });
+
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error('[Auth] Get user error:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Failed to fetch user data'
     });
   }
 });
 
-router.put('/profile', authenticateToken, async (req, res) => {
-  try {
-    const updates = req.body;
-    
-    delete updates.id;
-    delete updates.uid;
-    delete updates.createdAt;
-    
-    const updatedUser = await authService.updateUserProfile(req.user.uid, updates);
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully',
-      data: {
-        user: {
-          id: updatedUser.uid,
-          email: updatedUser.email,
-          username: updatedUser.username,
-          currentProgress: updatedUser.currentProgress || {},
-          hasApiKey: !!updatedUser.aiApiKey,
-          createdAt: updatedUser.createdAt
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Update profile error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.post('/api-key', authenticateToken, async (req, res) => {
-  try {
-    const { apiKey } = req.body;
-    
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: 'API key is required'
-      });
-    }
-
-    await authService.updateUserProfile(req.user.uid, { aiApiKey: apiKey });
-
-    res.json({
-      success: true,
-      message: 'AI API key saved successfully'
-    });
-  } catch (error) {
-    console.error('Set API key error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-router.delete('/api-key', authenticateToken, async (req, res) => {
-  try {
-    await authService.updateUserProfile(req.user.uid, { aiApiKey: null });
-
-    res.json({
-      success: true,
-      message: 'AI API key removed successfully'
-    });
-  } catch (error) {
-    console.error('Remove API key error:', error);
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
+/**
+ * POST /api/auth/validate-token
+ * Validate if token is still valid
+ */
+router.post('/validate-token', authenticateToken, (req, res) => {
+  // If middleware passes, token is valid
+  res.json({
+    success: true,
+    valid: true,
+    user: req.user
+  });
 });
 
 export default router;

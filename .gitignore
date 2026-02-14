@@ -1,6 +1,9 @@
 node_modules
-package-lock.json
+backend/package-lock.json
 *.config.json
 build
 .env
 backend/mindmelt-think-to-learn.json
+.backend-old
+.frontend-old
+.vscode
