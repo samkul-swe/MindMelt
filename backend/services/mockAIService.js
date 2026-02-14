@@ -182,30 +182,53 @@ class MockAIService {
   }
 
   // ============================================
-  // SOCRATIC LEARNING (Phase 3)
+  // SOCRATIC LEARNING (Phase 3) - Enhanced
   // ============================================
 
   async generateSocraticQuestion(context) {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     console.log('🤖 MOCK: Generating Socratic question...');
+    console.log('Context:', context);
     
-    // Return contextual questions based on phase
-    const questions = [
-      "Before writing code, how would you architect this app? What are the main components you'd need?",
-      "Good start! What about user input - how would you handle adding new items?",
-      "Where should you store the data?",
-      "How will the data survive an app restart?",
-      "What data structure would work best here?",
-      "Think about edge cases - what if the list is empty?",
-      "How would you optimize this for 1000+ items?"
+    const { conversation = [], topic, phase } = context;
+    const messageCount = conversation.length;
+    
+    // Debugging phase - guide through common bugs
+    if (phase === 'debugging' || topic?.toLowerCase().includes('debug')) {
+      const debuggingFlow = [
+        "I see you're using array indices for IDs. Let me walk you through a scenario: Add 3 todos ('Buy milk', 'Walk dog', 'Code'), then delete 'Walk dog' (index 1). Now add a new todo 'Read book'. What ID does it get?",
+        
+        "Right! The new todo gets index 2, but that's already taken by 'Code'. This causes bugs. Can you think of a way to generate IDs that don't depend on array position?",
+        
+        "Good idea! Using Date.now() or Date.now() + Math.random() ensures unique IDs. Now let's check another issue - open React DevTools and delete a todo. Do you see any state mutation warnings?",
+        
+        "Exactly! Look at your deleteTodo function. Are you using splice() or another method that mutates the array directly?",
+        
+        "Perfect understanding! You should use filter() instead: `setTodos(todos.filter(t => t.id !== id))`. This creates a new array instead of mutating. One more check - close and reopen your app. Do the todos persist?",
+        
+        "Great! If they persist, your AsyncStorage is working. If not, check that you're using JSON.stringify() when saving. You've identified and understood all the key issues! Ready to mark this complete?"
+      ];
+      
+      const index = Math.min(Math.floor(messageCount / 2), debuggingFlow.length - 1);
+      return debuggingFlow[index];
+    }
+    
+    // Design phase questions
+    const designQuestions = [
+      "Good thinking! So you've identified TodoList and TodoItem. What component handles adding new todos?",
+      "Perfect - AddTodo for input. Now, where should you store the list of todos? Think about which component needs to access and update the list.",
+      "Excellent! State in the App component makes sense. And how will those todos survive an app restart? What happens to useState when the app closes?",
+      "Right! useState doesn't persist. What React Native API can you use to save data permanently?",
+      "Exactly - AsyncStorage! So let's summarize your architecture: App manages state and AsyncStorage, AddTodo handles input, TodoList displays the list, and TodoItem renders each todo. Sound complete?",
+      "Perfect! Your architecture is well thought out. You've identified all the key components and how they work together. Ready to start implementing?"
     ];
     
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
-    return randomQuestion;
+    const questionIndex = Math.min(messageCount, designQuestions.length - 1);
+    return designQuestions[questionIndex];
   }
 
   async reviewCode(context) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('🔍 MOCK: Reviewing code...');
     
     return {
@@ -213,17 +236,60 @@ class MockAIService {
         {
           type: 'logical',
           severity: 'critical',
-          scenarioToReveal: 'Add 3 todos, delete the middle one, then add another',
-          socraticQuestion: 'What ID does the new todo get? What happens to your array?'
+          scenarioToReveal: 'Add 3 todos, delete the middle one, then add another. Check the IDs.',
+          socraticQuestion: 'What ID does the new todo get? What happens to your array?',
+          expectedRealization: 'IDs get messed up when using array index'
         },
         {
           type: 'bestPractice',
           severity: 'moderate',
-          scenarioToReveal: 'Check React DevTools for state mutation warning',
-          socraticQuestion: 'Look at your deleteTodo function. Are you mutating state directly?'
+          scenarioToReveal: 'Open React DevTools and check for warnings when deleting todos.',
+          socraticQuestion: 'Do you see any warnings? Look at your deleteTodo function - are you mutating state?',
+          expectedRealization: 'Should use filter() instead of splice() to avoid mutation'
         }
       ],
-      overallQuality: 'good'
+      overallQuality: 'good',
+      strengths: [
+        'Component architecture is well thought out',
+        'State management approach is correct',
+        'Code is readable and well-organized'
+      ],
+      needsWork: [
+        'ID generation strategy',
+        'Avoiding state mutation'
+      ]
+    };
+  }
+
+  async assessPerformance(context) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('📊 MOCK: Assessing performance...');
+    
+    return {
+      scores: {
+        architecture: 85,
+        implementation: 80,
+        debugging: 75,
+        understanding: 85
+      },
+      overallScore: 81,
+      strengths: [
+        'Strong component architecture thinking',
+        'Good state management understanding',
+        'Quick to identify bugs once pointed out'
+      ],
+      gaps: [
+        'Didn\'t consider unique ID problem upfront',
+        'State mutation initially overlooked',
+        'Could improve edge case thinking'
+      ],
+      nextProjectRecommendations: {
+        focusAreas: ['Async data handling', 'Error handling', 'Loading states'],
+        scaffoldingLevel: 'medium',
+        difficulty: 'same'
+      },
+      timeSpent: 5.5,
+      readyForNextProject: true
     };
   }
 

@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Brain, LogOut, User, Upload, Code, Target } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
+import api from '../services/api';
 import '../styles/components/dashboard.css';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
+  const [hasResume, setHasResume] = useState(false);
+  const [learningPath, setLearningPath] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkResumeStatus();
+  }, []);
+
+  const checkResumeStatus = async () => {
+    try {
+      const result = await api.getResumeStatus();
+      if (result.success) {
+        setHasResume(result.hasResume);
+        setLearningPath(result.learningPath);
+      }
+    } catch (error) {
+      console.error('Failed to check resume status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -54,7 +76,7 @@ const DashboardPage = () => {
 
           {/* Learning Options Grid */}
           <div className="options-grid">
-            {/* Resume Validation Card - NOW ACTIVE */}
+            {/* Resume Validation Card - Always visible */}
             <div 
               className="option-card"
               onClick={() => navigate('/resume-upload')}
@@ -65,26 +87,48 @@ const DashboardPage = () => {
               </div>
               <h3>Resume Skill Validation</h3>
               <p>Upload your resume and validate your claimed skills through Socratic questioning</p>
-              <Button variant="primary" size="medium">
-                Upload Resume
+              {hasResume && (
+                <div className="completed-badge">✓ Completed</div>
+              )}
+              <Button variant={hasResume ? "outline" : "primary"} size="medium">
+                {hasResume ? 'Update Resume' : 'Upload Resume'}
               </Button>
             </div>
 
-            {/* Project Learning Card - NOW ACTIVE */}
-            <div 
-              className="option-card"
-              onClick={() => navigate('/projects')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="option-icon">
-                <Code size={32} />
+            {/* Project Learning Card - Show only if resume uploaded */}
+            {hasResume && learningPath && (
+              <div 
+                className="option-card"
+                onClick={() => navigate('/projects')}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="option-icon">
+                  <Code size={32} />
+                </div>
+                <h3>{learningPath.targetRole} Projects</h3>
+                <p>Build 5 curated projects for {learningPath.targetRole} with AI guidance</p>
+                <div className="path-info">
+                  <span>🎯 {learningPath.timeline} days</span>
+                  <span>•</span>
+                  <span>5 projects</span>
+                </div>
+                <Button variant="primary" size="medium">
+                  Start Projects
+                </Button>
               </div>
-              <h3>Project-Based Learning</h3>
-              <p>Build 5 real-world projects with AI guidance and add them to your portfolio</p>
-              <Button variant="primary" size="medium">
-                Start Projects
-              </Button>
-            </div>
+            )}
+
+            {/* Locked state when no resume */}
+            {!hasResume && (
+              <div className="option-card locked">
+                <div className="option-icon locked-icon">
+                  <Code size={32} />
+                </div>
+                <h3>Project-Based Learning</h3>
+                <p>Upload your resume first to unlock personalized projects</p>
+                <div className="lock-indicator">🔒 Locked</div>
+              </div>
+            )}
 
             {/* LeetCode Mastery Card */}
             <div className="option-card coming-soon">

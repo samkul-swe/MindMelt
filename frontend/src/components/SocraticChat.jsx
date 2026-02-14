@@ -4,15 +4,22 @@ import Button from './common/Button';
 import api from '../services/api';
 import '../styles/components/socratic-chat.css';
 
-const SocraticChat = ({ userProjectId, phase = 'design', onComplete }) => {
+const SocraticChat = ({ 
+  userProjectId, 
+  phase = 'design', 
+  onComplete,
+  onComponentMentioned 
+}) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationStarted, setConversationStarted] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Component keywords to detect
+  const componentKeywords = ['App', 'AddTodo', 'TodoList', 'TodoItem', 'AsyncStorage'];
+
   useEffect(() => {
-    // Start with AI's first question
     if (!conversationStarted) {
       startConversation();
     }
@@ -29,18 +36,44 @@ const SocraticChat = ({ userProjectId, phase = 'design', onComplete }) => {
   const startConversation = async () => {
     setConversationStarted(true);
     
-    const starterQuestions = {
-      design: "Before writing any code, let's think through the architecture. What are the main components you'd need for a todo list app?",
-      debugging: "Your app is built! Let's test it together. Looking at your code, can you explain how you're generating unique IDs for todos?"
-    };
+    if (phase === 'debugging') {
+      // For debugging phase, start by analyzing the code
+      const debugIntro = {
+        role: 'assistant',
+        content: "Great work on implementing the app! Let's test it together to make sure everything works correctly. I'll walk you through some scenarios to check your code.",
+        timestamp: new Date()
+      };
+      
+      const firstBugScenario = {
+        role: 'assistant',
+        content: "Let's start with testing ID generation. Can you walk me through how you're creating unique IDs for each todo? Look at your addTodo function and explain your approach.",
+        timestamp: new Date()
+      };
 
-    const starterMessage = {
-      role: 'assistant',
-      content: starterQuestions[phase] || starterQuestions.design,
-      timestamp: new Date()
-    };
+      setMessages([debugIntro, firstBugScenario]);
+    } else {
+      // Design phase starter
+      const starterMessage = {
+        role: 'assistant',
+        content: "Let's design the Todo List App together! Before writing any code, what are the main components you'd need? Think about user input, displaying todos, and individual todo items.",
+        timestamp: new Date()
+      };
 
-    setMessages([starterMessage]);
+      setMessages([starterMessage]);
+    }
+  };
+
+  const detectComponents = (text) => {
+    const detected = [];
+    const lowerText = text.toLowerCase();
+    
+    componentKeywords.forEach(keyword => {
+      if (lowerText.includes(keyword.toLowerCase())) {
+        detected.push(keyword);
+      }
+    });
+
+    return detected;
   };
 
   const handleSendMessage = async (e) => {
@@ -53,6 +86,12 @@ const SocraticChat = ({ userProjectId, phase = 'design', onComplete }) => {
       content: inputMessage.trim(),
       timestamp: new Date()
     };
+
+    // Detect components in user's message
+    const detectedComponents = detectComponents(inputMessage);
+    if (detectedComponents.length > 0 && onComponentMentioned) {
+      detectedComponents.forEach(comp => onComponentMentioned(comp));
+    }
 
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
@@ -90,6 +129,19 @@ const SocraticChat = ({ userProjectId, phase = 'design', onComplete }) => {
     if (onComplete) {
       onComplete();
     }
+  };
+
+  // Check if enough progress for phase completion
+  const canCompletePhase = () => {
+    if (phase === 'design') {
+      // Need at least 4 exchanges to complete design
+      return messages.length >= 8;
+    }
+    if (phase === 'debugging') {
+      // Need at least 3 exchanges to complete debugging
+      return messages.length >= 6;
+    }
+    return false;
   };
 
   return (
@@ -155,16 +207,20 @@ const SocraticChat = ({ userProjectId, phase = 'design', onComplete }) => {
         </form>
 
         {/* Phase Complete Button */}
-        {messages.length >= 6 && phase === 'design' && (
+        {canCompletePhase() && (
           <div className="phase-complete-prompt">
-            <p>Ready to start implementing?</p>
+            <p>
+              {phase === 'design' 
+                ? '✅ Architecture design looks good! Ready to implement?'
+                : '✅ Issues understood! Ready to complete?'}
+            </p>
             <Button
               variant="primary"
               size="medium"
               icon={<ArrowRight size={18} />}
               onClick={handleCompletePhase}
             >
-              Start Implementation
+              {phase === 'design' ? 'Start Implementation' : 'Mark Project Complete'}
             </Button>
           </div>
         )}

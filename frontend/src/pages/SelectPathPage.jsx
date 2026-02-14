@@ -12,7 +12,7 @@ const SelectPathPage = () => {
 
   const [timeline, setTimeline] = useState(30);
   const [motivation, setMotivation] = useState('');
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [takeTest, setTakeTest] = useState(null); // null = not chosen, true = take test, false = skip
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,15 +63,27 @@ const SelectPathPage = () => {
         targetRole,
         currentMatch,
         timeline,
-        motivation
+        motivation,
+        takeTest
       });
 
       if (result.success) {
-        navigate('/dashboard', { 
-          state: { 
-            message: `Learning path created for ${targetRole}!` 
-          } 
-        });
+        // Navigate based on test choice
+        if (takeTest) {
+          navigate('/skill-test', { 
+            state: { 
+              targetRole,
+              learningPathId: result.learningPath.id
+            } 
+          });
+        } else {
+          navigate('/projects', { 
+            state: { 
+              message: `Learning path created for ${targetRole}!`,
+              targetRole 
+            } 
+          });
+        }
       } else {
         setError(result.message || 'Failed to create learning path');
       }
@@ -192,6 +204,49 @@ const SelectPathPage = () => {
             />
           </div>
 
+          {/* NEW: Optional Skill Test */}
+          <div className="form-section">
+            <h3>🎯 Skill Validation Test (Optional)</h3>
+            <p className="section-desc">
+              Take a quick test to validate your current skills for {targetRole}. 
+              We'll identify specific areas to focus on and customize your learning path.
+            </p>
+
+            <div className="test-options">
+              <div 
+                className={`test-option ${takeTest === true ? 'selected' : ''}`}
+                onClick={() => setTakeTest(true)}
+              >
+                <div className="option-header">
+                  <CheckCircle size={24} />
+                  <h4>Take Skill Test</h4>
+                </div>
+                <p>15-20 minutes to assess your current level</p>
+                <ul className="option-benefits">
+                  <li>✓ Get personalized gap analysis</li>
+                  <li>✓ Skip topics you already know</li>
+                  <li>✓ Focus on your weak areas</li>
+                </ul>
+              </div>
+
+              <div 
+                className={`test-option ${takeTest === false ? 'selected' : ''}`}
+                onClick={() => setTakeTest(false)}
+              >
+                <div className="option-header">
+                  <ArrowRight size={24} />
+                  <h4>Start Projects Directly</h4>
+                </div>
+                <p>Jump straight into building projects</p>
+                <ul className="option-benefits">
+                  <li>✓ Start learning immediately</li>
+                  <li>✓ Learn by doing</li>
+                  <li>✓ Can take test later if needed</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           {error && (
             <div className="error-message">
               {error}
@@ -205,8 +260,9 @@ const SelectPathPage = () => {
             loading={loading}
             icon={<ArrowRight size={20} />}
             className="submit-btn"
+            disabled={takeTest === null}
           >
-            Start My Learning Journey
+            {takeTest ? 'Start Skill Test' : 'Start Learning Journey'}
           </Button>
         </form>
       </div>

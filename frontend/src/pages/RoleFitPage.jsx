@@ -15,6 +15,7 @@ const RoleFitPage = () => {
   const [loadingDetails, setLoadingDetails] = useState({});
   const [error, setError] = useState('');
   const [profile, setProfile] = useState(null);
+  const [customRole, setCustomRole] = useState('');
 
   useEffect(() => {
     getRoleOverview();
@@ -74,14 +75,20 @@ const RoleFitPage = () => {
     }
   };
 
-  const handleSelectRole = (roleName) => {
-    const matchPercent = roleOverview[roleName];
-    const details = roleDetails[roleName];
+  const handleCustomRole = () => {
+    if (customRole.trim()) {
+      handleSelectRole(customRole.trim(), 0, {
+        gaps: ['Will be determined during learning'],
+        strengths: ['Your existing skills will be leveraged']
+      });
+    }
+  };
 
+  const handleSelectRole = (roleName, matchPercent, details = {}) => {
     navigate('/select-path', {
       state: {
         targetRole: roleName,
-        currentMatch: matchPercent,
+        currentMatch: matchPercent || 0,
         gaps: details?.gaps || [],
         strengths: details?.strengths || []
       }
@@ -159,20 +166,21 @@ const RoleFitPage = () => {
 
         {/* Role Cards */}
         {roleOverview && (
-          <div className="roles-grid">
-            {Object.entries(roleOverview).map(([roleName, matchPercent]) => {
-              const { icon: Icon, color } = getRoleIcon(matchPercent);
-              const roleClass = getRoleClass(matchPercent);
-              const isExpanded = expandedRole === roleName;
-              const details = roleDetails[roleName];
-              const isLoadingDetails = loadingDetails[roleName];
+          <>
+            <div className="roles-grid">
+              {Object.entries(roleOverview).map(([roleName, matchPercent]) => {
+                const { icon: Icon, color } = getRoleIcon(matchPercent);
+                const roleClass = getRoleClass(matchPercent);
+                const isExpanded = expandedRole === roleName;
+                const details = roleDetails[roleName];
+                const isLoadingDetails = loadingDetails[roleName];
 
-              return (
-                <div
-                  key={roleName}
-                  className={`role-card ${roleClass} ${isExpanded ? 'expanded' : ''}`}
-                >
-                  {/* Card Header - Always Visible */}
+                return (
+                  <div
+                    key={roleName}
+                    className={`role-card ${roleClass} ${isExpanded ? 'expanded' : ''}`}
+                  >
+                    {/* Card Header - Always Visible */}
                   <div 
                     className="role-card-header"
                     onClick={() => handleExpandRole(roleName)}
@@ -262,21 +270,58 @@ const RoleFitPage = () => {
                               variant="primary"
                               size="medium"
                               icon={<ArrowRight size={18} />}
-                              onClick={() => handleSelectRole(roleName)}
+                              onClick={() => handleSelectRole(roleName, matchPercent, details)}
                             >
                               {matchPercent >= 80 ? 'Start Learning Path' : 'Bridge the Gap'}
                             </Button>
                           </div>
                         </>
                       ) : (
-                        <p className="details-hint">Click to load detailed analysis</p>
+                        <p className="details-hint">Loading details...</p>
                       )}
                     </div>
                   )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* NEW: Custom Role Option */}
+            <div className="custom-role-section">
+              <div className="custom-role-divider">
+                <span>Or target a different role</span>
+              </div>
+              
+              <div className="custom-role-card">
+                <h3>Custom Role</h3>
+                <p>Don't see your target role? Enter it below and we'll create a custom learning path.</p>
+                
+                <div className="custom-role-input-group">
+                  <input
+                    type="text"
+                    placeholder="e.g., DevOps Engineer, Data Engineer, iOS Developer..."
+                    className="custom-role-input"
+                    value={customRole}
+                    onChange={(e) => setCustomRole(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && customRole.trim()) {
+                        handleCustomRole();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="primary"
+                    size="medium"
+                    icon={<ArrowRight size={18} />}
+                    onClick={handleCustomRole}
+                    disabled={!customRole.trim()}
+                  >
+                    Create Custom Path
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

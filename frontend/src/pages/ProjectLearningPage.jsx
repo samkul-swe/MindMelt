@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Code, MessageCircle, CheckCircle, ArrowRight, Download } from 'lucide-react';
+import { Code, MessageCircle, CheckCircle, ArrowRight, Download, Lightbulb } from 'lucide-react';
 import SocraticChat from '../components/SocraticChat';
 import CodeEditor from '../components/CodeEditor';
 import Button from '../components/common/Button';
@@ -12,23 +12,23 @@ const ProjectLearningPage = () => {
   const location = useLocation();
   const { userProjectId } = location.state || {};
 
-  const [userProject, setUserProject] = useState(null);
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPhase, setCurrentPhase] = useState('design'); // design → implementation → debugging → completed
+  const [loading, setLoading] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState('design');
+  const [submittedCode, setSubmittedCode] = useState('');
+  const [performanceData, setPerformanceData] = useState(null);
+  const [discoveredComponents, setDiscoveredComponents] = useState([]);
 
-  useEffect(() => {
-    loadProject();
-  }, []);
+  const allComponents = [
+    { name: 'App', description: 'Main container with state' },
+    { name: 'AddTodo', description: 'Input field component' },
+    { name: 'TodoList', description: 'Renders list of todos' },
+    { name: 'TodoItem', description: 'Individual todo display' },
+    { name: 'AsyncStorage', description: 'Data persistence' }
+  ];
 
-  const loadProject = async () => {
-    try {
-      // In real implementation, fetch from API
-      // For now, using mock data
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to load project:', error);
-      setLoading(false);
+  const handleComponentDiscovered = (componentName) => {
+    if (!discoveredComponents.includes(componentName)) {
+      setDiscoveredComponents([...discoveredComponents, componentName]);
     }
   };
 
@@ -36,204 +36,270 @@ const ProjectLearningPage = () => {
     setCurrentPhase(nextPhase);
   };
 
-  if (loading) {
-    return <div className="loading-screen">Loading project...</div>;
-  }
+  const handleCodeSubmit = async (code) => {
+    try {
+      setSubmittedCode(code);
+      await api.submitCode(userProjectId, code, 'javascript');
+      console.log('Code submitted');
+      handlePhaseComplete('debugging');
+    } catch (error) {
+      console.error('Failed to submit code:', error);
+      alert('Failed to submit code. Please try again.');
+    }
+  };
+
+  const handleProjectComplete = async () => {
+    try {
+      setLoading(true);
+      const result = await api.completeProject(userProjectId);
+      
+      if (result.success) {
+        setPerformanceData(result.performance);
+        handlePhaseComplete('completed');
+      }
+    } catch (error) {
+      console.error('Failed to complete project:', error);
+      alert('Failed to complete project. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadProject = async () => {
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('mindmelt_token');
+      
+      // Fetch ZIP file
+      const response = await fetch(`${API_BASE_URL}/api/projects/download/${userProjectId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Get filename from header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch ? filenameMatch[1] : '1_mobile_engineer.zip';
+
+      // Download the ZIP
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('Project downloaded as ZIP:', filename);
+    } catch (error) {
+      console.error('Failed to download:', error);
+      alert('Failed to download. Please try again.');
+    }
+  };
 
   return (
-    <div className="project-learning-page">
-      {/* Header with Progress */}
-      <div className="learning-header">
-        <div className="container">
-          <div className="header-content">
-            <div className="project-info">
-              <h1>Project 1: Todo List App</h1>
-              <p className="project-meta">Easy • 6 hours • Mobile Engineering</p>
-            </div>
-
-            {/* Phase Progress */}
-            <div className="phase-progress">
-              <div className={`phase-step ${currentPhase === 'design' ? 'active' : 'completed'}`}>
-                <div className="step-number">1</div>
-                <span>Design</span>
-              </div>
-              <div className="phase-line" />
-              <div className={`phase-step ${currentPhase === 'implementation' ? 'active' : currentPhase === 'debugging' || currentPhase === 'completed' ? 'completed' : ''}`}>
-                <div className="step-number">2</div>
-                <span>Implement</span>
-              </div>
-              <div className="phase-line" />
-              <div className={`phase-step ${currentPhase === 'debugging' ? 'active' : currentPhase === 'completed' ? 'completed' : ''}`}>
-                <div className="step-number">3</div>
-                <span>Debug</span>
-              </div>
-              <div className="phase-line" />
-              <div className={`phase-step ${currentPhase === 'completed' ? 'active' : ''}`}>
-                <div className="step-number">4</div>
-                <span>Complete</span>
-              </div>
+    <div className="project-learning-page-fullscreen">
+      <div className="learning-header-compact">
+        <div className="container-wide">
+          <div className="header-content-compact">
+            <h1>Project 1: Todo List App</h1>
+            <div className="phase-pills">
+              <span className={`phase-pill ${currentPhase === 'design' ? 'active' : 'completed'}`}>Design</span>
+              <span className={`phase-pill ${currentPhase === 'implementation' ? 'active' : 'completed'}`}>Implement</span>
+              <span className={`phase-pill ${currentPhase === 'debugging' ? 'active' : 'completed'}`}>Debug</span>
+              <span className={`phase-pill ${currentPhase === 'completed' ? 'active' : ''}`}>Complete</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="learning-content">
-        <div className="container">
-          <div className="content-grid">
-            {/* Left Side - Requirements/Info */}
-            <div className="project-sidebar">
-              <div className="sidebar-section">
-                <h3>📋 Requirements</h3>
-                <ul className="requirements-list">
-                  <li><CheckCircle size={16} /> Add new todos with text input</li>
-                  <li><CheckCircle size={16} /> Mark todos as complete/incomplete</li>
-                  <li><CheckCircle size={16} /> Delete todos</li>
-                  <li><CheckCircle size={16} /> Display list of all todos</li>
-                  <li><CheckCircle size={16} /> Persist todos (survive app restart)</li>
-                </ul>
-              </div>
-
-              <div className="sidebar-section">
-                <h3>🎯 Learning Objectives</h3>
-                <ul className="objectives-list">
-                  <li>React Native component architecture</li>
-                  <li>AsyncStorage for persistence</li>
-                  <li>State management with useState</li>
-                  <li>List rendering and optimization</li>
-                </ul>
-              </div>
-
-              <div className="sidebar-section">
-                <h3>⏱️ Time Tracker</h3>
-                <div className="time-display">
-                  <span className="time-spent">0:00</span>
-                  <span className="time-estimate">/ 6:00 hours</span>
+      {currentPhase === 'design' && (
+        <div className="learning-content-fullscreen">
+          <div className="container-wide">
+            <div className="split-view">
+              <div className="chat-panel">
+                <div className="panel-header">
+                  <MessageCircle size={24} />
+                  <h2>Design Conversation</h2>
+                  <p>Discuss the architecture with AI</p>
                 </div>
-                <div className="progress-bar-small">
-                  <div className="progress-fill" style={{ width: '0%' }} />
-                </div>
+                <SocraticChat 
+                  userProjectId={userProjectId}
+                  onComponentMentioned={handleComponentDiscovered}
+                  onComplete={() => handlePhaseComplete('implementation')}
+                />
               </div>
 
-              <div className="sidebar-section ice-cream-section">
-                <h3>🍦 Progress Reward</h3>
-                <div className="ice-cream-tracker">
-                  <div className="ice-cream-cone">
-                    <div className="scoop vanilla" />
-                  </div>
-                  <p className="ice-cream-text">1/5 Flavors</p>
+              <div className="architecture-panel">
+                <div className="panel-header">
+                  <Lightbulb size={24} />
+                  <h2>Architecture Builder</h2>
+                  <p>Components appear as you discover them</p>
+                </div>
+                
+                <div className="architecture-diagram">
+                  {discoveredComponents.length === 0 ? (
+                    <div className="empty-diagram">
+                      <Lightbulb size={48} />
+                      <p>Start chatting to build your architecture!</p>
+                      <p className="hint">Mention component names like "TodoList", "AddTodo"...</p>
+                    </div>
+                  ) : (
+                    <div className="component-tree">
+                      {allComponents.map((comp) => {
+                        const isDiscovered = discoveredComponents.includes(comp.name);
+                        return (
+                          <div key={comp.name} className={`component-node ${isDiscovered ? 'discovered' : 'undiscovered'}`}>
+                            <div className="component-icon">{isDiscovered ? '✓' : '?'}</div>
+                            <div className="component-info">
+                              <div className="component-name">{isDiscovered ? comp.name : '???'}</div>
+                              <div className="component-desc">{isDiscovered ? comp.description : 'Keep chatting to discover'}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="architecture-progress">
+                        <div className="progress-text">{discoveredComponents.length} / {allComponents.length} discovered</div>
+                        <div className="mini-progress-bar">
+                          <div className="mini-progress-fill" style={{ width: `${(discoveredComponents.length / allComponents.length) * 100}%` }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Right Side - Interactive Area */}
-            <div className="project-workspace">
-              {/* Design Phase */}
-              {currentPhase === 'design' && (
-                <div className="phase-container fade-in">
-                  <div className="phase-header">
-                    <MessageCircle size={32} />
-                    <div>
-                      <h2>Design Phase</h2>
-                      <p>Let's think through the architecture before writing code</p>
-                    </div>
-                  </div>
-
-                  <SocraticChat 
-                    userProjectId={userProjectId}
-                    onComplete={() => handlePhaseComplete('implementation')}
-                  />
+      {currentPhase === 'implementation' && (
+        <div className="learning-content-fullscreen">
+          <div className="container-wide">
+            <div className="fullscreen-phase">
+              <div className="phase-header-minimal">
+                <Code size={28} />
+                <div>
+                  <h2>Implementation Phase</h2>
+                  <p>Complete the TODOs in the scaffolded code</p>
                 </div>
-              )}
+              </div>
+              <CodeEditor 
+                initialCode={`import React, { useState, useEffect } from 'react';
 
-              {/* Implementation Phase */}
-              {currentPhase === 'implementation' && (
-                <div className="phase-container fade-in">
-                  <div className="phase-header">
-                    <Code size={32} />
-                    <div>
-                      <h2>Implementation Phase</h2>
-                      <p>Implement the TODOs in the scaffolded code below</p>
-                    </div>
-                  </div>
+export default function App() {
+  // TODO: Initialize state
+  const [todos, setTodos] = useState([]);
+  
+  // TODO: Load from storage
+  useEffect(() => {
+    // YOUR CODE HERE
+  }, []);
+  
+  // TODO: Add todo function
+  const addTodo = (text) => {
+    // YOUR CODE HERE
+  };
+  
+  return null;
+}`}
+                language="javascript"
+                onSubmit={handleCodeSubmit}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
-                  <CodeEditor 
-                    initialCode={`// Scaffold code here`}
-                    language="javascript"
-                    onSubmit={(code) => handleCodeSubmit(code)}
-                  />
+      {currentPhase === 'debugging' && (
+        <div className="learning-content-fullscreen">
+          <div className="container-wide">
+            <div className="fullscreen-phase">
+              <div className="phase-header-minimal">
+                <MessageCircle size={28} />
+                <div>
+                  <h2>🐛 Debugging Phase</h2>
+                  <p>Let's find and fix issues in your code</p>
                 </div>
-              )}
+              </div>
+              <div className="fullscreen-chat">
+                <SocraticChat 
+                  userProjectId={userProjectId}
+                  phase="debugging"
+                  onComplete={handleProjectComplete}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Debugging Phase */}
-              {currentPhase === 'debugging' && (
-                <div className="phase-container fade-in">
-                  <div className="phase-header">
-                    <h2>🐛 Debugging Phase</h2>
-                    <p>Let's walk through your code and find issues together</p>
-                  </div>
-
-                  <SocraticChat 
-                    userProjectId={userProjectId}
-                    phase="debugging"
-                    onComplete={() => handlePhaseComplete('completed')}
-                  />
+      {currentPhase === 'completed' && (
+        <div className="learning-content-fullscreen">
+          <div className="container-wide">
+            <div className="fullscreen-phase">
+              <div className="completion-content">
+                <div className="success-icon">
+                  <CheckCircle size={64} />
                 </div>
-              )}
+                <h2>🎉 Project Complete!</h2>
+                <p>You've successfully built a Todo List App</p>
 
-              {/* Completion */}
-              {currentPhase === 'completed' && (
-                <div className="phase-container fade-in">
-                  <div className="completion-content">
-                    <div className="success-icon">
-                      <CheckCircle size={64} />
-                    </div>
-                    <h2>🎉 Project Complete!</h2>
-                    <p>Congratulations! You've built a working Todo List App</p>
-
+                {performanceData && (
+                  <>
                     <div className="completion-stats">
                       <div className="stat">
                         <span className="stat-label">Time Spent</span>
-                        <span className="stat-value">5.5 hours</span>
+                        <span className="stat-value">{performanceData.timeSpent || '5.5'}h</span>
                       </div>
                       <div className="stat">
-                        <span className="stat-label">Your Score</span>
-                        <span className="stat-value">85/100</span>
+                        <span className="stat-label">Score</span>
+                        <span className="stat-value">{performanceData.overallScore}/100</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-label">Architecture</span>
+                        <span className="stat-value">{performanceData.scores?.architecture}/100</span>
                       </div>
                     </div>
 
-                    <div className="completion-actions">
-                      <Button
-                        variant="primary"
-                        size="large"
-                        icon={<Download size={20} />}
-                      >
-                        Download Project Code
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="large"
-                        icon={<ArrowRight size={20} />}
-                        onClick={() => navigate('/projects')}
-                      >
-                        Next Project
-                      </Button>
+                    <div className="what-you-learned">
+                      <h3>💪 Your Strengths</h3>
+                      <ul>
+                        {performanceData.strengths?.map((s, i) => <li key={i}>✓ {s}</li>)}
+                      </ul>
                     </div>
-                  </div>
+
+                    {performanceData.gaps?.length > 0 && (
+                      <div className="what-you-learned">
+                        <h3>📈 Areas You Improved</h3>
+                        <ul>
+                          {performanceData.gaps.map((g, i) => <li key={i}>↗ {g}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="completion-actions">
+                  <Button variant="primary" size="large" icon={<Download size={20} />} onClick={handleDownloadProject}>
+                    Download Project Code
+                  </Button>
+                  <Button variant="outline" size="large" icon={<ArrowRight size={20} />} onClick={() => navigate('/projects')}>
+                    Continue to Project 2
+                  </Button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
-
-  function handleCodeSubmit(code) {
-    console.log('Code submitted:', code);
-    // Move to debugging phase
-    handlePhaseComplete('debugging');
-  }
 };
 
 export default ProjectLearningPage;

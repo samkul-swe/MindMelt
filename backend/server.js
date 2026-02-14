@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resume.js';
 import projectRoutes from './routes/projects.js';
+import testRoutes from './routes/test.js';
 import './config/firebase.js'; // Initialize Firebase
 
 dotenv.config();
@@ -51,6 +52,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/test', testRoutes);
 
 // Future routes (Phase 4)
 // app.use('/api/leetcode', leetcodeRoutes);
@@ -121,7 +123,11 @@ app.listen(PORT, () => {
   console.log('   - GET  /api/projects/current/active');
   console.log('   - POST /api/projects/socratic/message');
   console.log('   - POST /api/projects/code/submit');
-  console.log('   - POST /api/projects/complete');
+  console.log('');
+  console.log('   SKILL TEST:');
+  console.log('   - POST /api/test/start');
+  console.log('   - POST /api/test/submit');
+  console.log('   - GET  /api/test/results/:testId');
   console.log('');
   console.log('🎯 Phase 1: Core Infrastructure ✓');
   console.log('🎯 Phase 2: Resume Analysis ✓');

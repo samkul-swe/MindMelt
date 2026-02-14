@@ -206,23 +206,136 @@ class ProjectService {
   }
 
   /**
-   * Complete a project
+   * Complete a project with performance assessment
    */
   async completeProject(userProjectId, performanceData) {
     try {
+      // Get the completed project data
+      const userProject = await getDoc('user_projects', userProjectId);
+      
+      // Calculate time spent
+      const startTime = userProject.startedAt;
+      const endTime = new Date();
+      const timeSpentHours = (endTime - startTime.toDate()) / (1000 * 60 * 60);
+
       await updateDoc('user_projects', userProjectId, {
         status: 'completed',
         completedAt: new Date(),
-        performance: performanceData
+        performance: performanceData,
+        timeSpent: timeSpentHours.toFixed(2)
       });
 
       console.log('✅ Project completed');
       
-      return { success: true };
+      return { 
+        success: true,
+        timeSpent: timeSpentHours.toFixed(2)
+      };
     } catch (error) {
       console.error('Error completing project:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate downloadable project package as ZIP
+   */
+  async generateProjectDownload(userProjectId) {
+    try {
+      const userProject = await getDoc('user_projects', userProjectId);
+      const project = await this.getProject(userProject.projectId);
+
+      // Create ZIP file
+      const zip = new JSZip();
+
+      // Add main code file
+      zip.file('App.js', userProject.userCode || '// No code submitted yet');
+
+      // Add architecture document
+      zip.file('ARCHITECTURE.md', `# Architecture Design\n\n${userProject.architectureDesign || 'No architecture design submitted'}`);
+
+      // Add README
+      const readme = this.generateReadme(project, userProject);
+      zip.file('README.md', readme);
+
+      // Add package.json for React Native project
+      const packageJson = {
+        name: project.projectName.toLowerCase().replace(/\s+/g, '-'),
+        version: '1.0.0',
+        description: project.description,
+        main: 'App.js',
+        scripts: {
+          start: 'expo start',
+          android: 'expo start --android',
+          ios: 'expo start --ios'
+        },
+        dependencies: {
+          'react': '^18.2.0',
+          'react-native': '^0.72.0',
+          '@react-native-async-storage/async-storage': '^1.19.0'
+        }
+      };
+      zip.file('package.json', JSON.stringify(packageJson, null, 2));
+
+      // Generate ZIP as buffer
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+      // Create filename: projectId_role
+      const role = userProject.project?.domain || 'project';
+      const projectNumber = project.order || '1';
+      const roleSafe = role.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const filename = `${projectNumber}_${roleSafe}.zip`;
+
+      return {
+        buffer: zipBuffer,
+        filename: filename,
+        projectName: project.projectName
+      };
+    } catch (error) {
+      console.error('Error generating download:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate README for project
+   */
+  generateReadme(project, userProject) {
+    return `# ${project.projectName}
+
+**Difficulty:** ${project.difficulty}  
+**Completed:** ${new Date(userProject.completedAt?.toDate()).toLocaleDateString()}  
+**Time Spent:** ${userProject.timeSpent} hours  
+**Score:** ${userProject.performance?.overallScore || 'N/A'}/100
+
+## Description
+
+${project.description}
+
+## Requirements
+
+${project.requirements.map(req => `- ${req}`).join('\n')}
+
+## What I Learned
+
+${project.learningObjectives.map(obj => `- ${obj}`).join('\n')}
+
+## Architecture
+
+${userProject.architectureDesign || 'Component-based architecture with React Native'}
+
+## Performance Analysis
+
+**Strengths:**
+${userProject.performance?.strengths?.map(s => `- ${s}`).join('\n') || '- Strong implementation'}
+
+**Areas Improved:**
+${userProject.performance?.gaps?.map(g => `- ${g}`).join('\n') || '- Continuous learning'}
+
+---
+
+*Built with MindMelt - AI-Powered Learning Platform*
+`;
   }
 
   /**

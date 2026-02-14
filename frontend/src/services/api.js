@@ -217,8 +217,34 @@ class APIService {
     });
   }
 
+  async downloadProject(userProjectId) {
+    return await this.request(`/api/projects/download/${userProjectId}`);
+  }
+
   async getCompletedProjects() {
     return await this.request('/api/projects/user/completed');
+  }
+
+  // ============================================
+  // SKILL TEST ENDPOINTS
+  // ============================================
+
+  async startTest(targetRole) {
+    return await this.request('/api/test/start', {
+      method: 'POST',
+      body: { targetRole }
+    });
+  }
+
+  async submitTest(testId, answers) {
+    return await this.request('/api/test/submit', {
+      method: 'POST',
+      body: { testId, answers }
+    });
+  }
+
+  async getTestResults(testId) {
+    return await this.request(`/api/test/results/${testId}`);
   }
 
   // LeetCode endpoints

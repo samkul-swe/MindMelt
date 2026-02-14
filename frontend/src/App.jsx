@@ -8,6 +8,8 @@ import DashboardPage from './pages/DashboardPage';
 import ResumeUploadPage from './pages/ResumeUploadPage';
 import RoleFitPage from './pages/RoleFitPage';
 import SelectPathPage from './pages/SelectPathPage';
+import SkillTestPage from './pages/SkillTestPage';
+import TestResultsPage from './pages/TestResultsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectLearningPage from './pages/ProjectLearningPage';
 import './styles/global.css';
@@ -101,6 +103,24 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SelectPathPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/skill-test" 
+        element={
+          <ProtectedRoute>
+            <SkillTestPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/test-results" 
+        element={
+          <ProtectedRoute>
+            <TestResultsPage />
           </ProtectedRoute>
         } 
       />

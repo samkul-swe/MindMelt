@@ -1,7 +1,8 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import projectService from '../services/projectService.js';
-import aiService from '../services/aiService.js';
+import aiService from '../services/mockAIService.js'; // Using Mock AI
+import { getDoc } from '../utils/firestore.js';
 
 const router = express.Router();
 
@@ -220,11 +221,13 @@ router.post('/socratic/message', async (req, res) => {
 
 /**
  * POST /api/projects/complete
- * Mark project as complete
+ * Mark project as complete with performance data
  */
 router.post('/complete', async (req, res) => {
   try {
-    const { userProjectId, performanceData } = req.body;
+    const { userProjectId } = req.body;
+
+    console.log('[Projects] Completing project:', userProjectId);
 
     if (!userProjectId) {
       return res.status(400).json({
@@ -233,18 +236,83 @@ router.post('/complete', async (req, res) => {
       });
     }
 
-    await projectService.completeProject(userProjectId, performanceData);
+    // Get user project data
+    console.log('[Projects] Fetching user project...');
+    const userProject = await getDoc('user_projects', userProjectId);
+    
+    if (!userProject) {
+      return res.status(404).json({
+        success: false,
+        message: 'User project not found'
+      });
+    }
+
+    console.log('[Projects] Fetching project details...');
+    const project = await projectService.getProject(userProject.projectId);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    // Get AI performance assessment
+    console.log('[Projects] Getting AI assessment...');
+    const performanceData = await aiService.assessPerformance({
+      projectName: project.projectName,
+      architectureDesign: userProject.architectureDesign,
+      userCode: userProject.userCode,
+      timeSpent: userProject.timeSpent
+    });
+
+    console.log('[Projects] Assessment received:', performanceData);
+
+    // Complete the project
+    console.log('[Projects] Marking project complete...');
+    const result = await projectService.completeProject(userProjectId, performanceData);
 
     res.json({
       success: true,
-      message: 'Project completed successfully'
+      message: 'Project completed successfully',
+      performance: performanceData,
+      timeSpent: result.timeSpent
     });
 
   } catch (error) {
     console.error('[Projects] Complete error:', error);
+    console.error('[Projects] Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Failed to complete project'
+      message: error.message || 'Failed to complete project'
+    });
+  }
+});
+
+/**
+ * GET /api/projects/download/:userProjectId
+ * Download project code package as ZIP
+ */
+router.get('/download/:userProjectId', async (req, res) => {
+  try {
+    const { userProjectId } = req.params;
+
+    console.log('[Projects] Generating ZIP download for:', userProjectId);
+
+    const packageData = await projectService.generateProjectDownload(userProjectId);
+
+    // Send ZIP file
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${packageData.filename}"`);
+    res.send(packageData.buffer);
+
+    console.log('[Projects] ZIP downloaded:', packageData.filename);
+
+  } catch (error) {
+    console.error('[Projects] Download error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate download'
     });
   }
 });
