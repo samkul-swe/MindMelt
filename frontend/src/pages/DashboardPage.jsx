@@ -54,15 +54,18 @@ const DashboardPage = () => {
 
           {/* Learning Options Grid */}
           <div className="options-grid">
-            {/* Resume Validation Card */}
-            <div className="option-card coming-soon">
+            {/* Resume Validation Card - NOW ACTIVE */}
+            <div 
+              className="option-card"
+              onClick={() => navigate('/resume-upload')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="option-icon">
                 <Upload size={32} />
               </div>
               <h3>Resume Skill Validation</h3>
               <p>Upload your resume and validate your claimed skills through Socratic questioning</p>
-              <div className="coming-soon-badge">Phase 2 - Coming Soon</div>
-              <Button variant="outline" size="medium" disabled>
+              <Button variant="primary" size="medium">
                 Upload Resume
               </Button>
             </div>
@@ -94,11 +97,11 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Phase 1 Complete Notice */}
+          {/* Phase Progress Notice */}
           <div className="phase-notice">
-            <h3>✅ Phase 1: Core Infrastructure Complete!</h3>
-            <p>Authentication system is working. Backend and frontend are connected.</p>
-            <p>Next up: <strong>Phase 2 - Resume Analysis & Role Fit</strong></p>
+            <h3>✅ Phase 2: Resume Analysis - Active!</h3>
+            <p>Upload your resume to get started with personalized learning paths.</p>
+            <p>Next: <strong>Phase 3 - Project-Based Learning</strong></p>
           </div>
         </div>
       </div>

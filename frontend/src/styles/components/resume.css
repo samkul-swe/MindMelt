@@ -1,0 +1,283 @@
+/* Resume Upload Page Styles */
+
+.resume-page {
+  min-height: 100vh;
+  background: var(--gradient-light);
+  padding: 3rem 0;
+}
+
+.resume-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.header-icon {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.resume-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.resume-header p {
+  font-size: 1.25rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* Upload Method Toggle */
+.upload-method-toggle {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  color: var(--gray-700);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.toggle-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.toggle-btn.active {
+  background: var(--gradient-primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+/* Resume Form */
+.resume-form {
+  max-width: 700px;
+  margin: 0 auto;
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+/* Dropzone */
+.dropzone {
+  border: 3px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: var(--gray-50);
+}
+
+.dropzone:hover {
+  border-color: var(--primary);
+  background: #FFF5F0;
+}
+
+.dropzone.active {
+  border-color: var(--primary);
+  background: var(--gradient-light);
+  transform: scale(1.02);
+}
+
+.dropzone-placeholder {
+  color: var(--gray-600);
+}
+
+.dropzone-placeholder svg {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.dropzone-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--gray-800);
+}
+
+.dropzone-hint {
+  font-size: 0.95rem;
+  color: var(--gray-500);
+  margin-bottom: 1rem;
+}
+
+.dropzone-limit {
+  font-size: 0.85rem;
+  color: var(--gray-400);
+}
+
+/* File Selected */
+.file-selected {
+  padding: 2rem;
+}
+
+.file-selected svg {
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.file-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 0.5rem;
+}
+
+.file-size {
+  color: var(--gray-500);
+  margin-bottom: 1.5rem;
+}
+
+.change-file {
+  padding: 0.5rem 1rem;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.change-file:hover {
+  background: var(--gray-200);
+}
+
+/* Text Input Area */
+.text-input-area {
+  margin-bottom: 1rem;
+}
+
+.resume-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  transition: all var(--transition-fast);
+}
+
+.resume-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.char-count {
+  text-align: right;
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin-top: 0.5rem;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  margin-top: 1.5rem;
+}
+
+/* Error Message */
+.error-message {
+  padding: 1rem;
+  background: var(--error-light);
+  border: 1px solid var(--error);
+  border-radius: var(--radius-md);
+  color: var(--error);
+  margin-bottom: 1rem;
+}
+
+/* Info Section */
+.info-section {
+  max-width: 700px;
+  margin: 3rem auto 0;
+  text-align: center;
+}
+
+.info-section h3 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  color: var(--gray-800);
+}
+
+.info-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.info-step {
+  text-align: center;
+}
+
+.step-number {
+  width: 48px;
+  height: 48px;
+  background: var(--gradient-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 auto 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.step-content h4 {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+  color: var(--gray-800);
+}
+
+.step-content p {
+  font-size: 0.95rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .resume-page {
+    padding: 2rem 0;
+  }
+
+  .resume-header h1 {
+    font-size: 2rem;
+  }
+
+  .upload-method-toggle {
+    flex-direction: column;
+  }
+
+  .toggle-btn {
+    width: 100%;
+  }
+
+  .info-steps {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .dropzone {
+    padding: 2rem 1rem;
+  }
+}

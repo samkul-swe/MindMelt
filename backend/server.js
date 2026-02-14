@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
+import resumeRoutes from './routes/resume.js';
 import './config/firebase.js'; // Initialize Firebase
 
 dotenv.config();
@@ -47,9 +48,9 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/resume', resumeRoutes);
 
-// Future routes (Phase 2+)
-// app.use('/api/resume', resumeRoutes);
+// Future routes (Phase 3+)
 // app.use('/api/projects', projectRoutes);
 // app.use('/api/leetcode', leetcodeRoutes);
 // app.use('/api/socratic', socraticRoutes);
@@ -107,9 +108,14 @@ app.listen(PORT, () => {
   console.log('   - POST /api/auth/login');
   console.log('   - GET  /api/auth/me');
   console.log('   - POST /api/auth/validate-token');
+  console.log('   - POST /api/resume/upload');
+  console.log('   - POST /api/resume/analyze-roles');
+  console.log('   - POST /api/resume/select-role');
+  console.log('   - GET  /api/resume/status');
   console.log('');
   console.log('🎯 Phase 1: Core Infrastructure ✓');
-  console.log('🔜 Phase 2: Resume Analysis (Coming Soon)');
+  console.log('🎯 Phase 2: Resume Analysis ✓');
+  console.log('🔜 Phase 3: Project Learning (Coming Soon)');
   console.log('');
   console.log('═══════════════════════════════════════');
   console.log('');

@@ -1,83 +1,171 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 /**
- * AI Service for Socratic conversations and analysis
- * Uses Anthropic Claude API
+ * AI Service - Improved architecture with separate calls
  */
 
 class AIService {
   constructor() {
-    this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
+    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this.model = this.client.getGenerativeModel({ 
+      model: process.env.AI_MODEL || 'gemini-1.5-pro'
     });
-    this.model = process.env.AI_MODEL || 'claude-3-5-sonnet-20241022';
   }
 
-  /**
-   * Make a call to Claude AI
-   * @param {string} prompt - The prompt to send
-   * @param {object} options - Additional options
-   * @returns {Promise<string>} AI response
-   */
   async call(prompt, options = {}) {
     try {
-      console.log('🤖 Calling AI API...');
+      console.log('🤖 Calling Gemini API...');
       
-      const message = await this.client.messages.create({
-        model: options.model || this.model,
-        max_tokens: options.maxTokens || 1024,
-        temperature: options.temperature || 0.7,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: options.temperature || 0.7,
+          maxOutputTokens: options.maxTokens || 4096,
+          topP: 0.95,
+          topK: 40
+        }
       });
 
-      const response = message.content[0].text;
-      console.log('✅ AI response received');
+      const response = result.response.text();
+      console.log('✅ Gemini response received');
+      console.log('📏 Response length:', response.length, 'characters');
       
       return response;
     } catch (error) {
-      console.error('❌ AI API error:', error);
+      console.error('❌ Gemini API error:', error);
       throw new Error(`AI service failed: ${error.message}`);
     }
   }
 
-  /**
-   * Call AI and parse JSON response
-   * @param {string} prompt - The prompt (should request JSON output)
-   * @returns {Promise<object>} Parsed JSON object
-   */
   async callForJSON(prompt, options = {}) {
+    let response;
     try {
-      const response = await this.call(prompt, options);
+      response = await this.call(prompt, options);
       
-      // Clean response - remove markdown code blocks if present
-      const cleaned = response
+      console.log('📝 Raw AI response (first 200 chars):', response.substring(0, 200));
+      
+      let cleaned = response
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
       
-      return JSON.parse(cleaned);
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleaned = jsonMatch[0];
+      }
+      
+      console.log('📏 Full cleaned length:', cleaned.length);
+      
+      const parsed = JSON.parse(cleaned);
+      console.log('✅ Successfully parsed JSON');
+      
+      return parsed;
     } catch (error) {
       if (error instanceof SyntaxError) {
-        console.error('Failed to parse AI JSON response:', error);
+        console.error('❌ Failed to parse AI JSON response');
+        console.error('📄 Full raw response:', response);
+        console.error('🔍 Error details:', error.message);
         throw new Error('AI returned invalid JSON format');
       }
       throw error;
     }
   }
 
+  // ============================================
+  // RESUME ANALYSIS
+  // ============================================
+
+  async analyzeResume(resumeText) {
+    const prompt = `Analyze this developer's resume and extract key information.
+
+Resume:
+${resumeText}
+
+Return ONLY valid JSON in this exact format:
+{
+  "skills": ["React", "Node.js", "Python"],
+  "experienceYears": 3,
+  "experienceLevel": "Junior" | "Mid-level" | "Senior",
+  "projects": ["Project 1", "Project 2"],
+  "education": "BS Computer Science",
+  "specializations": ["Full-Stack", "Backend"]
+}
+
+Be accurate. Only list skills explicitly mentioned.`;
+
+    return await this.callForJSON(prompt);
+  }
+
+  // ============================================
+  // ROLE FIT ANALYSIS - IMPROVED ARCHITECTURE
+  // ============================================
+
   /**
-   * Generate Socratic question based on context
-   * @param {object} context - Learning context
-   * @returns {Promise<string>} Socratic question
+   * Quick role overview - just match percentages
+   * This is FAST and uses minimal tokens
    */
+  async getRoleOverview(profile) {
+    const prompt = `Quick analysis: What % match is this developer for each role?
+
+Skills: ${JSON.stringify(profile.skills)}
+Experience: ${profile.experienceYears} years (${profile.experienceLevel})
+
+Return ONLY this JSON:
+{
+  "Full-Stack Engineer": 85,
+  "Backend Engineer": 78,
+  "Frontend Engineer": 72,
+  "Mobile Engineer": 45
+}
+
+Just numbers 0-100 for each role. No explanations.`;
+
+    return await this.callForJSON(prompt, { maxTokens: 256 });
+  }
+
+  /**
+   * Detailed analysis for ONE specific role
+   * Called when user clicks on a role card
+   */
+  async analyzeSpecificRole(profile, roleName) {
+    const prompt = `Detailed analysis for ${roleName} role.
+
+Developer Profile:
+- Skills: ${JSON.stringify(profile.skills)}
+- Experience: ${profile.experienceYears} years (${profile.experienceLevel})
+- Projects: ${JSON.stringify(profile.projects)}
+
+Analyze their fit for ${roleName}. Return ONLY this JSON:
+{
+  "match": 85,
+  "strengths": [
+    "Specific skill or experience that's relevant",
+    "Another strength",
+    "Maximum 5 strengths"
+  ],
+  "gaps": [
+    "Missing skill or knowledge area",
+    "Another gap",
+    "Maximum 5 gaps"
+  ],
+  "ready": true,
+  "reasoning": "One sentence explaining overall fit",
+  "recommendations": [
+    "Specific suggestion for improvement",
+    "Another actionable recommendation"
+  ]
+}`;
+
+    return await this.callForJSON(prompt, { maxTokens: 1024 });
+  }
+
+  // ============================================
+  // SOCRATIC LEARNING
+  // ============================================
+
   async generateSocraticQuestion(context) {
     const prompt = `You are a Socratic tutor helping a student learn ${context.topic}.
 
@@ -90,83 +178,12 @@ Your role:
 - Ask ONE question that guides discovery
 - Don't give answers, guide to answers
 - Build on their previous response
-- If stuck, give small hint
-- If wrong, ask why they think that
 
 Generate the next Socratic question (under 50 words):`;
 
     return await this.call(prompt, { temperature: 0.8 });
   }
 
-  /**
-   * Analyze resume and extract skills
-   * @param {string} resumeText - Resume content
-   * @returns {Promise<object>} Extracted data
-   */
-  async analyzeResume(resumeText) {
-    const prompt = `You are analyzing a developer's resume to extract skills and experience.
-
-Resume text:
-${resumeText}
-
-Extract and return JSON only:
-{
-  "skills": ["React", "Node.js", ...],
-  "experienceYears": 3,
-  "experienceLevel": "Junior" | "Mid-level" | "Senior",
-  "projects": ["E-commerce platform", ...],
-  "education": "BS Computer Science",
-  "specializations": ["Full-Stack", "Backend"]
-}
-
-Be accurate. Only list skills explicitly mentioned.
-Return ONLY valid JSON, no other text.`;
-
-    return await this.callForJSON(prompt);
-  }
-
-  /**
-   * Analyze role fit based on skills
-   * @param {object} profile - User profile
-   * @returns {Promise<object>} Role fit analysis
-   */
-  async analyzeRoleFit(profile) {
-    const prompt = `Given this developer profile:
-Skills: ${JSON.stringify(profile.skills)}
-Experience: ${profile.experienceYears} years as ${profile.experienceLevel}
-Projects: ${JSON.stringify(profile.projects)}
-
-Analyze fit for these roles:
-1. Full-Stack Engineer
-2. Mobile Engineer 
-3. Backend Engineer
-4. Frontend Engineer
-
-For each role, return JSON:
-{
-  "Full-Stack Engineer": {
-    "match": 0-100,
-    "strengths": ["Skills that apply"],
-    "gaps": ["Skills they're missing"],
-    "ready": true/false,
-    "reasoning": "Brief explanation"
-  },
-  ...
-}
-
-Base match on:
-- Relevant skills (60% weight)
-- Experience level (20% weight)
-- Project types (20% weight)
-
-Return ONLY valid JSON, no other text.`;
-
-    return await this.callForJSON(prompt);
-  }
-
-  /**
-   * Test if AI service is working
-   */
   async testConnection() {
     try {
       const response = await this.call('Reply with exactly: "AI service is working"', {
@@ -174,7 +191,7 @@ Return ONLY valid JSON, no other text.`;
       });
       return {
         success: true,
-        message: 'AI service connected successfully',
+        message: 'Gemini AI service connected successfully',
         response: response
       };
     } catch (error) {

@@ -5,6 +5,9 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
+import ResumeUploadPage from './pages/ResumeUploadPage';
+import RoleFitPage from './pages/RoleFitPage';
+import SelectPathPage from './pages/SelectPathPage';
 import './styles/global.css';
 
 // Protected Route Component
@@ -69,6 +72,33 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/resume-upload" 
+        element={
+          <ProtectedRoute>
+            <ResumeUploadPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/role-fit" 
+        element={
+          <ProtectedRoute>
+            <RoleFitPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/select-path" 
+        element={
+          <ProtectedRoute>
+            <SelectPathPage />
           </ProtectedRoute>
         } 
       />

@@ -51,6 +51,8 @@ class APIService {
       const data = await response.json();
 
       if (!response.ok) {
+        // Log full error details for debugging
+        console.error('API Error Response:', data);
         throw new Error(data.message || 'Request failed');
       }
 
@@ -106,19 +108,66 @@ class APIService {
   }
 
   // ============================================
-  // FUTURE ENDPOINTS (Phase 2+)
+  // RESUME ENDPOINTS (Phase 2) - IMPROVED
   // ============================================
 
-  // Resume endpoints
-  async uploadResume(resumeData) {
+  async uploadResumePDF(formData) {
+    const token = this.getToken();
+    
+    try {
+      const response = await fetch(`${this.baseURL}/api/resume/upload`, {
+        method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('API Error Response:', data);
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
+  async uploadResumeText(resumeText) {
     return await this.request('/api/resume/upload', {
       method: 'POST',
-      body: resumeData
+      body: { resumeText }
     });
   }
 
-  async getResumeFit() {
-    return await this.request('/api/resume/fit');
+  // IMPROVED: Get quick overview (just percentages)
+  async getRoleOverview() {
+    return await this.request('/api/resume/role-overview', {
+      method: 'POST'
+    });
+  }
+
+  // IMPROVED: Get detailed analysis for ONE role
+  async getRoleDetails(roleName) {
+    return await this.request('/api/resume/role-details', {
+      method: 'POST',
+      body: { roleName }
+    });
+  }
+
+  async selectRole(pathData) {
+    return await this.request('/api/resume/select-role', {
+      method: 'POST',
+      body: pathData
+    });
+  }
+
+  async getResumeStatus() {
+    return await this.request('/api/resume/status');
   }
 
   // Project endpoints
