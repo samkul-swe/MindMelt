@@ -8,6 +8,8 @@ import DashboardPage from './pages/DashboardPage';
 import ResumeUploadPage from './pages/ResumeUploadPage';
 import RoleFitPage from './pages/RoleFitPage';
 import SelectPathPage from './pages/SelectPathPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectLearningPage from './pages/ProjectLearningPage';
 import './styles/global.css';
 
 // Protected Route Component
@@ -99,6 +101,24 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SelectPathPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/projects" 
+        element={
+          <ProtectedRoute>
+            <ProjectsPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/project-learning" 
+        element={
+          <ProtectedRoute>
+            <ProjectLearningPage />
           </ProtectedRoute>
         } 
       />

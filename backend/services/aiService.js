@@ -163,7 +163,7 @@ Analyze their fit for ${roleName}. Return ONLY this JSON:
   }
 
   // ============================================
-  // SOCRATIC LEARNING
+  // SOCRATIC LEARNING (Phase 3)
   // ============================================
 
   async generateSocraticQuestion(context) {
@@ -171,17 +171,46 @@ Analyze their fit for ${roleName}. Return ONLY this JSON:
 
 Context:
 - Student's background: ${JSON.stringify(context.background)}
-- Current conversation: ${JSON.stringify(context.conversation)}
+- Recent conversation: ${JSON.stringify(context.conversation?.slice(-3) || [])}
 - Learning objective: ${context.objective}
 
 Your role:
 - Ask ONE question that guides discovery
 - Don't give answers, guide to answers
 - Build on their previous response
+- If stuck, give small hint
+- If wrong, ask why they think that
 
 Generate the next Socratic question (under 50 words):`;
 
-    return await this.call(prompt, { temperature: 0.8 });
+    return await this.call(prompt, { temperature: 0.8, maxTokens: 256 });
+  }
+
+  async reviewCode(context) {
+    const prompt = `Review this code for a ${context.requirements[0]} project.
+
+Code:
+${context.code}
+
+Requirements:
+${context.requirements.join('\n')}
+
+Find logical errors or best practice violations. Return JSON:
+{
+  "issues": [
+    {
+      "type": "logical" | "performance" | "bestPractice",
+      "severity": "critical" | "moderate",
+      "scenarioToReveal": "Try: Add 3 items, delete first",
+      "socraticQuestion": "What happens when..."
+    }
+  ],
+  "overallQuality": "excellent" | "good" | "needs work"
+}
+
+Focus on teachable moments. Return ONLY JSON.`;
+
+    return await this.callForJSON(prompt, { maxTokens: 1024 });
   }
 
   async testConnection() {

@@ -170,16 +170,55 @@ class APIService {
     return await this.request('/api/resume/status');
   }
 
-  // Project endpoints
+  // ============================================
+  // PROJECT ENDPOINTS (Phase 3)
+  // ============================================
+
   async getProjects(domain) {
-    return await this.request(`/api/projects/${domain}`);
+    return await this.request(`/api/projects/${encodeURIComponent(domain)}`);
   }
 
   async startProject(projectId) {
-    return await this.request(`/api/projects/start`, {
+    return await this.request('/api/projects/start', {
       method: 'POST',
       body: { projectId }
     });
+  }
+
+  async getCurrentProject() {
+    return await this.request('/api/projects/current/active');
+  }
+
+  async submitDesign(userProjectId, designText) {
+    return await this.request('/api/projects/design/submit', {
+      method: 'POST',
+      body: { userProjectId, designText }
+    });
+  }
+
+  async submitCode(userProjectId, code, language = 'javascript') {
+    return await this.request('/api/projects/code/submit', {
+      method: 'POST',
+      body: { userProjectId, code, language }
+    });
+  }
+
+  async sendSocraticMessage(userProjectId, message) {
+    return await this.request('/api/projects/socratic/message', {
+      method: 'POST',
+      body: { userProjectId, message }
+    });
+  }
+
+  async completeProject(userProjectId, performanceData) {
+    return await this.request('/api/projects/complete', {
+      method: 'POST',
+      body: { userProjectId, performanceData }
+    });
+  }
+
+  async getCompletedProjects() {
+    return await this.request('/api/projects/user/completed');
   }
 
   // LeetCode endpoints

@@ -70,15 +70,18 @@ const DashboardPage = () => {
               </Button>
             </div>
 
-            {/* Project Learning Card */}
-            <div className="option-card coming-soon">
+            {/* Project Learning Card - NOW ACTIVE */}
+            <div 
+              className="option-card"
+              onClick={() => navigate('/projects')}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="option-icon">
                 <Code size={32} />
               </div>
               <h3>Project-Based Learning</h3>
               <p>Build 5 real-world projects with AI guidance and add them to your portfolio</p>
-              <div className="coming-soon-badge">Phase 3 - Coming Soon</div>
-              <Button variant="outline" size="medium" disabled>
+              <Button variant="primary" size="medium">
                 Start Projects
               </Button>
             </div>

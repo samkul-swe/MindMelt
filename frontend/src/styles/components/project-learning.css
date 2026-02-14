@@ -1,0 +1,359 @@
+/* Project Learning Page */
+
+.project-learning-page {
+  min-height: 100vh;
+  background: var(--gradient-light);
+}
+
+/* Header */
+.learning-header {
+  background: white;
+  border-bottom: 2px solid var(--gray-200);
+  padding: 2rem 0;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.project-info h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.project-meta {
+  color: var(--gray-600);
+  font-size: 0.95rem;
+}
+
+/* Phase Progress */
+.phase-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phase-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  transition: all var(--transition-normal);
+}
+
+.phase-step.active .step-number {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+  transform: scale(1.1);
+}
+
+.phase-step.completed .step-number {
+  background: var(--success);
+  color: white;
+}
+
+.phase-step span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.phase-step.active span {
+  color: var(--primary);
+}
+
+.phase-step.completed span {
+  color: var(--success);
+}
+
+.phase-line {
+  width: 60px;
+  height: 2px;
+  background: var(--gray-200);
+}
+
+/* Main Content */
+.learning-content {
+  padding: 2rem 0;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2rem;
+}
+
+/* Sidebar */
+.project-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebar-section {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-section h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: var(--gray-900);
+}
+
+.requirements-list,
+.objectives-list {
+  list-style: none;
+  padding: 0;
+}
+
+.requirements-list li,
+.objectives-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.requirements-list li svg {
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+/* Time Tracker */
+.time-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.time-spent {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.time-estimate {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+}
+
+.progress-bar-small {
+  background: var(--gray-100);
+  height: 8px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  transition: width var(--transition-slow);
+}
+
+/* Ice Cream Section */
+.ice-cream-section {
+  background: linear-gradient(135deg, #FFF5F0 0%, #FFE8DC 100%);
+  border: 2px solid var(--primary-light);
+}
+
+.ice-cream-tracker {
+  text-align: center;
+}
+
+.ice-cream-cone {
+  width: 80px;
+  height: 100px;
+  margin: 0 auto 1rem;
+  position: relative;
+}
+
+.scoop {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  margin: 0 auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.scoop.vanilla {
+  background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
+  border: 3px solid #DEB887;
+}
+
+.ice-cream-text {
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+
+/* Workspace */
+.project-workspace {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  min-height: 600px;
+}
+
+.phase-container {
+  animation: fadeIn 0.5s ease;
+}
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--gray-100);
+}
+
+.phase-header svg {
+  color: var(--primary);
+}
+
+.phase-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--gray-900);
+}
+
+.phase-header p {
+  margin: 0;
+  color: var(--gray-600);
+}
+
+/* Completion Content */
+.completion-content {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--gradient-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.completion-content h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--gray-900);
+}
+
+.completion-stats {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+  margin: 2rem 0;
+  padding: 2rem;
+  background: var(--gradient-light);
+  border-radius: var(--radius-lg);
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--gray-600);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.completion-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-sidebar {
+    order: 2;
+  }
+
+  .project-workspace {
+    order: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .phase-progress {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .completion-stats {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .completion-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .completion-actions button {
+    width: 100%;
+  }
+}

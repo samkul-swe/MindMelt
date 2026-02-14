@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resume.js';
+import projectRoutes from './routes/projects.js';
 import './config/firebase.js'; // Initialize Firebase
 
 dotenv.config();
@@ -49,11 +50,10 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/projects', projectRoutes);
 
-// Future routes (Phase 3+)
-// app.use('/api/projects', projectRoutes);
+// Future routes (Phase 4)
 // app.use('/api/leetcode', leetcodeRoutes);
-// app.use('/api/socratic', socraticRoutes);
 
 // ============================================
 // ERROR HANDLING
@@ -104,18 +104,28 @@ app.listen(PORT, () => {
   console.log(`📚 API Base: http://localhost:${PORT}/api`);
   console.log('');
   console.log('✅ Available Routes:');
+  console.log('   AUTH:');
   console.log('   - POST /api/auth/register');
   console.log('   - POST /api/auth/login');
   console.log('   - GET  /api/auth/me');
-  console.log('   - POST /api/auth/validate-token');
+  console.log('');
+  console.log('   RESUME:');
   console.log('   - POST /api/resume/upload');
-  console.log('   - POST /api/resume/analyze-roles');
+  console.log('   - POST /api/resume/role-overview');
+  console.log('   - POST /api/resume/role-details');
   console.log('   - POST /api/resume/select-role');
-  console.log('   - GET  /api/resume/status');
+  console.log('');
+  console.log('   PROJECTS:');
+  console.log('   - GET  /api/projects/:domain');
+  console.log('   - POST /api/projects/start');
+  console.log('   - GET  /api/projects/current/active');
+  console.log('   - POST /api/projects/socratic/message');
+  console.log('   - POST /api/projects/code/submit');
+  console.log('   - POST /api/projects/complete');
   console.log('');
   console.log('🎯 Phase 1: Core Infrastructure ✓');
   console.log('🎯 Phase 2: Resume Analysis ✓');
-  console.log('🔜 Phase 3: Project Learning (Coming Soon)');
+  console.log('🎯 Phase 3: Project Learning ✓');
   console.log('');
   console.log('═══════════════════════════════════════');
   console.log('');

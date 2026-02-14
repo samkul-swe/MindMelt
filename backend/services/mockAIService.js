@@ -181,9 +181,50 @@ class MockAIService {
     };
   }
 
+  // ============================================
+  // SOCRATIC LEARNING (Phase 3)
+  // ============================================
+
   async generateSocraticQuestion(context) {
     await new Promise(resolve => setTimeout(resolve, 800));
-    return 'What approach would you take to solve this problem?';
+    console.log('🤖 MOCK: Generating Socratic question...');
+    
+    // Return contextual questions based on phase
+    const questions = [
+      "Before writing code, how would you architect this app? What are the main components you'd need?",
+      "Good start! What about user input - how would you handle adding new items?",
+      "Where should you store the data?",
+      "How will the data survive an app restart?",
+      "What data structure would work best here?",
+      "Think about edge cases - what if the list is empty?",
+      "How would you optimize this for 1000+ items?"
+    ];
+    
+    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    return randomQuestion;
+  }
+
+  async reviewCode(context) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('🔍 MOCK: Reviewing code...');
+    
+    return {
+      issues: [
+        {
+          type: 'logical',
+          severity: 'critical',
+          scenarioToReveal: 'Add 3 todos, delete the middle one, then add another',
+          socraticQuestion: 'What ID does the new todo get? What happens to your array?'
+        },
+        {
+          type: 'bestPractice',
+          severity: 'moderate',
+          scenarioToReveal: 'Check React DevTools for state mutation warning',
+          socraticQuestion: 'Look at your deleteTodo function. Are you mutating state directly?'
+        }
+      ],
+      overallQuality: 'good'
+    };
   }
 
   async analyzeResume(resumeText) {
