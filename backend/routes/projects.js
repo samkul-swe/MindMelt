@@ -1,343 +1,217 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
 import projectService from '../services/projectService.js';
-import aiService from '../services/mockAIService.js'; // Using Mock AI
-import { getDoc } from '../utils/firestore.js';
+import conversationService from '../services/conversationService.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(authenticateToken);
-
 /**
- * GET /api/projects/:domain
- * Get all projects for a domain (e.g., "Mobile Engineering")
+ * Get all projects for a domain
  */
-router.get('/:domain', async (req, res) => {
+router.get('/:domain', authenticateToken, async (req, res) => {
   try {
     const { domain } = req.params;
-    
-    console.log(`[Projects] Fetching projects for domain: ${domain}`);
+    console.log('[Projects] Fetching projects for domain:', domain);
     
     const projects = await projectService.getProjectsByDomain(domain);
+    res.json({ projects });
     
-    res.json({
-      success: true,
-      domain,
-      projects,
-      count: projects.length
-    });
-
   } catch (error) {
-    console.error('[Projects] Fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch projects'
-    });
+    console.error('[Projects] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 /**
- * POST /api/projects/start
- * Start a new project
+ * Get specific project
  */
-router.post('/start', async (req, res) => {
+router.get('/project/:projectId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { projectId } = req.body;
-
-    if (!projectId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Project ID is required'
-      });
+    const { projectId } = req.params;
+    const project = await projectService.getProject(projectId);
+    
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
     }
-
-    console.log(`[Projects] User ${userId} starting project ${projectId}`);
-
-    const userProject = await projectService.startProject(userId, projectId);
-
-    res.json({
-      success: true,
-      message: 'Project started successfully',
-      userProject
-    });
-
+    
+    res.json({ project });
+    
   } catch (error) {
-    console.error('[Projects] Start error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to start project'
-    });
+    console.error('[Projects] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 /**
- * GET /api/projects/current
  * Get user's current active project
  */
-router.get('/current/active', async (req, res) => {
+router.get('/current/active', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-
+    const userId = req.user.userId;
     const currentProject = await projectService.getUserCurrentProject(userId);
-
-    if (!currentProject) {
-      return res.json({
-        success: true,
-        hasProject: false,
-        project: null
-      });
-    }
-
-    res.json({
-      success: true,
-      hasProject: true,
-      project: currentProject
-    });
-
-  } catch (error) {
-    console.error('[Projects] Get current error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch current project'
-    });
-  }
-});
-
-/**
- * POST /api/projects/design/submit
- * Submit architecture design
- */
-router.post('/design/submit', async (req, res) => {
-  try {
-    const { userProjectId, designText } = req.body;
-
-    if (!userProjectId || !designText) {
-      return res.status(400).json({
-        success: false,
-        message: 'User project ID and design text are required'
-      });
-    }
-
-    await projectService.submitDesign(userProjectId, designText);
-
-    res.json({
-      success: true,
-      message: 'Design submitted successfully',
-      nextPhase: 'implementation'
-    });
-
-  } catch (error) {
-    console.error('[Projects] Design submit error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit design'
-    });
-  }
-});
-
-/**
- * POST /api/projects/code/submit
- * Submit code implementation
- */
-router.post('/code/submit', async (req, res) => {
-  try {
-    const { userProjectId, code, language } = req.body;
-
-    if (!userProjectId || !code) {
-      return res.status(400).json({
-        success: false,
-        message: 'User project ID and code are required'
-      });
-    }
-
-    await projectService.submitCode(userProjectId, code, language);
-
-    res.json({
-      success: true,
-      message: 'Code submitted successfully',
-      nextPhase: 'review'
-    });
-
-  } catch (error) {
-    console.error('[Projects] Code submit error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit code'
-    });
-  }
-});
-
-/**
- * POST /api/projects/socratic/message
- * Send message in Socratic conversation
- */
-router.post('/socratic/message', async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { userProjectId, message } = req.body;
-
-    if (!userProjectId || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'User project ID and message are required'
-      });
-    }
-
-    // Save user message
-    await projectService.addSocraticMessage(userProjectId, 'user', message);
-
-    // Get conversation history
-    const conversation = await projectService.getSocraticConversation(userProjectId);
-
-    // Get user project and project details
-    const userProject = await getDoc('user_projects', userProjectId);
-    const project = await projectService.getProject(userProject.projectId);
-
-    // Generate AI response
-    const aiResponse = await aiService.generateSocraticQuestion({
-      topic: project.projectName,
-      background: { phase: userProject.phase },
-      conversation: conversation.slice(-5), // Last 5 messages for context
-      objective: project.learningObjectives[0]
-    });
-
-    // Save AI message
-    await projectService.addSocraticMessage(userProjectId, 'assistant', aiResponse);
-
-    res.json({
-      success: true,
-      message: aiResponse
-    });
-
-  } catch (error) {
-    console.error('[Projects] Socratic message error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate response'
-    });
-  }
-});
-
-/**
- * POST /api/projects/complete
- * Mark project as complete with performance data
- */
-router.post('/complete', async (req, res) => {
-  try {
-    const { userProjectId } = req.body;
-
-    console.log('[Projects] Completing project:', userProjectId);
-
-    if (!userProjectId) {
-      return res.status(400).json({
-        success: false,
-        message: 'User project ID is required'
-      });
-    }
-
-    // Get user project data
-    console.log('[Projects] Fetching user project...');
-    const userProject = await getDoc('user_projects', userProjectId);
     
-    if (!userProject) {
-      return res.status(404).json({
-        success: false,
-        message: 'User project not found'
-      });
-    }
-
-    console.log('[Projects] Fetching project details...');
-    const project = await projectService.getProject(userProject.projectId);
-
-    if (!project) {
-      return res.status(404).json({
-        success: false,
-        message: 'Project not found'
-      });
-    }
-
-    // Get AI performance assessment
-    console.log('[Projects] Getting AI assessment...');
-    const performanceData = await aiService.assessPerformance({
-      projectName: project.projectName,
-      architectureDesign: userProject.architectureDesign,
-      userCode: userProject.userCode,
-      timeSpent: userProject.timeSpent
-    });
-
-    console.log('[Projects] Assessment received:', performanceData);
-
-    // Complete the project
-    console.log('[Projects] Marking project complete...');
-    const result = await projectService.completeProject(userProjectId, performanceData);
-
-    res.json({
-      success: true,
-      message: 'Project completed successfully',
-      performance: performanceData,
-      timeSpent: result.timeSpent
-    });
-
+    res.json({ currentProject });
+    
   } catch (error) {
-    console.error('[Projects] Complete error:', error);
-    console.error('[Projects] Error stack:', error.stack);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to complete project'
-    });
+    console.error('[Projects] Error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 /**
- * GET /api/projects/download/:userProjectId
- * Download project code package as ZIP
- */
-router.get('/download/:userProjectId', async (req, res) => {
-  try {
-    const { userProjectId } = req.params;
-
-    console.log('[Projects] Generating ZIP download for:', userProjectId);
-
-    const packageData = await projectService.generateProjectDownload(userProjectId);
-
-    // Send ZIP file
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${packageData.filename}"`);
-    res.send(packageData.buffer);
-
-    console.log('[Projects] ZIP downloaded:', packageData.filename);
-
-  } catch (error) {
-    console.error('[Projects] Download error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to generate download'
-    });
-  }
-});
-
-/**
- * GET /api/projects/user/completed
  * Get user's completed projects
  */
-router.get('/user/completed', async (req, res) => {
+router.get('/user/completed', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
+    const completedProjects = await projectService.getUserCompletedProjects(userId);
+    
+    res.json({ completedProjects });
+    
+  } catch (error) {
+    console.error('[Projects] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const completed = await projectService.getUserCompletedProjects(userId);
+/**
+ * Start a project
+ */
+router.post('/start', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { projectId } = req.body;
+    
+    console.log(`[Projects] User ${userId} starting project ${projectId}`);
+    
+    const result = await projectService.startProject(userId, projectId);
+    
+    res.json({ 
+      success: true, 
+      userProject: result 
+    });
+    
+  } catch (error) {
+    console.error('[Projects] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
+/**
+ * NEW: Send message in Socratic conversation
+ */
+router.post('/socratic/message', authenticateToken, async (req, res) => {
+  try {
+    const { userProjectId, message } = req.body;
+    
+    console.log(`[Projects] Socratic message from project ${userProjectId}`);
+    
+    const result = await conversationService.handleUserMessage(
+      userProjectId, 
+      message
+    );
+    
     res.json({
       success: true,
-      projects: completed,
-      count: completed.length
+      aiMessage: {
+        role: 'assistant',
+        content: result.message,
+        timestamp: new Date(),
+        action: result.action,
+        file: result.file,
+        template: result.template
+      }
     });
-
+    
   } catch (error) {
-    console.error('[Projects] Get completed error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch completed projects'
+    console.error('[Projects] Error in Socratic message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * NEW: Get conversation history
+ */
+router.get('/conversation/:userProjectId', authenticateToken, async (req, res) => {
+  try {
+    const { userProjectId } = req.params;
+    
+    const messages = await conversationService.getConversation(userProjectId);
+    
+    res.json({ 
+      success: true,
+      messages 
+    });
+    
+  } catch (error) {
+    console.error('[Projects] Error fetching conversation:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * UPDATED: Submit code
+ */
+router.post('/code/submit', authenticateToken, async (req, res) => {
+  try {
+    const { userProjectId, code, file } = req.body;
+    
+    console.log(`[Projects] Code submission for ${file}`);
+    
+    const result = await projectService.submitCode(userProjectId, code, file);
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('[Projects] Error submitting code:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Complete project
+ */
+router.post('/complete', authenticateToken, async (req, res) => {
+  try {
+    const { userProjectId, performanceData } = req.body;
+    
+    console.log('[Projects] Completing project:', userProjectId);
+    
+    const result = await projectService.completeProject(
+      userProjectId, 
+      performanceData
+    );
+    
+    res.json(result);
+    
+  } catch (error) {
+    console.error('[Projects] Error completing project:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Download project as ZIP
+ */
+router.get('/download/:userProjectId', authenticateToken, async (req, res) => {
+  try {
+    const { userProjectId } = req.params;
+    
+    console.log('[Projects] Generating ZIP download for:', userProjectId);
+    
+    const { buffer, filename, projectName } = await projectService.generateProjectDownload(userProjectId);
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    
+    res.send(buffer);
+    
+  } catch (error) {
+    console.error('[Projects] Download error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate download',
+      details: error.message 
     });
   }
 });

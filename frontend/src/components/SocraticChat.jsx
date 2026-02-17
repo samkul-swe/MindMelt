@@ -8,7 +8,8 @@ const SocraticChat = ({
   userProjectId, 
   phase = 'design', 
   onComplete,
-  onComponentMentioned 
+  onComponentMentioned,
+  onOpenEditor // NEW: Add this prop
 }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -20,10 +21,10 @@ const SocraticChat = ({
   const componentKeywords = ['App', 'AddTodo', 'TodoList', 'TodoItem', 'AsyncStorage'];
 
   useEffect(() => {
-    if (!conversationStarted) {
-      startConversation();
+    if (!conversationStarted && userProjectId) {
+      loadConversation(); // NEW: Load existing conversation
     }
-  }, []);
+  }, [userProjectId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -33,11 +34,35 @@ const SocraticChat = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const startConversation = async () => {
+  // NEW: Load conversation history from backend
+  const loadConversation = async () => {
     setConversationStarted(true);
     
+    try {
+      const token = localStorage.getItem('mindmelt_token');
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/projects/conversation/${userProjectId}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.success && data.messages && data.messages.length > 0) {
+        setMessages(data.messages);
+      } else {
+        // Start fresh conversation
+        startConversation();
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      startConversation(); // Fallback to starting fresh
+    }
+  };
+
+  const startConversation = () => {
     if (phase === 'debugging') {
-      // For debugging phase, start by analyzing the code
       const debugIntro = {
         role: 'assistant',
         content: "Great work on implementing the app! Let's test it together to make sure everything works correctly. I'll walk you through some scenarios to check your code.",
@@ -51,16 +76,8 @@ const SocraticChat = ({
       };
 
       setMessages([debugIntro, firstBugScenario]);
-    } else {
-      // Design phase starter
-      const starterMessage = {
-        role: 'assistant',
-        content: "Let's design the Todo List App together! Before writing any code, what are the main components you'd need? Think about user input, displaying todos, and individual todo items.",
-        timestamp: new Date()
-      };
-
-      setMessages([starterMessage]);
     }
+    // Design phase will be started by backend automatically
   };
 
   const detectComponents = (text) => {
@@ -98,17 +115,40 @@ const SocraticChat = ({
     setLoading(true);
 
     try {
-      // Call API to get AI response
-      const result = await api.sendSocraticMessage(userProjectId, inputMessage.trim());
+      // NEW: Use the updated backend endpoint
+      const token = localStorage.getItem('mindmelt_token');
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/projects/socratic/message`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            userProjectId: userProjectId,
+            message: inputMessage.trim()
+          })
+        }
+      );
 
-      if (result.success) {
-        const aiMessage = {
-          role: 'assistant',
-          content: result.message,
-          timestamp: new Date()
-        };
+      const data = await response.json();
 
-        setMessages(prev => [...prev, aiMessage]);
+      if (data.success) {
+        setMessages(prev => [...prev, data.aiMessage]);
+
+        // NEW: Check if AI wants to open editor
+        if (data.aiMessage.action === 'open_editor') {
+          // Trigger parent to open editor
+          if (onOpenEditor) {
+            setTimeout(() => {
+              onOpenEditor({
+                file: data.aiMessage.file,
+                template: data.aiMessage.template
+              });
+            }, 1000); // Small delay so user can read message
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to get AI response:', error);
@@ -134,37 +174,56 @@ const SocraticChat = ({
   // Check if enough progress for phase completion
   const canCompletePhase = () => {
     if (phase === 'design') {
-      // Need at least 4 exchanges to complete design
       return messages.length >= 8;
     }
     if (phase === 'debugging') {
-      // Need at least 3 exchanges to complete debugging
       return messages.length >= 6;
     }
     return false;
+  };
+
+  // NEW: Render action button if message has one
+  const renderMessage = (msg, idx) => {
+    return (
+      <div key={idx} className={`message ${msg.role}`}>
+        <div className="message-avatar">
+          {msg.role === 'assistant' ? (
+            <Brain size={24} />
+          ) : (
+            <div className="user-avatar">You</div>
+          )}
+        </div>
+        <div className="message-content">
+          <div className="message-text">{msg.content}</div>
+          
+          {/* NEW: Render action button if present */}
+          {msg.action === 'open_editor' && onOpenEditor && (
+            <Button
+              variant="primary"
+              size="small"
+              style={{ marginTop: '1rem' }}
+              onClick={() => onOpenEditor({
+                file: msg.file,
+                template: msg.template
+              })}
+            >
+              📝 Open Editor
+            </Button>
+          )}
+          
+          <div className="message-time">
+            {new Date(msg.timestamp).toLocaleTimeString()}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="socratic-chat">
       {/* Messages Area */}
       <div className="messages-container">
-        {messages.map((msg, idx) => (
-          <div key={idx} className={`message ${msg.role}`}>
-            <div className="message-avatar">
-              {msg.role === 'assistant' ? (
-                <Brain size={24} />
-              ) : (
-                <div className="user-avatar">You</div>
-              )}
-            </div>
-            <div className="message-content">
-              <div className="message-text">{msg.content}</div>
-              <div className="message-time">
-                {new Date(msg.timestamp).toLocaleTimeString()}
-              </div>
-            </div>
-          </div>
-        ))}
+        {messages.map((msg, idx) => renderMessage(msg, idx))}
         
         {loading && (
           <div className="message assistant">

@@ -98,7 +98,7 @@ const ProjectsPage = () => {
       const result = await api.startProject(projectId);
       if (result.success) {
         navigate('/project-learning', { 
-          state: { userProjectId: result.userProject.id } 
+          state: { userProjectId: result.userProject.id }
         });
       }
     } catch (error) {

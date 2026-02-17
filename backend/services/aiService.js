@@ -1,234 +1,255 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 /**
- * AI Service - Improved architecture with separate calls
+ * AI Service - Mock AI responses for conversation flow
  */
-
 class AIService {
-  constructor() {
-    this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.client.getGenerativeModel({ 
-      model: process.env.AI_MODEL || 'gemini-1.5-pro'
-    });
-  }
-
-  async call(prompt, options = {}) {
-    try {
-      console.log('🤖 Calling Gemini API...');
-      
-      const result = await this.model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 4096,
-          topP: 0.95,
-          topK: 40
-        }
-      });
-
-      const response = result.response.text();
-      console.log('✅ Gemini response received');
-      console.log('📏 Response length:', response.length, 'characters');
-      
-      return response;
-    } catch (error) {
-      console.error('❌ Gemini API error:', error);
-      throw new Error(`AI service failed: ${error.message}`);
-    }
-  }
-
-  async callForJSON(prompt, options = {}) {
-    let response;
-    try {
-      response = await this.call(prompt, options);
-      
-      console.log('📝 Raw AI response (first 200 chars):', response.substring(0, 200));
-      
-      let cleaned = response
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleaned = jsonMatch[0];
-      }
-      
-      console.log('📏 Full cleaned length:', cleaned.length);
-      
-      const parsed = JSON.parse(cleaned);
-      console.log('✅ Successfully parsed JSON');
-      
-      return parsed;
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error('❌ Failed to parse AI JSON response');
-        console.error('📄 Full raw response:', response);
-        console.error('🔍 Error details:', error.message);
-        throw new Error('AI returned invalid JSON format');
-      }
-      throw error;
-    }
-  }
-
-  // ============================================
-  // RESUME ANALYSIS
-  // ============================================
-
-  async analyzeResume(resumeText) {
-    const prompt = `Analyze this developer's resume and extract key information.
-
-Resume:
-${resumeText}
-
-Return ONLY valid JSON in this exact format:
-{
-  "skills": ["React", "Node.js", "Python"],
-  "experienceYears": 3,
-  "experienceLevel": "Junior" | "Mid-level" | "Senior",
-  "projects": ["Project 1", "Project 2"],
-  "education": "BS Computer Science",
-  "specializations": ["Full-Stack", "Backend"]
-}
-
-Be accurate. Only list skills explicitly mentioned.`;
-
-    return await this.callForJSON(prompt);
-  }
-
-  // ============================================
-  // ROLE FIT ANALYSIS - IMPROVED ARCHITECTURE
-  // ============================================
-
+  
   /**
-   * Quick role overview - just match percentages
-   * This is FAST and uses minimal tokens
+   * Generate initial greeting for project
    */
-  async getRoleOverview(profile) {
-    const prompt = `Quick analysis: What % match is this developer for each role?
+  async generateInitialGreeting(projectDetails) {
+    return `Welcome! Let's build a ${projectDetails.projectName} together.
 
-Skills: ${JSON.stringify(profile.skills)}
-Experience: ${profile.experienceYears} years (${profile.experienceLevel})
+Before we start coding, I want to understand your thinking. 
 
-Return ONLY this JSON:
-{
-  "Full-Stack Engineer": 85,
-  "Backend Engineer": 78,
-  "Frontend Engineer": 72,
-  "Mobile Engineer": 45
-}
-
-Just numbers 0-100 for each role. No explanations.`;
-
-    return await this.callForJSON(prompt, { maxTokens: 256 });
+What information should each todo item contain? Think about what you'd need to track for a task.`;
   }
-
+  
   /**
-   * Detailed analysis for ONE specific role
-   * Called when user clicks on a role card
+   * Generate Socratic response
    */
-  async analyzeSpecificRole(profile, roleName) {
-    const prompt = `Detailed analysis for ${roleName} role.
-
-Developer Profile:
-- Skills: ${JSON.stringify(profile.skills)}
-- Experience: ${profile.experienceYears} years (${profile.experienceLevel})
-- Projects: ${JSON.stringify(profile.projects)}
-
-Analyze their fit for ${roleName}. Return ONLY this JSON:
-{
-  "match": 85,
-  "strengths": [
-    "Specific skill or experience that's relevant",
-    "Another strength",
-    "Maximum 5 strengths"
-  ],
-  "gaps": [
-    "Missing skill or knowledge area",
-    "Another gap",
-    "Maximum 5 gaps"
-  ],
-  "ready": true,
-  "reasoning": "One sentence explaining overall fit",
-  "recommendations": [
-    "Specific suggestion for improvement",
-    "Another actionable recommendation"
-  ]
-}`;
-
-    return await this.callForJSON(prompt, { maxTokens: 1024 });
+  async generateSocraticResponse({ concept, userMessage, conversationHistory, phase }) {
+    console.log('🤖 MOCK: Generating Socratic response for', concept);
+    
+    // Mock responses based on concept
+    const responses = {
+      'data_model_fields': this.handleDataModelDiscussion(userMessage, conversationHistory),
+      'data_structures': this.handleDataStructureDiscussion(userMessage),
+      'ui_components': this.handleUIDiscussion(userMessage),
+      'event_handlers': this.handleEventDiscussion(userMessage),
+      'persistence': this.handlePersistenceDiscussion(userMessage)
+    };
+    
+    return responses[concept] || {
+      message: "I see. Tell me more about your thinking.",
+      action: null
+    };
   }
+  
+  /**
+   * Handle data model discussion
+   */
+  handleDataModelDiscussion(userMessage, history) {
+    const msg = userMessage.toLowerCase();
+    
+    // Check if they mentioned fields
+    if (msg.includes('text') || msg.includes('title') || msg.includes('description')) {
+      // They identified text field
+      if (msg.includes('time') || msg.includes('date') || msg.includes('end') || msg.includes('deadline')) {
+        // They also identified timestamp - good!
+        return {
+          message: `Great! You've identified the key fields:
+- Todo text/title
+- End time/deadline
 
-  // ============================================
-  // SOCRATIC LEARNING (Phase 3)
-  // ============================================
+Let's define these in code. I'll open the editor for you.`,
+          action: 'open_editor',
+          file: 'models/Todo.java',
+          template: `import java.util.Date;
 
-  async generateSocraticQuestion(context) {
-    const prompt = `You are a Socratic tutor helping a student learn ${context.topic}.
-
-Context:
-- Student's background: ${JSON.stringify(context.background)}
-- Recent conversation: ${JSON.stringify(context.conversation?.slice(-3) || [])}
-- Learning objective: ${context.objective}
-
-Your role:
-- Ask ONE question that guides discovery
-- Don't give answers, guide to answers
-- Build on their previous response
-- If stuck, give small hint
-- If wrong, ask why they think that
-
-Generate the next Socratic question (under 50 words):`;
-
-    return await this.call(prompt, { temperature: 0.8, maxTokens: 256 });
-  }
-
-  async reviewCode(context) {
-    const prompt = `Review this code for a ${context.requirements[0]} project.
-
-Code:
-${context.code}
-
-Requirements:
-${context.requirements.join('\n')}
-
-Find logical errors or best practice violations. Return JSON:
-{
-  "issues": [
-    {
-      "type": "logical" | "performance" | "bestPractice",
-      "severity": "critical" | "moderate",
-      "scenarioToReveal": "Try: Add 3 items, delete first",
-      "socraticQuestion": "What happens when..."
+public class Todo {
+    // Define your fields here
+    // Hint: What text does the todo show?
+    private String todoText;
+    
+    // Hint: When does the todo end?
+    private int endTime;  // TODO: Is 'int' the right type for a timestamp?
+    
+    // Constructor
+    public Todo(String text, int time) {
+        this.todoText = text;
+        this.endTime = time;
     }
-  ],
-  "overallQuality": "excellent" | "good" | "needs work"
-}
-
-Focus on teachable moments. Return ONLY JSON.`;
-
-    return await this.callForJSON(prompt, { maxTokens: 1024 });
+}`
+        };
+      } else {
+        // They only mentioned text, ask about timestamp
+        return {
+          message: "Good start with the todo text! What else might you need? Think about timing - when should the todo be done?",
+          action: null
+        };
+      }
+    }
+    
+    // They haven't mentioned key fields yet
+    return {
+      message: "Think about what makes a task meaningful. If I tell you 'Buy milk', what else would help you remember and complete it?",
+      action: null
+    };
   }
+  
+  /**
+   * Handle data structure discussion
+   */
+  handleDataStructureDiscussion(userMessage) {
+    const msg = userMessage.toLowerCase();
+    
+    if (msg.includes('array') || msg.includes('list')) {
+      return {
+        message: `Perfect! ArrayList is ideal for storing multiple todos because the list can grow and shrink dynamically.
 
-  async testConnection() {
-    try {
-      const response = await this.call('Reply with exactly: "AI service is working"', {
-        maxTokens: 50
-      });
-      return {
-        success: true,
-        message: 'Gemini AI service connected successfully',
-        response: response
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message
+Let's create a TodoList class to manage them.`,
+        action: 'open_editor',
+        file: 'models/TodoList.java',
+        template: `import java.util.ArrayList;
+
+public class TodoList {
+    // Store all todos here
+    // Hint: Use ArrayList<Todo>
+    
+    // Constructor
+    public TodoList() {
+        // Initialize your list
+    }
+    
+    // Add a new todo
+    public void addTodo(Todo todo) {
+        // YOUR CODE HERE
+    }
+    
+    // Get all todos
+    public ArrayList<Todo> getAllTodos() {
+        // YOUR CODE HERE
+    }
+}`
       };
     }
+    
+    return {
+      message: "Think about data structures you know. When you have multiple items and the number can change, what's a good way to store them?",
+      action: null
+    };
+  }
+  
+  /**
+   * Handle UI component discussion
+   */
+  handleUIDiscussion(userMessage) {
+    return {
+      message: "UI components coming soon in next iteration!",
+      action: null
+    };
+  }
+  
+  /**
+   * Handle event handler discussion
+   */
+  handleEventDiscussion(userMessage) {
+    return {
+      message: "Event handlers coming soon!",
+      action: null
+    };
+  }
+  
+  /**
+   * Handle persistence discussion
+   */
+  handlePersistenceDiscussion(userMessage) {
+    return {
+      message: "Persistence coming soon!",
+      action: null
+    };
+  }
+  
+  /**
+   * Explain issue to user
+   */
+  async explainIssue({ issue, code, concept }) {
+    console.log('🤖 MOCK: Explaining issue:', issue.type);
+    
+    if (issue.type === 'type_mismatch') {
+      return `I see you defined the timestamp as \`int\`, but there's a better way!
+
+In Android, we use \`java.util.Date\` to represent points in time. An integer can only store numbers, but a Date object knows about days, hours, minutes, and can handle time zones.
+
+Let me show you what needs to change. Look for the line with \`int endTime\` and change it to \`Date endTime\`.`;
+    }
+    
+    if (issue.type === 'missing_import') {
+      return `You're using the \`${issue.description.match(/for (\w+) class/)?.[1]}\` class, but Java needs to know where to find it!
+
+Add this line at the top of your file:
+\`\`\`
+${issue.hint}
+\`\`\`
+
+This tells Java to import the class from the standard library.`;
+    }
+    
+    if (issue.type === 'syntax_error') {
+      return `Oops! ${issue.description}. 
+
+In Java, every statement must end with a semicolon (;). This tells Java where one instruction ends and the next begins.
+
+Can you find the line missing a semicolon and add it?`;
+    }
+    
+    return `There's an issue: ${issue.description}. ${issue.hint}`;
+  }
+  
+  /**
+   * Generate next concept introduction
+   */
+  async generateConceptIntro({ concept, previousWork }) {
+    const intros = {
+      'data_structures': `Excellent! You've defined what a Todo looks like.
+
+Now, your app will have many todos. How will you store and manage multiple todos?`,
+      
+      'ui_components': `Great work on the data layer!
+
+Now let's think about the user interface. What screens or components will users interact with?`,
+      
+      'event_handlers': `Your UI is taking shape!
+
+Now, when a user taps a button or types something, what should happen? Let's wire up the interactions.`,
+      
+      'persistence': `Almost done with the basics!
+
+One problem: when the user closes the app, all todos disappear. How can we save them permanently?`
+    };
+    
+    return intros[concept] || "Let's move to the next concept!";
+  }
+  
+  /**
+   * Generate debug phase intro
+   */
+  async generateDebugIntro() {
+    return `🎉 Awesome! You've built all the components.
+
+Now let's test your app and see how it behaves. I'm going to run it with a test scenario:
+
+1. Launch app
+2. Add a todo: "Buy milk"
+3. Add another: "Walk dog"
+4. Mark first todo as complete
+
+Let me see what happens...
+
+[Testing... 2 seconds later]
+
+Uh oh! The app crashed when trying to mark a todo as complete.
+
+Let me show you what went wrong.`;
+  }
+  
+  /**
+   * Call AI (stub for future real AI)
+   */
+  async callAI(prompt, options = {}) {
+    // Future: real AI call
+    // For now: return mock
+    return "Mock AI response";
   }
 }
 

@@ -14,7 +14,8 @@ const ProjectLearningPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [currentPhase, setCurrentPhase] = useState('design');
-  const [submittedCode, setSubmittedCode] = useState('');
+  const [mode, setMode] = useState('chat'); // NEW: 'chat' | 'editor'
+  const [editorState, setEditorState] = useState(null); // NEW: Editor data
   const [performanceData, setPerformanceData] = useState(null);
   const [discoveredComponents, setDiscoveredComponents] = useState([]);
 
@@ -34,18 +35,30 @@ const ProjectLearningPage = () => {
 
   const handlePhaseComplete = (nextPhase) => {
     setCurrentPhase(nextPhase);
+    setMode('chat'); // Reset to chat when phase changes
   };
 
-  const handleCodeSubmit = async (code) => {
-    try {
-      setSubmittedCode(code);
-      await api.submitCode(userProjectId, code, 'javascript');
-      console.log('Code submitted');
-      handlePhaseComplete('debugging');
-    } catch (error) {
-      console.error('Failed to submit code:', error);
-      alert('Failed to submit code. Please try again.');
-    }
+  // NEW: Handle editor opening from chat
+  const handleOpenEditor = (editorData) => {
+    console.log('📝 Opening editor:', editorData);
+    setEditorState(editorData);
+    setMode('editor');
+  };
+
+  // NEW: Handle code submission success
+  const handleCodeSubmitSuccess = () => {
+    // Code was accepted, back to chat
+    setMode('chat');
+    setEditorState(null);
+    
+    // If in design phase, might move to implementation
+    // Backend will handle this through conversation
+  };
+
+  // NEW: Handle back to chat from editor
+  const handleBackToChat = () => {
+    setMode('chat');
+    setEditorState(null);
   };
 
   const handleProjectComplete = async () => {
@@ -70,7 +83,6 @@ const ProjectLearningPage = () => {
       const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3001';
       const token = localStorage.getItem('mindmelt_token');
       
-      // Fetch ZIP file
       const response = await fetch(`${API_BASE_URL}/api/projects/download/${userProjectId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -81,12 +93,10 @@ const ProjectLearningPage = () => {
         throw new Error('Download failed');
       }
 
-      // Get filename from header
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
       const filename = filenameMatch ? filenameMatch[1] : '1_mobile_engineer.zip';
 
-      // Download the ZIP
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -102,6 +112,40 @@ const ProjectLearningPage = () => {
     }
   };
 
+  // Show editor fullscreen when mode is 'editor'
+  if (mode === 'editor' && editorState) {
+    return (
+      <div className="project-learning-page-fullscreen">
+        <div className="learning-header-compact">
+          <div className="container-wide">
+            <div className="header-content-compact">
+              <h1>Project 1: Todo List App - Code Editor</h1>
+              <div className="phase-pills">
+                <span className="phase-pill active">Implementation</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="learning-content-fullscreen">
+          <div className="container-wide">
+            <div className="fullscreen-phase">
+              <CodeEditor 
+                userProjectId={userProjectId}
+                file={editorState.file}
+                initialCode={editorState.template}
+                language="java"
+                onSubmit={handleCodeSubmitSuccess}
+                onBackToChat={handleBackToChat}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular chat phases
   return (
     <div className="project-learning-page-fullscreen">
       <div className="learning-header-compact">
@@ -130,8 +174,10 @@ const ProjectLearningPage = () => {
                 </div>
                 <SocraticChat 
                   userProjectId={userProjectId}
+                  phase="design"
                   onComponentMentioned={handleComponentDiscovered}
                   onComplete={() => handlePhaseComplete('implementation')}
+                  onOpenEditor={handleOpenEditor} // NEW: Pass handler
                 />
               </div>
 
@@ -186,31 +232,17 @@ const ProjectLearningPage = () => {
                 <Code size={28} />
                 <div>
                   <h2>Implementation Phase</h2>
-                  <p>Complete the TODOs in the scaffolded code</p>
+                  <p>Continue the conversation - AI will guide you</p>
                 </div>
               </div>
-              <CodeEditor 
-                initialCode={`import React, { useState, useEffect } from 'react';
-
-export default function App() {
-  // TODO: Initialize state
-  const [todos, setTodos] = useState([]);
-  
-  // TODO: Load from storage
-  useEffect(() => {
-    // YOUR CODE HERE
-  }, []);
-  
-  // TODO: Add todo function
-  const addTodo = (text) => {
-    // YOUR CODE HERE
-  };
-  
-  return null;
-}`}
-                language="javascript"
-                onSubmit={handleCodeSubmit}
-              />
+              <div className="fullscreen-chat">
+                <SocraticChat 
+                  userProjectId={userProjectId}
+                  phase="implementation"
+                  onComplete={() => handlePhaseComplete('debugging')}
+                  onOpenEditor={handleOpenEditor} // NEW: Pass handler
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -232,6 +264,7 @@ export default function App() {
                   userProjectId={userProjectId}
                   phase="debugging"
                   onComplete={handleProjectComplete}
+                  onOpenEditor={handleOpenEditor} // NEW: Pass handler
                 />
               </div>
             </div>

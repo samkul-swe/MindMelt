@@ -1,9 +1,13 @@
 import aiService from './aiService.js';
+import conversationService from './conversationService.js';
+import codeReviewService from './codeReviewService.js';
 import { getDoc, createDoc, updateDoc, queryDocs } from '../utils/firestore.js';
 import db from '../config/firebase.js';
+import JSZip from 'jszip';
 
 /**
  * Project Service - Handles project-based learning
+ * UPDATED: Integrated with conversational flow
  */
 
 class ProjectService {
@@ -14,10 +18,8 @@ class ProjectService {
     try {
       const snapshot = await db.collection('projects')
         .where('domain', '==', domain)
-        // .orderBy('order', 'asc')  // TEMPORARILY COMMENTED - need index
         .get();
 
-      // Sort in memory instead
       const projects = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -44,6 +46,7 @@ class ProjectService {
 
   /**
    * Start a project for a user
+   * UPDATED: Initialize conversation state
    */
   async startProject(userId, projectId) {
     try {
@@ -53,26 +56,46 @@ class ProjectService {
         throw new Error('Project not found');
       }
 
-      // Create user project instance
+      // Create user project instance with conversation state
       const userProject = {
         userId,
         projectId,
         projectName: project.projectName,
         domain: project.domain,
         difficulty: project.difficulty,
-        status: 'design_phase', // design_phase → implementation → debugging → completed
-        phase: 'design',
-        designSubmitted: false,
-        codeSubmitted: false,
+        status: 'in_progress',
+        
+        // NEW: Conversation-driven state
+        conversationState: {
+          currentPhase: 'define',
+          currentConcept: 'data_model_fields',
+          completedConcepts: [],
+          issuesEncountered: [],
+          conceptMastery: {},
+          activeFile: null,
+          awaitingAction: 'conversation'
+        },
+        
+        // NEW: Multi-file code storage
+        files: {},
+        
         startedAt: new Date(),
         timeSpent: 0
       };
 
-      const doc = await createDoc('user_projects', userProject);
+      const docRef = await createDoc('user_projects', userProject);
+      const userProjectId = docRef.id;
       
       console.log(`✅ User started project: ${project.projectName}`);
       
-      return { id: doc.id, ...userProject, project };
+      // Initialize conversation
+      await conversationService.initializeConversation(userProjectId, project);
+      
+      return { 
+        id: userProjectId, 
+        ...userProject, 
+        project 
+      };
     } catch (error) {
       console.error('Error starting project:', error);
       throw error;
@@ -84,19 +107,16 @@ class ProjectService {
    */
   async getUserCurrentProject(userId) {
     try {
-      // Get all user projects (can't use compound query without index)
       const snapshot = await db.collection('user_projects')
         .where('userId', '==', userId)
         .get();
 
-      // Filter in memory
       const projects = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(p => p.status !== 'completed');
+        .filter(p => p.status === 'in_progress');
 
       if (projects.length === 0) return null;
 
-      // Get the full project details
       const userProject = projects[0];
       const projectDetails = await this.getProject(userProject.projectId);
 
@@ -115,7 +135,6 @@ class ProjectService {
    */
   async getUserCompletedProjects(userId) {
     try {
-      // Get all user projects, filter in memory
       const snapshot = await db.collection('user_projects')
         .where('userId', '==', userId)
         .get();
@@ -132,41 +151,26 @@ class ProjectService {
   }
 
   /**
-   * Submit architecture design (Socratic phase)
+   * REMOVED: submitDesign (not needed in new flow)
+   * Design happens through conversation
    */
-  async submitDesign(userProjectId, designText) {
-    try {
-      await updateDoc('user_projects', userProjectId, {
-        architectureDesign: designText,
-        designSubmitted: true,
-        phase: 'implementation'
-      });
-
-      console.log('✅ Design submitted');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error submitting design:', error);
-      throw error;
-    }
-  }
 
   /**
-   * Submit code implementation
+   * Submit code (NEW: integrated with conversation flow)
    */
-  async submitCode(userProjectId, code, language = 'javascript') {
+  async submitCode(userProjectId, code, file) {
     try {
-      await updateDoc('user_projects', userProjectId, {
-        userCode: code,
-        codeLanguage: language,
-        codeSubmitted: true,
-        submittedAt: new Date(),
-        phase: 'review'
-      });
-
-      console.log('✅ Code submitted');
+      console.log(`📝 Code submitted for ${file}`);
       
-      return { success: true };
+      // Let conversation service handle the review
+      const result = await conversationService.handleCodeSubmission(
+        userProjectId, 
+        code, 
+        file
+      );
+      
+      return result;
+      
     } catch (error) {
       console.error('Error submitting code:', error);
       throw error;
@@ -174,43 +178,14 @@ class ProjectService {
   }
 
   /**
-   * AI reviews code and finds issues for guided debugging
+   * REMOVED: reviewCode (now handled by conversationService)
    */
-  async reviewCode(userProjectId) {
-    try {
-      const userProject = await getDoc('user_projects', userProjectId);
-      const project = await this.getProject(userProject.projectId);
-
-      if (!userProject.userCode) {
-        throw new Error('No code submitted yet');
-      }
-
-      // Get AI to review code
-      const review = await aiService.reviewCode({
-        code: userProject.userCode,
-        requirements: project.requirements,
-        commonBugs: project.commonBugs
-      });
-
-      // Save review results
-      await updateDoc('user_projects', userProjectId, {
-        codeReview: review,
-        reviewedAt: new Date()
-      });
-
-      return review;
-    } catch (error) {
-      console.error('Error reviewing code:', error);
-      throw error;
-    }
-  }
 
   /**
    * Complete a project with performance assessment
    */
-  async completeProject(userProjectId, performanceData) {
+  async completeProject(userProjectId, performanceData = null) {
     try {
-      // Get the completed project data
       const userProject = await getDoc('user_projects', userProjectId);
       
       // Calculate time spent
@@ -218,10 +193,16 @@ class ProjectService {
       const endTime = new Date();
       const timeSpentHours = (endTime - startTime.toDate()) / (1000 * 60 * 60);
 
+      // If no performance data provided, generate it
+      let performance = performanceData;
+      if (!performance) {
+        performance = await this.generatePerformanceAssessment(userProject);
+      }
+
       await updateDoc('user_projects', userProjectId, {
         status: 'completed',
         completedAt: new Date(),
-        performance: performanceData,
+        performance: performance,
         timeSpent: timeSpentHours.toFixed(2)
       });
 
@@ -229,12 +210,55 @@ class ProjectService {
       
       return { 
         success: true,
-        timeSpent: timeSpentHours.toFixed(2)
+        timeSpent: timeSpentHours.toFixed(2),
+        performance: performance
       };
     } catch (error) {
       console.error('Error completing project:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate performance assessment (MOCK)
+   */
+  async generatePerformanceAssessment(userProject) {
+    console.log('📊 MOCK: Generating performance assessment...');
+    
+    const state = userProject.conversationState;
+    const issues = state.issuesEncountered || [];
+    
+    // Calculate scores based on issues
+    const architectureScore = Math.max(70, 100 - (issues.length * 5));
+    const implementationScore = Math.max(65, 95 - (issues.length * 8));
+    const debuggingScore = issues.length > 3 ? 70 : 85;
+    const understandingScore = Object.keys(state.conceptMastery || {}).length * 15;
+    
+    const overallScore = Math.round(
+      (architectureScore + implementationScore + debuggingScore + understandingScore) / 4
+    );
+    
+    return {
+      scores: {
+        architecture: architectureScore,
+        implementation: implementationScore,
+        debugging: debuggingScore,
+        understanding: understandingScore
+      },
+      overallScore: overallScore,
+      strengths: [
+        'Followed conversational guidance well',
+        'Fixed issues when pointed out',
+        'Completed all concepts'
+      ],
+      gaps: issues.map(i => i.type).slice(0, 3),
+      nextProjectRecommendations: {
+        focusAreas: ['Error handling', 'Edge cases'],
+        scaffoldingLevel: issues.length > 5 ? 'high' : 'medium',
+        difficulty: 'same'
+      },
+      readyForNextProject: true
+    };
   }
 
   /**
@@ -245,34 +269,28 @@ class ProjectService {
       const userProject = await getDoc('user_projects', userProjectId);
       const project = await this.getProject(userProject.projectId);
 
-      // Create ZIP file
       const zip = new JSZip();
 
-      // Add main code file
-      zip.file('App.js', userProject.userCode || '// No code submitted yet');
-
-      // Add architecture document
-      zip.file('ARCHITECTURE.md', `# Architecture Design\n\n${userProject.architectureDesign || 'No architecture design submitted'}`);
+      // Add all code files
+      const files = userProject.files || {};
+      Object.keys(files).forEach(filename => {
+        const fileData = files[filename];
+        zip.file(filename, fileData.currentCode || '// No code yet');
+      });
 
       // Add README
       const readme = this.generateReadme(project, userProject);
       zip.file('README.md', readme);
 
-      // Add package.json for React Native project
+      // Add package.json / build config
       const packageJson = {
         name: project.projectName.toLowerCase().replace(/\s+/g, '-'),
         version: '1.0.0',
         description: project.description,
-        main: 'App.js',
+        main: 'App.java',
         scripts: {
-          start: 'expo start',
-          android: 'expo start --android',
-          ios: 'expo start --ios'
-        },
-        dependencies: {
-          'react': '^18.2.0',
-          'react-native': '^0.72.0',
-          '@react-native-async-storage/async-storage': '^1.19.0'
+          build: 'javac *.java',
+          run: 'java App'
         }
       };
       zip.file('package.json', JSON.stringify(packageJson, null, 2));
@@ -280,11 +298,7 @@ class ProjectService {
       // Generate ZIP as buffer
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
-      // Create filename: projectId_role
-      const role = userProject.project?.domain || 'project';
-      const projectNumber = project.order || '1';
-      const roleSafe = role.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      const filename = `${projectNumber}_${roleSafe}.zip`;
+      const filename = `${project.order || '1'}_${project.projectName.toLowerCase().replace(/\s+/g, '_')}.zip`;
 
       return {
         buffer: zipBuffer,
@@ -301,6 +315,10 @@ class ProjectService {
    * Generate README for project
    */
   generateReadme(project, userProject) {
+    const state = userProject.conversationState || {};
+    const completedConcepts = state.completedConcepts || [];
+    const issuesEncountered = state.issuesEncountered || [];
+    
     return `# ${project.projectName}
 
 **Difficulty:** ${project.difficulty}  
@@ -312,82 +330,48 @@ class ProjectService {
 
 ${project.description}
 
-## Requirements
+## What I Built
 
-${project.requirements.map(req => `- ${req}`).join('\n')}
+Through conversational learning, I implemented:
 
-## What I Learned
+${completedConcepts.map(c => `- ${c.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`).join('\n')}
 
-${project.learningObjectives.map(obj => `- ${obj}`).join('\n')}
+## Challenges Overcome
 
-## Architecture
-
-${userProject.architectureDesign || 'Component-based architecture with React Native'}
+${issuesEncountered.length > 0 
+  ? issuesEncountered.map(i => `- ${i.description} (${i.type})`).join('\n')
+  : '- Built smoothly with guidance'}
 
 ## Performance Analysis
+
+**Overall Score:** ${userProject.performance?.overallScore}/100
 
 **Strengths:**
 ${userProject.performance?.strengths?.map(s => `- ${s}`).join('\n') || '- Strong implementation'}
 
-**Areas Improved:**
-${userProject.performance?.gaps?.map(g => `- ${g}`).join('\n') || '- Continuous learning'}
+**Areas for Growth:**
+${userProject.performance?.gaps?.map(g => `- ${g}`).join('\n') || '- Continue practicing'}
+
+## Skills Demonstrated
+
+- Conversational problem-solving
+- Iterative development
+- Bug fixing and debugging
+- Code review incorporation
 
 ---
 
-*Built with MindMelt - AI-Powered Learning Platform*
+*Built with MindMelt - Conversational AI Learning Platform*
+*Learn by building, not just reading.*
 `;
   }
 
   /**
-   * Get Socratic conversation for project
+   * Get conversation for a project
+   * (Delegated to conversationService)
    */
-  async getSocraticConversation(userProjectId) {
-    try {
-      const doc = await getDoc('socratic_conversations', userProjectId);
-      return doc?.messages || [];
-    } catch (error) {
-      console.error('Error fetching conversation:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Add message to Socratic conversation
-   */
-  async addSocraticMessage(userProjectId, role, content) {
-    try {
-      const existing = await getDoc('socratic_conversations', userProjectId);
-      
-      const message = {
-        role,
-        content,
-        timestamp: new Date()
-      };
-
-      if (existing) {
-        // Append to existing
-        const messages = existing.messages || [];
-        messages.push(message);
-        
-        await updateDoc('socratic_conversations', userProjectId, {
-          messages,
-          updatedAt: new Date()
-        });
-      } else {
-        // Create new conversation
-        await db.collection('socratic_conversations').doc(userProjectId).set({
-          userProjectId,
-          messages: [message],
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-      }
-
-      return message;
-    } catch (error) {
-      console.error('Error adding message:', error);
-      throw error;
-    }
+  async getConversation(userProjectId) {
+    return await conversationService.getConversation(userProjectId);
   }
 }
 

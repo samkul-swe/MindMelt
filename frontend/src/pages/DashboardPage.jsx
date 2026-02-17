@@ -12,9 +12,11 @@ const DashboardPage = () => {
   const [hasResume, setHasResume] = useState(false);
   const [learningPath, setLearningPath] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     checkResumeStatus();
+    fetchStats();
   }, []);
 
   const checkResumeStatus = async () => {
@@ -29,6 +31,11 @@ const DashboardPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchStats = async () => {
+    const result = await api.getUserStats();
+    setStats(result);
   };
 
   const handleLogout = () => {
@@ -71,7 +78,25 @@ const DashboardPage = () => {
           {/* Welcome Section */}
           <div className="welcome-section">
             <h1>Welcome back, {currentUser?.name}! 👋</h1>
-            <p>Choose how you want to start your learning journey</p>
+            <p className="sarcastic-subtitle">
+              Still pretending to know React? Let's see if you've learned anything yet 😏
+            </p>
+            {stats && (
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <span className="stat-value">{stats.projectsCompleted}/5</span>
+                  <span className="stat-label">Projects Done</span>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-value">{stats.skillImprovement}%</span>
+                  <span className="stat-label">Skill Growth</span>
+                </div>
+                <div className="stat-card achievement">
+                  <span className="stat-label">🏆 Last Achievement</span>
+                  <span className="stat-value">{stats.lastAchievement}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Learning Options Grid */}
