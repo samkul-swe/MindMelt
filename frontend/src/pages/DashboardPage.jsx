@@ -34,13 +34,36 @@ const DashboardPage = () => {
   };
 
   const fetchStats = async () => {
-    const result = await api.getUserStats();
-    setStats(result);
+    try {
+      const result = await api.getUserStats();
+      if (result.success) {
+        setStats(result);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
   };
 
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  // Sarcastic messages based on progress
+  const getSarcasticMessage = () => {
+    if (!stats) return "Ready to stop googling and start learning? 😏";
+    
+    const progress = stats.projectsCompleted;
+    
+    if (progress === 0) {
+      return "Still pretending to know React? Let's see if you've learned anything yet 😏";
+    } else if (progress < 3) {
+      return "Making progress? Or just getting lucky? Keep going! 🚀";
+    } else if (progress < 5) {
+      return "Look at you, actually learning! Don't stop now 💪";
+    } else {
+      return "You actually did it! Now go build something real 🎉";
+    }
   };
 
   return (
@@ -79,21 +102,34 @@ const DashboardPage = () => {
           <div className="welcome-section">
             <h1>Welcome back, {currentUser?.name}! 👋</h1>
             <p className="sarcastic-subtitle">
-              Still pretending to know React? Let's see if you've learned anything yet 😏
+              {getSarcasticMessage()}
             </p>
+            
+            {/* Stats Grid */}
             {stats && (
               <div className="stats-grid">
                 <div className="stat-card">
-                  <span className="stat-value">{stats.projectsCompleted}/5</span>
-                  <span className="stat-label">Projects Done</span>
+                  <span className="stat-value">{stats.projectsCompleted}/{stats.totalProjects}</span>
+                  <span className="stat-label">Projects Completed</span>
                 </div>
+                
                 <div className="stat-card">
-                  <span className="stat-value">{stats.skillImprovement}%</span>
-                  <span className="stat-label">Skill Growth</span>
+                  {stats.projectsCompleted > 0 ? (
+                    <>
+                      <span className="stat-value">+{stats.skillImprovement}%</span>
+                      <span className="stat-label">Skill Growth</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="stat-value motivational">Let's Start! 🚀</span>
+                      <span className="stat-label">Your Journey Awaits</span>
+                    </>
+                  )}
                 </div>
+                
                 <div className="stat-card achievement">
                   <span className="stat-label">🏆 Last Achievement</span>
-                  <span className="stat-value">{stats.lastAchievement}</span>
+                  <span className="stat-value">{stats.lastAchievement || 'Journey Started'}</span>
                 </div>
               </div>
             )}
@@ -101,7 +137,7 @@ const DashboardPage = () => {
 
           {/* Learning Options Grid */}
           <div className="options-grid">
-            {/* Resume Validation Card - Always visible */}
+            {/* Resume Validation Card */}
             <div 
               className="option-card"
               onClick={() => navigate('/resume-upload')}
@@ -111,70 +147,85 @@ const DashboardPage = () => {
                 <Upload size={32} />
               </div>
               <h3>Resume Skill Validation</h3>
-              <p>Upload your resume and validate your claimed skills through Socratic questioning</p>
+              <p>Upload your resume and discover which roles fit you best</p>
               {hasResume && (
-                <div className="completed-badge">✓ Completed</div>
+                <div className="completed-badge">✓ Resume Uploaded</div>
               )}
               <Button variant={hasResume ? "outline" : "primary"} size="medium">
                 {hasResume ? 'Update Resume' : 'Upload Resume'}
               </Button>
             </div>
 
-            {/* Project Learning Card - Show only if resume uploaded */}
-            {hasResume && learningPath && (
+            {/* Project Learning Card */}
+            {hasResume && learningPath ? (
               <div 
-                className="option-card"
+                className="option-card highlight"
                 onClick={() => navigate('/projects')}
                 style={{ cursor: 'pointer' }}
               >
                 <div className="option-icon">
                   <Code size={32} />
                 </div>
-                <h3>{learningPath.targetRole} Projects</h3>
-                <p>Build 5 curated projects for {learningPath.targetRole} with AI guidance</p>
+                <h3>{learningPath.targetRole}</h3>
+                <p>Build 5 projects with Socratic AI guidance</p>
                 <div className="path-info">
                   <span>🎯 {learningPath.timeline} days</span>
                   <span>•</span>
                   <span>5 projects</span>
+                  <span>•</span>
+                  <span>{stats?.projectsCompleted || 0}/5 done</span>
                 </div>
                 <Button variant="primary" size="medium">
-                  Start Projects
+                  {stats?.projectsCompleted > 0 ? 'Continue Learning' : 'Start Projects'}
                 </Button>
               </div>
-            )}
-
-            {/* Locked state when no resume */}
-            {!hasResume && (
+            ) : hasResume ? (
+              <div 
+                className="option-card"
+                onClick={() => navigate('/role-selection')}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="option-icon">
+                  <Code size={32} />
+                </div>
+                <h3>Choose Your Path</h3>
+                <p>Select a target role and start your learning journey</p>
+                <Button variant="primary" size="medium">
+                  Select Role
+                </Button>
+              </div>
+            ) : (
               <div className="option-card locked">
                 <div className="option-icon locked-icon">
                   <Code size={32} />
                 </div>
                 <h3>Project-Based Learning</h3>
                 <p>Upload your resume first to unlock personalized projects</p>
-                <div className="lock-indicator">🔒 Locked</div>
+                <div className="lock-indicator">🔒 Upload resume to unlock</div>
               </div>
             )}
 
-            {/* LeetCode Mastery Card */}
+            {/* LeetCode Card - Phase 4 */}
             <div className="option-card coming-soon">
               <div className="option-icon">
                 <Target size={32} />
               </div>
-              <h3>LeetCode Pattern Mastery</h3>
-              <p>Optimize existing solutions and learn missing patterns systematically</p>
-              <div className="coming-soon-badge">Phase 4 - Coming Soon</div>
+              <h3>LeetCode Mastery</h3>
+              <p>Optimize solutions and master coding patterns</p>
+              <div className="coming-soon-badge">Coming in Phase 4</div>
               <Button variant="outline" size="medium" disabled>
                 Connect GitHub
               </Button>
             </div>
           </div>
 
-          {/* Phase Progress Notice */}
-          <div className="phase-notice">
-            <h3>✅ Phase 2: Resume Analysis - Active!</h3>
-            <p>Upload your resume to get started with personalized learning paths.</p>
-            <p>Next: <strong>Phase 3 - Project-Based Learning</strong></p>
-          </div>
+          {/* Quick Actions / Help */}
+          {!hasResume && (
+            <div className="help-banner">
+              <h3>👉 Start Here</h3>
+              <p>Upload your resume to get personalized project recommendations based on your skills and target role</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

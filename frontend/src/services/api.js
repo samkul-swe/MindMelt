@@ -63,6 +63,17 @@ class APIService {
     }
   }
 
+  async getUserStats() {
+    const token = this.getToken();
+    const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.json();
+  }
+
+
   // ============================================
   // AUTH ENDPOINTS
   // ============================================

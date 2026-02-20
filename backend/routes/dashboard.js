@@ -5,7 +5,6 @@ import resumeService from '../services/resumeService.js';
 
 const router = express.Router();
 
-// backend/routes/dashboard.js (NEW FILE NEEDED)
 router.get('/stats', authenticateToken, async (req, res) => {
   const userId = req.user.userId;
   

@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js';
 import resumeRoutes from './routes/resume.js';
 import projectRoutes from './routes/projects.js';
 import testRoutes from './routes/test.js';
+import dashboardRoutes from './routes/dashboard.js';
 import './config/firebase.js'; // Initialize Firebase
 
 dotenv.config();
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Future routes (Phase 4)
 // app.use('/api/leetcode', leetcodeRoutes);

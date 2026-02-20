@@ -199,3 +199,110 @@
     padding: 2rem 0;
   }
 }
+
+/* Add at the end of file */
+
+/* Sarcastic subtitle */
+.sarcastic-subtitle {
+  font-size: 1.1rem !important;
+  color: var(--gray-500) !important;
+  font-style: italic;
+  margin-top: 0.5rem !important;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.stat-card {
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  transition: all var(--transition-normal);
+}
+
+.stat-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.stat-card.achievement {
+  border-color: var(--warning);
+  background: linear-gradient(135deg, #fff5e6 0%, #ffffff 100%);
+}
+
+.stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value.motivational {
+  font-size: 1.5rem;
+  color: var(--success);
+}
+
+.stat-card.achievement .stat-value {
+  font-size: 1rem;
+  color: var(--warning);
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Highlight card for active learning */
+.option-card.highlight {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.path-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--gray-600);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Help banner */
+.help-banner {
+  background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+  border: 2px solid var(--warning);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.help-banner h3 {
+  color: var(--warning);
+  margin-bottom: 0.5rem;
+}
+
+.help-banner p {
+  color: var(--gray-700);
+  margin: 0;
+}
